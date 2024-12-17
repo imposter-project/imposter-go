@@ -1,0 +1,13 @@
+# Binaries
+*.exe
+*.dll
+*.so
+*.dylib
+bin/
+
+# Go workspace files
+*.log
+*.out
+
+# Module cache
+go.sum

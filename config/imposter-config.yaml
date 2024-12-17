@@ -1,0 +1,35 @@
+plugin: rest
+resources:
+  - method: GET
+    path: /hello
+    response:
+      content: "Hello, World!"
+      statusCode: 200
+
+  - method: GET
+    path: /file
+    response:
+      file: "responses/example.txt"
+      statusCode: 200
+
+  - method: POST
+    path: /echo
+    response:
+      content: "Echoing back"
+      statusCode: 201
+
+  - method: POST
+    path: /match-xml
+    requestBody:
+      xpath: "//user[name='John']"
+    response:
+      content: "Matched XML body!"
+      statusCode: 200
+
+  - method: POST
+    path: /match-json
+    requestBody:
+      jsonpath: "$.user.name"
+    response:
+      content: "Matched JSON body!"
+      statusCode: 200
