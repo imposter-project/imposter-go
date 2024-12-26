@@ -24,15 +24,34 @@ func main() {
 
 	var combinedConfig parser.Config
 
+	scanRecursive := (os.Getenv("IMPOSTER_CONFIG_SCAN_RECURSIVE") == "true")
+
 	err := filepath.Walk(configDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
+		// Skip subdirectories if not scanning recursively
+		if info.IsDir() && info.Name() != filepath.Base(configDir) && !scanRecursive {
+			return filepath.SkipDir
+		}
+
 		if !info.IsDir() && (strings.HasSuffix(info.Name(), "-config.json") || strings.HasSuffix(info.Name(), "-config.yaml") || strings.HasSuffix(info.Name(), "-config.yml")) {
 			fileConfig, err := parser.ParseConfig(path)
 			if err != nil {
 				return err
 			}
+			// Prefix 'File' properties if in a subdirectory
+			baseDir := filepath.Dir(path)
+			relDir, err := filepath.Rel(configDir, baseDir)
+			if err != nil {
+				return err
+			}
+			for i := range fileConfig.Resources {
+				if fileConfig.Resources[i].Response.File != "" && relDir != "." {
+					fileConfig.Resources[i].Response.File = filepath.Join(relDir, fileConfig.Resources[i].Response.File)
+				}
+			}
+
 			if combinedConfig.Plugin == "" {
 				combinedConfig.Plugin = fileConfig.Plugin
 			} else if combinedConfig.Plugin != fileConfig.Plugin {
