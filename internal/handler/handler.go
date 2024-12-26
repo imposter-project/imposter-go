@@ -35,7 +35,11 @@ func HandleRequest(w http.ResponseWriter, r *http.Request, configDir string, res
 
 	for _, res := range resources {
 		if matchesResource(res, r, body) {
-			w.WriteHeader(res.Response.StatusCode)
+			statusCode := res.Response.StatusCode
+			if statusCode == 0 {
+				statusCode = 200
+			}
+			w.WriteHeader(statusCode)
 
 			if res.Response.File != "" {
 				filePath := filepath.Join(configDir, res.Response.File)
