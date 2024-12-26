@@ -49,17 +49,21 @@ func HandleRequest(w http.ResponseWriter, r *http.Request, configDir string, res
 					return
 				}
 				w.Write(data)
+				fmt.Printf("Handled request - method:%s, path:%s, status:%d, length:%d\n", r.Method, r.URL.Path, statusCode, len(data))
 				return
 			}
 
 			if res.Response.Content != "" {
 				fmt.Fprint(w, res.Response.Content)
+				fmt.Printf("Handled request - method:%s, path:%s, status:%d, length:%d\n", r.Method, r.URL.Path, statusCode, len(res.Response.Content))
 				return
 			}
 		}
 	}
+	notFoundMsg := "Resource not found"
 	w.WriteHeader(http.StatusNotFound)
-	fmt.Fprint(w, "Resource not found")
+	fmt.Fprint(w, notFoundMsg)
+	fmt.Printf("Handled request - method:%s, path:%s, status:%d, length:%d\n", r.Method, r.URL.Path, http.StatusNotFound, len(notFoundMsg))
 }
 
 // matchesResource checks if an incoming HTTP request matches the defined resource
