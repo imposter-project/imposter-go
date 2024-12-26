@@ -11,3 +11,8 @@ bin/
 
 # Module cache
 go.sum
+
+.idea/
+.vscode/
+*.iml
+__debug_bin*

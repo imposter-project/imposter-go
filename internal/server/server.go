@@ -2,19 +2,17 @@ package server
 
 import (
 	"fmt"
-	"net/http"
-	"path/filepath"
 	"github.com/gatehill/imposter-go/internal/handler"
+	"net/http"
 )
 
 type Server struct {
-	Addr       string
-	ConfigDir  string
-	Resources  []handler.Resource
+	Addr      string
+	ConfigDir string
+	Resources []handler.Resource
 }
 
-func NewServer(configPath string, resources []handler.Resource) *Server {
-	configDir := filepath.Dir(configPath)
+func NewServer(configDir string, resources []handler.Resource) *Server {
 	return &Server{
 		Addr:      ":8080",
 		ConfigDir: configDir,
