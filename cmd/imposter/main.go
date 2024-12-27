@@ -6,12 +6,15 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/gatehill/imposter-go/internal/config"
 	"github.com/gatehill/imposter-go/internal/parser"
 	"github.com/gatehill/imposter-go/internal/server"
 )
 
 func main() {
 	fmt.Println("Starting Imposter-Go...")
+
+	imposterConfig := config.LoadConfig()
 
 	if len(os.Args) < 2 {
 		panic("Config directory path must be provided as the first argument")
@@ -22,7 +25,7 @@ func main() {
 		panic("Specified path is not a valid directory")
 	}
 
-	var combinedConfig parser.Config
+	var configs []config.Config
 
 	scanRecursive := (os.Getenv("IMPOSTER_CONFIG_SCAN_RECURSIVE") == "true")
 
@@ -36,6 +39,7 @@ func main() {
 		}
 
 		if !info.IsDir() && (strings.HasSuffix(info.Name(), "-config.json") || strings.HasSuffix(info.Name(), "-config.yaml") || strings.HasSuffix(info.Name(), "-config.yml")) {
+			fmt.Printf("Loading config file: %s\n", path)
 			fileConfig, err := parser.ParseConfig(path)
 			if err != nil {
 				return err
@@ -51,15 +55,7 @@ func main() {
 					fileConfig.Resources[i].Response.File = filepath.Join(relDir, fileConfig.Resources[i].Response.File)
 				}
 			}
-
-			if combinedConfig.Plugin == "" {
-				combinedConfig.Plugin = fileConfig.Plugin
-			} else if combinedConfig.Plugin != fileConfig.Plugin {
-				panic("Mismatched plugin types encountered")
-			}
-
-			// Merge resources
-			combinedConfig.Resources = append(combinedConfig.Resources, fileConfig.Resources...)
+			configs = append(configs, *fileConfig)
 		}
 		return nil
 	})
@@ -67,11 +63,14 @@ func main() {
 		panic(err)
 	}
 
-	if combinedConfig.Plugin != "rest" {
-		panic("Unsupported plugin type")
+	// Optional: check that at least one config is rest
+	for _, cfg := range configs {
+		if cfg.Plugin != "rest" {
+			panic("Unsupported plugin type")
+		}
 	}
 
-	// Initialize and start the server with resources
-	srv := server.NewServer(configDir, combinedConfig.Resources)
+	// Initialize and start the server with multiple configs
+	srv := server.NewServer(imposterConfig, configDir, configs)
 	srv.Start()
 }

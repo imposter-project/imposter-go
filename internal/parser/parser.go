@@ -2,27 +2,22 @@ package parser
 
 import (
 	"fmt"
-	"io/ioutil"
-	"github.com/gatehill/imposter-go/internal/handler"
+	"github.com/gatehill/imposter-go/internal/config"
 	"gopkg.in/yaml.v3"
+	"io/ioutil"
 )
 
-type Config struct {
-	Plugin    string             `yaml:"plugin"`
-	Resources []handler.Resource `yaml:"resources"`
-}
-
 // ParseConfig loads and parses a YAML configuration file
-func ParseConfig(path string) (*Config, error) {
+func ParseConfig(path string) (*config.Config, error) {
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file: %w", err)
 	}
 
-	var config Config
-	if err := yaml.Unmarshal(data, &config); err != nil {
+	var cfg config.Config
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal YAML: %w", err)
 	}
 
-	return &config, nil
+	return &cfg, nil
 }

@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"github.com/gatehill/imposter-go/internal/config"
 	"github.com/gatehill/imposter-go/internal/handler"
 	"net/http"
 )
@@ -9,14 +10,14 @@ import (
 type Server struct {
 	Addr      string
 	ConfigDir string
-	Resources []handler.Resource
+	Configs   []config.Config
 }
 
-func NewServer(configDir string, resources []handler.Resource) *Server {
+func NewServer(imposterConfig *config.ImposterConfig, configDir string, configs []config.Config) *Server {
 	return &Server{
-		Addr:      ":8080",
+		Addr:      ":" + imposterConfig.ServerPort,
 		ConfigDir: configDir,
-		Resources: resources,
+		Configs:   configs,
 	}
 }
 
@@ -24,7 +25,7 @@ func (s *Server) Start() {
 	fmt.Printf("Server is listening on %s...\n", s.Addr)
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		handler.HandleRequest(w, r, s.ConfigDir, s.Resources)
+		handler.HandleRequest(w, r, s.ConfigDir, s.Configs)
 	})
 
 	if err := http.ListenAndServe(s.Addr, nil); err != nil {
