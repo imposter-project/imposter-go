@@ -43,6 +43,7 @@ type Resource struct {
 
 type Config struct {
 	Plugin    string `yaml:"plugin"`
+	BasePath  string `yaml:"basePath"`
 	Resources []Resource
 }
 
@@ -68,6 +69,7 @@ func LoadConfig(configDir string) []Config {
 	var configs []Config
 
 	scanRecursive := (os.Getenv("IMPOSTER_CONFIG_SCAN_RECURSIVE") == "true")
+	autoBasePath := (os.Getenv("IMPOSTER_AUTO_BASE_PATH") == "true")
 
 	err := filepath.Walk(configDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -84,6 +86,17 @@ func LoadConfig(configDir string) []Config {
 			if err != nil {
 				return err
 			}
+
+			// Set basePath if autoBasePath is enabled
+			if autoBasePath && fileConfig.BasePath == "" {
+				baseDir := filepath.Dir(path)
+				relDir, err := filepath.Rel(configDir, baseDir)
+				if err != nil {
+					return err
+				}
+				fileConfig.BasePath = "/" + relDir
+			}
+
 			// Prefix 'File' properties if in a subdirectory
 			baseDir := filepath.Dir(path)
 			relDir, err := filepath.Rel(configDir, baseDir)
@@ -93,6 +106,10 @@ func LoadConfig(configDir string) []Config {
 			for i := range fileConfig.Resources {
 				if fileConfig.Resources[i].Response.File != "" && relDir != "." {
 					fileConfig.Resources[i].Response.File = filepath.Join(relDir, fileConfig.Resources[i].Response.File)
+					}
+				// Prefix paths with basePath
+				if fileConfig.BasePath != "" {
+					fileConfig.Resources[i].Path = filepath.Join(fileConfig.BasePath, fileConfig.Resources[i].Path)
 				}
 			}
 			configs = append(configs, *fileConfig)
