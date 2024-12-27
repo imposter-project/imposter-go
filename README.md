@@ -16,7 +16,7 @@ A Go implementation of the Imposter tool (https://github.com/outofcoffee/imposte
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/imposter-go.git
+   git clone https://github.com/imposter-project/imposter-go.git
    cd imposter-go
    ```
 
