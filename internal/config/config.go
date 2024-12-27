@@ -16,6 +16,14 @@ type Response struct {
 	StatusCode int    `yaml:"statusCode"`
 	File       string `yaml:"file"`
 	Fail       string `yaml:"fail"`
+	Delay      Delay  `yaml:"delay"`
+}
+
+// Delay represents the delay configuration for a response
+type Delay struct {
+	Exact int `yaml:"exact"`
+	Min   int `yaml:"min"`
+	Max   int `yaml:"max"`
 }
 
 // Resource represents an HTTP resource
@@ -26,7 +34,7 @@ type Resource struct {
 	Headers     map[string]string `yaml:"headers"`
 	RequestBody map[string]string `yaml:"requestBody"`
 	FormParams  map[string]string `yaml:"formParams"`
-	PathParams  map[string]string `yaml:"pathParams"` // new field
+	PathParams  map[string]string `yaml:"pathParams"`
 	Response    Response          `yaml:"response"`
 }
 
@@ -67,7 +75,7 @@ func LoadConfig(configDir string) []Config {
 			return filepath.SkipDir
 		}
 
-		if !info.IsDir() && (strings.HasSuffix(info.Name(), "-config.json") || strings.HasSuffix(info.Name(), "-config.yaml") || strings.HasSuffix(info.Name(), "-config.yml")) {
+		if (!info.IsDir() && (strings.HasSuffix(info.Name(), "-config.json") || strings.HasSuffix(info.Name(), "-config.yaml") || strings.HasSuffix(info.Name(), "-config.yml"))) {
 			fmt.Printf("Loading config file: %s\n", path)
 			fileConfig, err := parseConfig(path)
 			if err != nil {

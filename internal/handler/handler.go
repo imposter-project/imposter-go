@@ -7,9 +7,11 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/gatehill/imposter-go/internal/config"
 	"github.com/gatehill/imposter-go/internal/matcher"
+	"golang.org/x/exp/rand"
 )
 
 // HandleRequest processes incoming HTTP requests based on resources
@@ -56,6 +58,18 @@ func HandleRequest(w http.ResponseWriter, r *http.Request, configDir string, con
 
 	if tie {
 		fmt.Printf("Warning: multiple equally specific matches. Using the first.\n")
+	}
+
+	// Handle delay if specified
+	if best.Resource.Response.Delay.Exact > 0 {
+		delay := best.Resource.Response.Delay.Exact
+		fmt.Printf("Delaying request (exact: %dms) - method:%s, path:%s\n", delay, r.Method, r.URL.Path)
+		time.Sleep(time.Duration(delay) * time.Millisecond)
+	} else if best.Resource.Response.Delay.Min > 0 && best.Resource.Response.Delay.Max > 0 {
+		delay := rand.Intn(best.Resource.Response.Delay.Max-best.Resource.Response.Delay.Min+1) + best.Resource.Response.Delay.Min
+		fmt.Printf("Delaying request (range: %dms-%dms, actual: %dms) - method:%s, path:%s\n",
+			best.Resource.Response.Delay.Min, best.Resource.Response.Delay.Max, delay, r.Method, r.URL.Path)
+		time.Sleep(time.Duration(delay) * time.Millisecond)
 	}
 
 	// Write response using 'best.Resource'
