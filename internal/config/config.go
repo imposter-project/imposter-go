@@ -24,6 +24,7 @@ type Resource struct {
 	QueryParams map[string]string `yaml:"queryParams"`
 	Headers     map[string]string `yaml:"headers"`
 	RequestBody map[string]string `yaml:"requestBody"`
+	FormParams  map[string]string `yaml:"formParams"`
 	Response    Response          `yaml:"response"`
 }
 

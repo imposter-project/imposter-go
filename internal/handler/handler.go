@@ -125,6 +125,19 @@ func calculateMatchScore(res config.Resource, r *http.Request, body []byte) int 
 		score++
 	}
 
+	// Match form parameters (if content type is application/x-www-form-urlencoded)
+	if len(res.FormParams) > 0 && strings.HasPrefix(r.Header.Get("Content-Type"), "application/x-www-form-urlencoded") {
+		if err := r.ParseForm(); err != nil {
+			return 0
+		}
+		for key, expectedValue := range res.FormParams {
+			if r.FormValue(key) != expectedValue {
+				return 0
+			}
+			score++
+		}
+	}
+
 	// Match request body
 	if xpathQuery, exists := res.RequestBody["xpath"]; exists {
 		if !matcher.MatchXPath(body, xpathQuery) {
