@@ -78,6 +78,11 @@ func HandleRequest(w http.ResponseWriter, r *http.Request, configDir string, con
 		statusCode = 200
 	}
 
+	// Set response headers
+	for key, value := range best.Resource.Response.Headers {
+		w.Header().Set(key, value)
+	}
+
 	if best.Resource.Response.Fail != "" {
 		switch best.Resource.Response.Fail {
 		case "EmptyResponse":

@@ -12,11 +12,12 @@ import (
 
 // Response represents an HTTP response
 type Response struct {
-	Content    string `yaml:"content"`
-	StatusCode int    `yaml:"statusCode"`
-	File       string `yaml:"file"`
-	Fail       string `yaml:"fail"`
-	Delay      Delay  `yaml:"delay"`
+	Content    string            `yaml:"content"`
+	StatusCode int               `yaml:"statusCode"`
+	File       string            `yaml:"file"`
+	Fail       string            `yaml:"fail"`
+	Delay      Delay             `yaml:"delay"`
+	Headers    map[string]string `yaml:"headers"`
 }
 
 // Delay represents the delay configuration for a response
