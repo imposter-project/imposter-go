@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -76,7 +77,7 @@ func LoadConfig(configDir string) []Config {
 			return filepath.SkipDir
 		}
 
-		if (!info.IsDir() && (strings.HasSuffix(info.Name(), "-config.json") || strings.HasSuffix(info.Name(), "-config.yaml") || strings.HasSuffix(info.Name(), "-config.yml"))) {
+		if !info.IsDir() && (strings.HasSuffix(info.Name(), "-config.json") || strings.HasSuffix(info.Name(), "-config.yaml") || strings.HasSuffix(info.Name(), "-config.yml")) {
 			fmt.Printf("Loading config file: %s\n", path)
 			fileConfig, err := parseConfig(path)
 			if err != nil {
@@ -110,10 +111,27 @@ func parseConfig(path string) (*Config, error) {
 		return nil, fmt.Errorf("failed to read file: %w", err)
 	}
 
+	// Substitute environment variables
+	data = []byte(substituteEnvVars(string(data)))
+
 	var cfg Config
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal YAML: %w", err)
 	}
 
 	return &cfg, nil
+}
+
+// substituteEnvVars replaces ${env.VAR} and ${env.VAR:-default} with environment variable values
+func substituteEnvVars(content string) string {
+	re := regexp.MustCompile(`\$\{env\.([A-Z0-9_]+)(:-([^}]+))?\}`)
+	return re.ReplaceAllStringFunc(content, func(match string) string {
+		groups := re.FindStringSubmatch(match)
+		envVar := groups[1]
+		defaultValue := groups[3]
+		if value, exists := os.LookupEnv(envVar); exists {
+			return value
+		}
+		return defaultValue
+	})
 }
