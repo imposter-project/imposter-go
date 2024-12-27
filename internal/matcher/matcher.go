@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/antchfx/xmlquery"
+	"github.com/antchfx/xpath"
 	"github.com/gatehill/imposter-go/internal/config"
 	"k8s.io/client-go/util/jsonpath"
 )
@@ -18,7 +19,18 @@ func MatchXPath(body []byte, condition config.BodyMatchCondition) bool {
 		return false
 	}
 
-	result := xmlquery.FindOne(doc, condition.XPath)
+	// Compile an XPath expression with namespace bindings.
+	// The map keys are the prefixes (e.g. "ns1"), and the values are the namespace URIs.
+	expr, err := xpath.CompileWithNS(
+		condition.XPath,
+		condition.XMLNamespaces,
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	// Select the node using the compiled expression.
+	result := xmlquery.QuerySelector(doc, expr)
 	if result == nil {
 		return MatchCondition("", condition.MatchCondition)
 	}
