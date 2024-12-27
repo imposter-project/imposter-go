@@ -71,10 +71,21 @@ func LoadConfig(configDir string) []Config {
 	scanRecursive := (os.Getenv("IMPOSTER_CONFIG_SCAN_RECURSIVE") == "true")
 	autoBasePath := (os.Getenv("IMPOSTER_AUTO_BASE_PATH") == "true")
 
+	ignorePaths := loadIgnorePaths(configDir)
+
 	err := filepath.Walk(configDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
+
+		// Skip ignored paths
+		if shouldIgnorePath(path, ignorePaths) {
+			if info.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+
 		// Skip subdirectories if not scanning recursively
 		if info.IsDir() && info.Name() != filepath.Base(configDir) && !scanRecursive {
 			return filepath.SkipDir
@@ -106,7 +117,7 @@ func LoadConfig(configDir string) []Config {
 			for i := range fileConfig.Resources {
 				if fileConfig.Resources[i].Response.File != "" && relDir != "." {
 					fileConfig.Resources[i].Response.File = filepath.Join(relDir, fileConfig.Resources[i].Response.File)
-					}
+				}
 				// Prefix paths with basePath
 				if fileConfig.BasePath != "" {
 					fileConfig.Resources[i].Path = filepath.Join(fileConfig.BasePath, fileConfig.Resources[i].Path)
@@ -120,6 +131,43 @@ func LoadConfig(configDir string) []Config {
 		panic(err)
 	}
 	return configs
+}
+
+// loadIgnorePaths loads ignore paths from .imposterignore file or uses default ignore paths
+func loadIgnorePaths(configDir string) []string {
+	defaultIgnorePaths := []string{".git", ".idea", ".svn", "node_modules"}
+	ignoreFilePath := filepath.Join(configDir, ".imposterignore")
+
+	if _, err := os.Stat(ignoreFilePath); os.IsNotExist(err) {
+		return defaultIgnorePaths
+	}
+
+	data, err := ioutil.ReadFile(ignoreFilePath)
+	if err != nil {
+		fmt.Printf("Failed to read .imposterignore file: %v\n", err)
+		return defaultIgnorePaths
+	}
+
+	lines := strings.Split(string(data), "\n")
+	var ignorePaths []string
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line != "" && !strings.HasPrefix(line, "#") {
+			ignorePaths = append(ignorePaths, line)
+		}
+	}
+
+	return ignorePaths
+}
+
+// shouldIgnorePath checks if a path should be ignored based on the ignore paths
+func shouldIgnorePath(path string, ignorePaths []string) bool {
+	for _, ignorePath := range ignorePaths {
+		if strings.Contains(path, ignorePath) {
+			return true
+		}
+	}
+	return false
 }
 
 // parseConfig loads and parses a YAML configuration file
