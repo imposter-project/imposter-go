@@ -34,5 +34,5 @@ func main() {
 
 	// Initialize and start the server with multiple configs
 	srv := server.NewServer(imposterConfig, configDir, configs)
-	srv.Start()
+	srv.Start(imposterConfig)
 }

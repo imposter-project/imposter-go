@@ -21,11 +21,11 @@ func NewServer(imposterConfig *config.ImposterConfig, configDir string, configs 
 	}
 }
 
-func (s *Server) Start() {
+func (s *Server) Start(imposterConfig *config.ImposterConfig) {
 	fmt.Printf("Server is listening on %s...\n", s.Addr)
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		handler.HandleRequest(w, r, s.ConfigDir, s.Configs)
+		handler.HandleRequest(w, r, s.ConfigDir, s.Configs, imposterConfig)
 	})
 
 	if err := http.ListenAndServe(s.Addr, nil); err != nil {

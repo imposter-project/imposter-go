@@ -19,6 +19,7 @@ type Response struct {
 	Fail       string            `yaml:"fail"`
 	Delay      Delay             `yaml:"delay"`
 	Headers    map[string]string `yaml:"headers"`
+	Template   bool              `yaml:"template"`
 }
 
 // Delay represents the delay configuration for a response
