@@ -397,17 +397,54 @@ func calculateMatchScore(res config.Resource, r *http.Request, body []byte) int 
 
 	// Match request body
 	if res.RequestBody.JSONPath != "" {
-		if !matcher.MatchJSONPath(body, res.RequestBody) {
+		if !matcher.MatchJSONPath(body, res.RequestBody.BodyMatchCondition) {
 			return 0
 		}
 		score++
 	} else if res.RequestBody.XPath != "" {
-		if !matcher.MatchXPath(body, res.RequestBody) {
+		if !matcher.MatchXPath(body, res.RequestBody.BodyMatchCondition) {
 			return 0
 		}
 		score++
 	} else if res.RequestBody.Value != "" {
 		if !matcher.MatchCondition(string(body), res.RequestBody.MatchCondition) {
+			return 0
+		}
+		score++
+	} else if len(res.RequestBody.AllOf) > 0 {
+		for _, condition := range res.RequestBody.AllOf {
+			if condition.JSONPath != "" {
+				if !matcher.MatchJSONPath(body, condition) {
+					return 0
+				}
+			} else if condition.XPath != "" {
+				if !matcher.MatchXPath(body, condition) {
+					return 0
+				}
+			} else if !matcher.MatchCondition(string(body), condition.MatchCondition) {
+				return 0
+			}
+		}
+		score++
+	} else if len(res.RequestBody.AnyOf) > 0 {
+		matched := false
+		for _, condition := range res.RequestBody.AnyOf {
+			if condition.JSONPath != "" {
+				if matcher.MatchJSONPath(body, condition) {
+					matched = true
+					break
+				}
+			} else if condition.XPath != "" {
+				if matcher.MatchXPath(body, condition) {
+					matched = true
+					break
+				}
+			} else if matcher.MatchCondition(string(body), condition.MatchCondition) {
+				matched = true
+				break
+			}
+		}
+		if !matched {
 			return 0
 		}
 		score++

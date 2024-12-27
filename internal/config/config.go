@@ -35,12 +35,19 @@ type MatchCondition struct {
 	Operator string `yaml:"operator"`
 }
 
+// BodyMatchCondition represents a condition for matching request bodies
+type BodyMatchCondition struct {
+	MatchCondition
+	JSONPath      string            `yaml:"jsonPath,omitempty"`
+	XPath         string            `yaml:"xPath,omitempty"`
+	XMLNamespaces map[string]string `yaml:"xmlNamespaces"`
+}
+
 // RequestBody represents the request body matching configuration
 type RequestBody struct {
-	MatchCondition
-	JSONPath      string            `yaml:"jsonPath"`
-	XPath         string            `yaml:"xPath"`
-	XMLNamespaces map[string]string `yaml:"xmlNamespaces"`
+	BodyMatchCondition
+	AllOf []BodyMatchCondition `yaml:"allOf"`
+	AnyOf []BodyMatchCondition `yaml:"anyOf"`
 }
 
 // Resource represents an HTTP resource

@@ -12,29 +12,29 @@ import (
 )
 
 // MatchXPath matches XML body content using XPath query
-func MatchXPath(body []byte, reqBody config.RequestBody) bool {
+func MatchXPath(body []byte, condition config.BodyMatchCondition) bool {
 	doc, err := xmlquery.Parse(bytes.NewReader(body))
 	if err != nil {
 		return false
 	}
 
-	result := xmlquery.FindOne(doc, reqBody.XPath)
+	result := xmlquery.FindOne(doc, condition.XPath)
 	if result == nil {
-		return MatchCondition("", reqBody.MatchCondition)
+		return MatchCondition("", condition.MatchCondition)
 	}
 
-	return MatchCondition(result.InnerText(), reqBody.MatchCondition)
+	return MatchCondition(result.InnerText(), condition.MatchCondition)
 }
 
 // MatchJSONPath matches JSON body content using JSONPath query
-func MatchJSONPath(body []byte, reqBody config.RequestBody) bool {
+func MatchJSONPath(body []byte, condition config.BodyMatchCondition) bool {
 	var jsonData interface{}
 	if err := json.Unmarshal(body, &jsonData); err != nil {
 		return false
 	}
 
 	jpath := jsonpath.New("jsonpath")
-	if err := jpath.Parse(reqBody.JSONPath); err != nil {
+	if err := jpath.Parse(condition.JSONPath); err != nil {
 		return false
 	}
 
@@ -43,7 +43,7 @@ func MatchJSONPath(body []byte, reqBody config.RequestBody) bool {
 		return false
 	}
 
-	return MatchCondition(results.String(), reqBody.MatchCondition)
+	return MatchCondition(results.String(), condition.MatchCondition)
 }
 
 // MatchSimpleOrAdvancedCondition checks if a value matches a condition based on the operator
