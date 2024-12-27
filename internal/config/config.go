@@ -25,6 +25,7 @@ type Resource struct {
 	Headers     map[string]string `yaml:"headers"`
 	RequestBody map[string]string `yaml:"requestBody"`
 	FormParams  map[string]string `yaml:"formParams"`
+	PathParams  map[string]string `yaml:"pathParams"` // new field
 	Response    Response          `yaml:"response"`
 }
 

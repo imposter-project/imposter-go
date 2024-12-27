@@ -101,11 +101,28 @@ func calculateMatchScore(res config.Resource, r *http.Request, body []byte) int 
 	}
 	score++
 
-	// Match path
-	if r.URL.Path != res.Path {
+	// Match path with optional pathParams
+	requestSegments := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	resourceSegments := strings.Split(strings.Trim(res.Path, "/"), "/")
+	if len(requestSegments) != len(resourceSegments) {
 		return 0
 	}
-	score++
+
+	for i, segment := range resourceSegments {
+		if strings.HasPrefix(segment, "{") && strings.HasSuffix(segment, "}") {
+			paramName := strings.Trim(segment, "{}")
+			if expectedValue, hasParam := res.PathParams[paramName]; hasParam {
+				if requestSegments[i] != expectedValue {
+					return 0
+				}
+				score++
+			}
+		} else {
+			if requestSegments[i] != segment {
+				return 0
+			}
+		}
+	}
 
 	// Match query parameters
 	for key, expectedValue := range res.QueryParams {
