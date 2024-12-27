@@ -351,8 +351,8 @@ func calculateMatchScore(res config.Resource, r *http.Request, body []byte) int 
 	for i, segment := range resourceSegments {
 		if strings.HasPrefix(segment, "{") && strings.HasSuffix(segment, "}") {
 			paramName := strings.Trim(segment, "{}")
-			if expectedValue, hasParam := res.PathParams[paramName]; hasParam {
-				if requestSegments[i] != expectedValue {
+			if condition, hasParam := res.PathParams[paramName]; hasParam {
+				if !matcher.MatchSimpleOrAdvancedCondition(requestSegments[i], condition) {
 					return 0
 				}
 				score++
@@ -365,18 +365,18 @@ func calculateMatchScore(res config.Resource, r *http.Request, body []byte) int 
 	}
 
 	// Match query parameters
-	for key, expectedValue := range res.QueryParams {
+	for key, condition := range res.QueryParams {
 		actualValue := r.URL.Query().Get(key)
-		if actualValue != expectedValue {
+		if !matcher.MatchSimpleOrAdvancedCondition(actualValue, condition) {
 			return 0
 		}
 		score++
 	}
 
 	// Match headers
-	for key, expectedValue := range res.Headers {
+	for key, condition := range res.Headers {
 		actualValue := r.Header.Get(key)
-		if !strings.EqualFold(actualValue, expectedValue) {
+		if !matcher.MatchSimpleOrAdvancedCondition(actualValue, condition) {
 			return 0
 		}
 		score++
@@ -387,8 +387,8 @@ func calculateMatchScore(res config.Resource, r *http.Request, body []byte) int 
 		if err := r.ParseForm(); err != nil {
 			return 0
 		}
-		for key, expectedValue := range res.FormParams {
-			if r.FormValue(key) != expectedValue {
+		for key, condition := range res.FormParams {
+			if !matcher.MatchSimpleOrAdvancedCondition(r.FormValue(key), condition) {
 				return 0
 			}
 			score++
@@ -396,14 +396,18 @@ func calculateMatchScore(res config.Resource, r *http.Request, body []byte) int 
 	}
 
 	// Match request body
-	if xpathQuery, exists := res.RequestBody["xpath"]; exists {
-		if !matcher.MatchXPath(body, xpathQuery) {
+	if res.RequestBody.JSONPath != "" {
+		if !matcher.MatchJSONPath(body, res.RequestBody) {
 			return 0
 		}
 		score++
-	}
-	if jsonPathQuery, exists := res.RequestBody["jsonpath"]; exists {
-		if !matcher.MatchJSONPath(body, jsonPathQuery) {
+	} else if res.RequestBody.XPath != "" {
+		if !matcher.MatchXPath(body, res.RequestBody) {
+			return 0
+		}
+		score++
+	} else if res.RequestBody.Value != "" {
+		if !matcher.MatchCondition(string(body), res.RequestBody.MatchCondition) {
 			return 0
 		}
 		score++

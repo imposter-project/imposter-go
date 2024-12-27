@@ -29,16 +29,30 @@ type Delay struct {
 	Max   int `yaml:"max"`
 }
 
+// MatchCondition represents a condition for matching requests
+type MatchCondition struct {
+	Value    string `yaml:"value"`
+	Operator string `yaml:"operator"`
+}
+
+// RequestBody represents the request body matching configuration
+type RequestBody struct {
+	MatchCondition
+	JSONPath      string            `yaml:"jsonPath"`
+	XPath         string            `yaml:"xPath"`
+	XMLNamespaces map[string]string `yaml:"xmlNamespaces"`
+}
+
 // Resource represents an HTTP resource
 type Resource struct {
-	Method      string            `yaml:"method"`
-	Path        string            `yaml:"path"`
-	QueryParams map[string]string `yaml:"queryParams"`
-	Headers     map[string]string `yaml:"headers"`
-	RequestBody map[string]string `yaml:"requestBody"`
-	FormParams  map[string]string `yaml:"formParams"`
-	PathParams  map[string]string `yaml:"pathParams"`
-	Response    Response          `yaml:"response"`
+	Method      string                 `yaml:"method"`
+	Path        string                 `yaml:"path"`
+	QueryParams map[string]interface{} `yaml:"queryParams"`
+	Headers     map[string]interface{} `yaml:"headers"`
+	RequestBody RequestBody            `yaml:"requestBody"`
+	FormParams  map[string]interface{} `yaml:"formParams"`
+	PathParams  map[string]interface{} `yaml:"pathParams"`
+	Response    Response               `yaml:"response"`
 }
 
 type Config struct {
