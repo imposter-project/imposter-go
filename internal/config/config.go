@@ -15,6 +15,7 @@ type Response struct {
 	Content    string `yaml:"content"`
 	StatusCode int    `yaml:"statusCode"`
 	File       string `yaml:"file"`
+	Fail       string `yaml:"fail"`
 }
 
 // Resource represents an HTTP resource

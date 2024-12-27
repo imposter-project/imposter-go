@@ -63,7 +63,33 @@ func HandleRequest(w http.ResponseWriter, r *http.Request, configDir string, con
 	if statusCode == 0 {
 		statusCode = 200
 	}
-	w.WriteHeader(statusCode)
+
+	if best.Resource.Response.Fail != "" {
+		switch best.Resource.Response.Fail {
+		case "EmptyResponse":
+			// Send a status but no body
+			w.WriteHeader(statusCode)
+			fmt.Printf("Handled request (simulated failure: EmptyResponse) - method:%s, path:%s, status:%d, length:0\n",
+				r.Method, r.URL.Path, statusCode)
+			return
+
+		case "CloseConnection":
+			// Close the connection before sending any response
+			hijacker, ok := w.(http.Hijacker)
+			if !ok {
+				http.Error(w, "HTTP server does not support connection hijacking", http.StatusInternalServerError)
+				return
+			}
+			conn, _, err := hijacker.Hijack()
+			if err != nil {
+				http.Error(w, "Failed to hijack connection", http.StatusInternalServerError)
+				return
+			}
+			fmt.Printf("Handled request (simulated failure: CloseConnection) - method:%s, path:%s\n", r.Method, r.URL.Path)
+			conn.Close()
+			return
+		}
+	}
 
 	if best.Resource.Response.File != "" {
 		filePath := filepath.Join(configDir, best.Resource.Response.File)
