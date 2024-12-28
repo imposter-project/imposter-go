@@ -5,8 +5,8 @@ import (
 	"os"
 
 	"github.com/gatehill/imposter-go/internal/config"
-
 	"github.com/gatehill/imposter-go/internal/server"
+	"github.com/gatehill/imposter-go/internal/store"
 )
 
 func main() {
@@ -24,6 +24,9 @@ func main() {
 	}
 
 	configs := config.LoadConfig(configDir)
+
+	store.InitStores()
+	store.PreloadStores(configDir, configs)
 
 	// Optional: check that at least one config is rest
 	for _, cfg := range configs {

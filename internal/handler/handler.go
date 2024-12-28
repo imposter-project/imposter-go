@@ -16,6 +16,8 @@ import (
 	"github.com/gatehill/imposter-go/internal/matcher"
 	uuid "github.com/satori/go.uuid"
 	"golang.org/x/exp/rand"
+	"github.com/gatehill/imposter-go/internal/store"
+	"encoding/json"
 )
 
 // HandleRequest processes incoming HTTP requests based on resources
@@ -190,6 +192,7 @@ func processTemplate(template string, r *http.Request, imposterConfig *config.Im
 	template = strings.ReplaceAll(template, "${system.server.port}", imposterConfig.ServerPort)
 	template = strings.ReplaceAll(template, "${system.server.url}", fmt.Sprintf("http://%s%s", r.Host, r.URL.Path))
 
+	template = replaceStorePlaceholders(template)
 	return template
 }
 
@@ -451,4 +454,27 @@ func calculateMatchScore(res config.Resource, r *http.Request, body []byte) int 
 	}
 
 	return score
+}
+
+func replaceStorePlaceholders(tmpl string) string {
+	re := regexp.MustCompile(`\$\{stores\.([^\.]+)\.([^}]+)\}`)
+	return re.ReplaceAllStringFunc(tmpl, func(match string) string {
+		groups := re.FindStringSubmatch(match)
+		storeName := groups[1]
+		key := groups[2]
+		val, found := store.GetValue(storeName, key)
+		if !found {
+			return ""
+		}
+		switch v := val.(type) {
+		case string:
+			return v
+		default:
+			jsonBytes, err := json.Marshal(v)
+			if err != nil {
+				return ""
+			}
+			return string(jsonBytes)
+		}
+	})
 }

@@ -62,10 +62,20 @@ type Resource struct {
 	Response    Response               `yaml:"response"`
 }
 
+type System struct {
+	Stores map[string]StoreDefinition `yaml:"stores"`
+}
+
+type StoreDefinition struct {
+	PreloadFile string                 `yaml:"preloadFile,omitempty"`
+	PreloadData map[string]interface{} `yaml:"preloadData,omitempty"`
+}
+
 type Config struct {
 	Plugin    string `yaml:"plugin"`
 	BasePath  string `yaml:"basePath"`
 	Resources []Resource
+	System    *System `yaml:"system,omitempty"`
 }
 
 // Application-wide configuration
