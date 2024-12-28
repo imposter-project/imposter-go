@@ -19,7 +19,7 @@ import (
 )
 
 // ProcessTemplate processes a template string, replacing placeholders with actual values.
-func ProcessTemplate(template string, r *http.Request, imposterConfig *config.ImposterConfig) string {
+func ProcessTemplate(template string, r *http.Request, imposterConfig *config.ImposterConfig, requestStore map[string]interface{}) string {
 	// Replace request path parameters
 	for key, value := range r.URL.Query() {
 		placeholder := fmt.Sprintf("${context.request.queryParams.%s}", key)
@@ -80,11 +80,11 @@ func ProcessTemplate(template string, r *http.Request, imposterConfig *config.Im
 	template = strings.ReplaceAll(template, "${system.server.port}", imposterConfig.ServerPort)
 	template = strings.ReplaceAll(template, "${system.server.url}", fmt.Sprintf("http://%s%s", r.Host, r.URL.Path))
 
-	template = replaceStorePlaceholders(template)
+	template = replaceStorePlaceholders(template, requestStore)
 	return template
 }
 
-// replaceRandomPlaceholders handles random value placeholders
+// replaceRandomPlaceholders handles random value placeholders.
 func replaceRandomPlaceholders(template string) string {
 	re := regexp.MustCompile(`\$\{random\.(\w+)\(([^)]*)\)\}`)
 	return re.ReplaceAllStringFunc(template, func(match string) string {
@@ -118,6 +118,7 @@ func replaceRandomPlaceholders(template string) string {
 	})
 }
 
+// randomUUID generates a random UUID string.
 func randomUUID(uppercase bool) string {
 	uuidStr := uuid.NewV4().String()
 	if uppercase {
@@ -126,8 +127,7 @@ func randomUUID(uppercase bool) string {
 	return uuidStr
 }
 
-// Helper functions for random value generation and parameter parsing
-
+// parseParams parses a parameter string into a map.
 func parseParams(paramStr string) map[string]string {
 	params := make(map[string]string)
 	if paramStr == "" {
@@ -142,6 +142,7 @@ func parseParams(paramStr string) map[string]string {
 	return params
 }
 
+// getIntParam retrieves an integer parameter from a map, or returns a default value.
 func getIntParam(params map[string]string, key string, defaultValue int) int {
 	if value, exists := params[key]; exists {
 		if intValue, err := strconv.Atoi(value); err == nil {
@@ -151,6 +152,7 @@ func getIntParam(params map[string]string, key string, defaultValue int) int {
 	return defaultValue
 }
 
+// getBoolParam retrieves a boolean parameter from a map, or returns a default value.
 func getBoolParam(params map[string]string, key string, defaultValue bool) bool {
 	if value, exists := params[key]; exists {
 		if boolValue, err := strconv.ParseBool(value); err == nil {
@@ -160,6 +162,7 @@ func getBoolParam(params map[string]string, key string, defaultValue bool) bool 
 	return defaultValue
 }
 
+// getStringParam retrieves a string parameter from a map, or returns a default value.
 func getStringParam(params map[string]string, key string, defaultValue string) string {
 	if value, exists := params[key]; exists {
 		return value
@@ -167,6 +170,7 @@ func getStringParam(params map[string]string, key string, defaultValue string) s
 	return defaultValue
 }
 
+// randomAlphabetic generates a random alphabetic string.
 func randomAlphabetic(length int, uppercase bool) string {
 	letters := "abcdefghijklmnopqrstuvwxyz"
 	if uppercase {
@@ -175,6 +179,7 @@ func randomAlphabetic(length int, uppercase bool) string {
 	return randomStringFromCharset(length, letters)
 }
 
+// randomAlphanumeric generates a random alphanumeric string.
 func randomAlphanumeric(length int, uppercase bool) string {
 	letters := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	if uppercase {
@@ -183,6 +188,7 @@ func randomAlphanumeric(length int, uppercase bool) string {
 	return randomStringFromCharset(length, letters)
 }
 
+// randomAny generates a random string from a given character set.
 func randomAny(chars string, length int, uppercase bool) string {
 	if uppercase {
 		chars = strings.ToUpper(chars)
@@ -190,11 +196,13 @@ func randomAny(chars string, length int, uppercase bool) string {
 	return randomStringFromCharset(length, chars)
 }
 
+// randomNumeric generates a random numeric string.
 func randomNumeric(length int) string {
 	digits := "0123456789"
 	return randomStringFromCharset(length, digits)
 }
 
+// randomStringFromCharset generates a random string from a given character set.
 func randomStringFromCharset(length int, charset string) string {
 	result := make([]byte, length)
 	for i := range result {
@@ -203,14 +211,15 @@ func randomStringFromCharset(length int, charset string) string {
 	return string(result)
 }
 
-func replaceStorePlaceholders(tmpl string) string {
+// replaceStorePlaceholders replaces store placeholders in a template with actual values.
+func replaceStorePlaceholders(tmpl string, requestStore map[string]interface{}) string {
 	re := regexp.MustCompile(`\$\{stores\.([^\.]+)\.([^}]+)\}`)
 	return re.ReplaceAllStringFunc(tmpl, func(match string) string {
 		return replaceOrUseDefault(match, match, func(plainExpr string) string {
 			groups := re.FindStringSubmatch(plainExpr)
 			storeName := groups[1]
 			key := groups[2]
-			val, found := store.GetValue(storeName, key)
+			val, found := getStoreValue(storeName, key, requestStore)
 			if !found {
 				return ""
 			}
@@ -228,10 +237,18 @@ func replaceStorePlaceholders(tmpl string) string {
 	})
 }
 
+// getStoreValue retrieves a value from a store, or from the request store if the store is "request".
+func getStoreValue(storeName, key string, requestStore map[string]interface{}) (interface{}, bool) {
+	if storeName == "request" {
+		val, found := requestStore[key]
+		return val, found
+	}
+	return store.GetValue(storeName, key)
+}
+
 // extractDefaultFromExpr extracts the default value from an expression, where
-// the expression is of the form ${expr:-default}
-// both the default value and the expression without the default value
-// are returned
+// the expression is of the form ${expr:-default}.
+// Both the default value and the expression without the default value are returned.
 func extractDefaultFromExpr(expr string) (defaultVal string, plainExpr string) {
 	inner := strings.Trim(expr, "${}")
 	parts := strings.Split(inner, ":-")
@@ -241,7 +258,7 @@ func extractDefaultFromExpr(expr string) (defaultVal string, plainExpr string) {
 	return "", expr
 }
 
-// replaceOrUseDefault replaces an expression in a template with a value, or a default value if the value is empty
+// replaceOrUseDefault replaces an expression in a template with a value, or a default value if the value is empty.
 func replaceOrUseDefault(template string, expr string, repl func(plainExpr string) string) string {
 	defaultVal, plainExpr := extractDefaultFromExpr(expr)
 	actualVal := repl(plainExpr)

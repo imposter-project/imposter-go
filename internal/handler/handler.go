@@ -62,8 +62,11 @@ func HandleRequest(w http.ResponseWriter, r *http.Request, configDir string, con
 		fmt.Printf("Warning: multiple equally specific matches. Using the first.\n")
 	}
 
+	// Initialize request-scoped store
+	requestStore := make(map[string]interface{})
+
 	// Capture request data
-	capture.CaptureRequestData(imposterConfig, best.Resource, r, body)
+	capture.CaptureRequestData(imposterConfig, best.Resource, r, body, requestStore)
 
 	// Handle delay if specified
 	if best.Resource.Response.Delay.Exact > 0 {
@@ -102,7 +105,7 @@ func HandleRequest(w http.ResponseWriter, r *http.Request, configDir string, con
 	}
 
 	if best.Resource.Response.Template {
-		responseContent = template.ProcessTemplate(responseContent, r, imposterConfig)
+		responseContent = template.ProcessTemplate(responseContent, r, imposterConfig, requestStore)
 	}
 
 	if best.Resource.Response.Fail != "" {

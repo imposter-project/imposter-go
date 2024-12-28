@@ -14,7 +14,8 @@ import (
 	"k8s.io/client-go/util/jsonpath"
 )
 
-func CaptureRequestData(imposterConfig *config.ImposterConfig, resource config.Resource, r *http.Request, body []byte) {
+// CaptureRequestData captures elements of the request and stores them in the specified store.
+func CaptureRequestData(imposterConfig *config.ImposterConfig, resource config.Resource, r *http.Request, body []byte, requestStore map[string]interface{}) {
 	for key, capture := range resource.Capture {
 		var value string
 		if capture.PathParam != "" {
@@ -28,7 +29,7 @@ func CaptureRequestData(imposterConfig *config.ImposterConfig, resource config.R
 		} else if capture.RequestHeader != "" {
 			value = r.Header.Get(capture.RequestHeader)
 		} else if capture.Expression != "" {
-			value = template.ProcessTemplate(capture.Expression, r, imposterConfig)
+			value = template.ProcessTemplate(capture.Expression, r, imposterConfig, requestStore)
 		} else if capture.Const != "" {
 			value = capture.Const
 		} else if capture.RequestBody.JSONPath != "" {
@@ -37,11 +38,16 @@ func CaptureRequestData(imposterConfig *config.ImposterConfig, resource config.R
 			value = extractXPath(body, capture.RequestBody.XPath, capture.RequestBody.XMLNamespaces)
 		}
 		if value != "" {
-			store.StoreValue(capture.Store, key, value)
+			if capture.Store == "request" {
+				requestStore[key] = value
+			} else {
+				store.StoreValue(capture.Store, key, value)
+			}
 		}
 	}
 }
 
+// extractJSONPath extracts a value from the JSON body using a JSONPath expression.
 func extractJSONPath(body []byte, jsonPath string) string {
 	var jsonData interface{}
 	if err := json.Unmarshal(body, &jsonData); err != nil {
@@ -61,6 +67,7 @@ func extractJSONPath(body []byte, jsonPath string) string {
 	return results.String()
 }
 
+// extractXPath extracts a value from the XML body using an XPath expression.
 func extractXPath(body []byte, xPath string, namespaces map[string]string) string {
 	doc, err := xmlquery.Parse(bytes.NewReader(body))
 	if err != nil {
