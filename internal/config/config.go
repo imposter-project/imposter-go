@@ -52,6 +52,7 @@ type RequestBody struct {
 
 // Response represents an HTTP response
 type Capture struct {
+	Enabled       bool   `yaml:"enabled,omitempty"`
 	Store         string `yaml:"store"`
 	PathParam     string `yaml:"pathParam,omitempty"`
 	QueryParam    string `yaml:"queryParam,omitempty"`

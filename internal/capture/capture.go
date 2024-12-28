@@ -17,6 +17,9 @@ import (
 // CaptureRequestData captures elements of the request and stores them in the specified store.
 func CaptureRequestData(imposterConfig *config.ImposterConfig, resource config.Resource, r *http.Request, body []byte, requestStore map[string]interface{}) {
 	for key, capture := range resource.Capture {
+		if !capture.Enabled {
+			continue
+		}
 		var value string
 		if capture.PathParam != "" {
 			value = utils.ExtractPathParams(r.URL.Path, resource.Path)[capture.PathParam]
