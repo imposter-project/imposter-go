@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
+	"strings"
 
 	"github.com/gatehill/imposter-go/internal/config"
 )
@@ -63,9 +64,34 @@ func GetValue(storeName, key string) (interface{}, bool) {
 	return val, found
 }
 
-func StoreValue(storeName, key, value string) {
+func StoreValue(storeName, key string, value interface{}) {
 	if _, ok := stores[storeName]; !ok {
 		stores[storeName] = &storeData{data: make(map[string]interface{})}
 	}
 	stores[storeName].data[key] = value
+}
+
+func GetAllValues(storeName, keyPrefix string) map[string]interface{} {
+	store, ok := stores[storeName]
+	if !ok {
+		return nil
+	}
+	result := make(map[string]interface{})
+	for k, v := range store.data {
+		if strings.HasPrefix(k, keyPrefix) {
+			result[k] = v
+		}
+	}
+	return result
+}
+
+func DeleteValue(storeName, key string) {
+	store, ok := stores[storeName]
+	if ok {
+		delete(store.data, key)
+	}
+}
+
+func DeleteStore(storeName string) {
+	delete(stores, storeName)
 }
