@@ -52,15 +52,21 @@ type RequestBody struct {
 
 // Response represents an HTTP response
 type Capture struct {
-	Enabled       bool   `yaml:"enabled,omitempty"`
-	Store         string `yaml:"store"`
+	Enabled     bool       `yaml:"enabled,omitempty"`
+	Store       string     `yaml:"store"`
+	Key         CaptureKey `yaml:"key,omitempty"`
+	CaptureKey  `yaml:",inline"`
+}
+
+// CaptureKey represents the key configuration for capturing request data.
+type CaptureKey struct {
 	PathParam     string `yaml:"pathParam,omitempty"`
 	QueryParam    string `yaml:"queryParam,omitempty"`
 	FormParam     string `yaml:"formParam,omitempty"`
 	RequestHeader string `yaml:"requestHeader,omitempty"`
 	Expression    string `yaml:"expression,omitempty"`
 	Const         string `yaml:"const,omitempty"`
-	RequestBody   struct {
+	RequestBody struct {
 		JSONPath      string            `yaml:"jsonPath,omitempty"`
 		XPath         string            `yaml:"xPath,omitempty"`
 		XMLNamespaces map[string]string `yaml:"xmlNamespaces,omitempty"`

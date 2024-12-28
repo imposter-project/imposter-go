@@ -20,34 +20,42 @@ func CaptureRequestData(imposterConfig *config.ImposterConfig, resource config.R
 		if !capture.Enabled {
 			continue
 		}
-		var value string
-		if capture.PathParam != "" {
-			value = utils.ExtractPathParams(r.URL.Path, resource.Path)[capture.PathParam]
-		} else if capture.QueryParam != "" {
-			value = r.URL.Query().Get(capture.QueryParam)
-		} else if capture.FormParam != "" {
-			if err := r.ParseForm(); err == nil {
-				value = r.FormValue(capture.FormParam)
-			}
-		} else if capture.RequestHeader != "" {
-			value = r.Header.Get(capture.RequestHeader)
-		} else if capture.Expression != "" {
-			value = template.ProcessTemplate(capture.Expression, r, imposterConfig, requestStore)
-		} else if capture.Const != "" {
-			value = capture.Const
-		} else if capture.RequestBody.JSONPath != "" {
-			value = extractJSONPath(body, capture.RequestBody.JSONPath)
-		} else if capture.RequestBody.XPath != "" {
-			value = extractXPath(body, capture.RequestBody.XPath, capture.RequestBody.XMLNamespaces)
-		}
+
+		itemName := getValueFromCaptureKey(capture.Key, key, r, body, imposterConfig, requestStore)
+		value := getValueFromCaptureKey(capture.CaptureKey, "", r, body, imposterConfig, requestStore)
+
 		if value != "" {
 			if capture.Store == "request" {
-				requestStore[key] = value
+				requestStore[itemName] = value
 			} else {
-				store.StoreValue(capture.Store, key, value)
+				store.StoreValue(capture.Store, itemName, value)
 			}
 		}
 	}
+}
+
+// getValueFromCaptureKey retrieves the value based on the capture key configuration.
+func getValueFromCaptureKey(key config.CaptureKey, defaultKey string, r *http.Request, body []byte, imposterConfig *config.ImposterConfig, requestStore map[string]interface{}) string {
+	if key.PathParam != "" {
+		return utils.ExtractPathParams(r.URL.Path, r.URL.Path)[key.PathParam]
+	} else if key.QueryParam != "" {
+		return r.URL.Query().Get(key.QueryParam)
+	} else if key.FormParam != "" {
+		if err := r.ParseForm(); err == nil {
+			return r.FormValue(key.FormParam)
+		}
+	} else if key.RequestHeader != "" {
+		return r.Header.Get(key.RequestHeader)
+	} else if key.Expression != "" {
+		return template.ProcessTemplate(key.Expression, r, imposterConfig, requestStore)
+	} else if key.Const != "" {
+		return key.Const
+	} else if key.RequestBody.JSONPath != "" {
+		return extractJSONPath(body, key.RequestBody.JSONPath)
+	} else if key.RequestBody.XPath != "" {
+		return extractXPath(body, key.RequestBody.XPath, key.RequestBody.XMLNamespaces)
+	}
+	return defaultKey
 }
 
 // extractJSONPath extracts a value from the JSON body using a JSONPath expression.
