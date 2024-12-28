@@ -3,9 +3,10 @@ package store
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gatehill/imposter-go/internal/config"
 	"io/ioutil"
 	"path/filepath"
+
+	"github.com/gatehill/imposter-go/internal/config"
 )
 
 type storeData struct {
@@ -60,4 +61,11 @@ func GetValue(storeName, key string) (interface{}, bool) {
 	}
 	val, found := store.data[key]
 	return val, found
+}
+
+func StoreValue(storeName, key, value string) {
+	if _, ok := stores[storeName]; !ok {
+		stores[storeName] = &storeData{data: make(map[string]interface{})}
+	}
+	stores[storeName].data[key] = value
 }

@@ -12,12 +12,16 @@ import (
 
 	"regexp"
 
+	"encoding/json"
+
+	"github.com/antchfx/xmlquery"
+	"github.com/antchfx/xpath"
 	"github.com/gatehill/imposter-go/internal/config"
 	"github.com/gatehill/imposter-go/internal/matcher"
+	"github.com/gatehill/imposter-go/internal/store"
 	uuid "github.com/satori/go.uuid"
 	"golang.org/x/exp/rand"
-	"github.com/gatehill/imposter-go/internal/store"
-	"encoding/json"
+	"k8s.io/client-go/util/jsonpath"
 )
 
 // HandleRequest processes incoming HTTP requests based on resources
@@ -65,6 +69,9 @@ func HandleRequest(w http.ResponseWriter, r *http.Request, configDir string, con
 	if tie {
 		fmt.Printf("Warning: multiple equally specific matches. Using the first.\n")
 	}
+
+	// Capture request data
+	captureRequestData(imposterConfig, best.Resource, r, body)
 
 	// Handle delay if specified
 	if best.Resource.Response.Delay.Exact > 0 {
@@ -136,6 +143,72 @@ func HandleRequest(w http.ResponseWriter, r *http.Request, configDir string, con
 	w.Write([]byte(responseContent))
 	fmt.Printf("Handled request - method:%s, path:%s, status:%d, length:%d\n",
 		r.Method, r.URL.Path, statusCode, len(responseContent))
+}
+
+func captureRequestData(imposterConfig *config.ImposterConfig, resource config.Resource, r *http.Request, body []byte) {
+	for key, capture := range resource.Capture {
+		var value string
+		if capture.PathParam != "" {
+			value = extractPathParams(r.URL.Path, resource.Path)[capture.PathParam]
+		} else if capture.QueryParam != "" {
+			value = r.URL.Query().Get(capture.QueryParam)
+		} else if capture.FormParam != "" {
+			if err := r.ParseForm(); err == nil {
+				value = r.FormValue(capture.FormParam)
+			}
+		} else if capture.RequestHeader != "" {
+			value = r.Header.Get(capture.RequestHeader)
+		} else if capture.Expression != "" {
+			value = processTemplate(capture.Expression, r, imposterConfig)
+		} else if capture.Const != "" {
+			value = capture.Const
+		} else if capture.RequestBody.JSONPath != "" {
+			value = extractJSONPath(body, capture.RequestBody.JSONPath)
+		} else if capture.RequestBody.XPath != "" {
+			value = extractXPath(body, capture.RequestBody.XPath, capture.RequestBody.XMLNamespaces)
+		}
+		if value != "" {
+			store.StoreValue(capture.Store, key, value)
+		}
+	}
+}
+
+func extractJSONPath(body []byte, jsonPath string) string {
+	var jsonData interface{}
+	if err := json.Unmarshal(body, &jsonData); err != nil {
+		return ""
+	}
+
+	jpath := jsonpath.New("jsonpath")
+	if err := jpath.Parse(jsonPath); err != nil {
+		return ""
+	}
+
+	results := new(bytes.Buffer)
+	if err := jpath.Execute(results, jsonData); err != nil {
+		return ""
+	}
+
+	return results.String()
+}
+
+func extractXPath(body []byte, xPath string, namespaces map[string]string) string {
+	doc, err := xmlquery.Parse(bytes.NewReader(body))
+	if err != nil {
+		return ""
+	}
+
+	expr, err := xpath.CompileWithNS(xPath, namespaces)
+	if err != nil {
+		return ""
+	}
+
+	result := xmlquery.QuerySelector(doc, expr)
+	if result == nil {
+		return ""
+	}
+
+	return result.InnerText()
 }
 
 // processTemplate replaces placeholders in the template with actual values

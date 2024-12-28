@@ -50,6 +50,22 @@ type RequestBody struct {
 	AnyOf []BodyMatchCondition `yaml:"anyOf"`
 }
 
+// Response represents an HTTP response
+type Capture struct {
+	Store         string `yaml:"store"`
+	PathParam     string `yaml:"pathParam,omitempty"`
+	QueryParam    string `yaml:"queryParam,omitempty"`
+	FormParam     string `yaml:"formParam,omitempty"`
+	RequestHeader string `yaml:"requestHeader,omitempty"`
+	Expression    string `yaml:"expression,omitempty"`
+	Const         string `yaml:"const,omitempty"`
+	RequestBody   struct {
+		JSONPath      string            `yaml:"jsonPath,omitempty"`
+		XPath         string            `yaml:"xPath,omitempty"`
+		XMLNamespaces map[string]string `yaml:"xmlNamespaces,omitempty"`
+	} `yaml:"requestBody,omitempty"`
+}
+
 // Resource represents an HTTP resource
 type Resource struct {
 	Method      string                 `yaml:"method"`
@@ -60,6 +76,7 @@ type Resource struct {
 	FormParams  map[string]interface{} `yaml:"formParams"`
 	PathParams  map[string]interface{} `yaml:"pathParams"`
 	Response    Response               `yaml:"response"`
+	Capture     map[string]Capture     `yaml:"capture,omitempty"`
 }
 
 type System struct {
