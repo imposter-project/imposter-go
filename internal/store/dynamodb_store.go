@@ -8,7 +8,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/gatehill/imposter-go/internal/config"
 )
 
 type DynamoDBStoreProvider struct {
@@ -22,10 +21,6 @@ func (p *DynamoDBStoreProvider) InitStores() {
 	}))
 	p.ddb = dynamodb.New(sess)
 	p.tableName = os.Getenv("IMPOSTER_DYNAMODB_TABLE")
-}
-
-func (p *DynamoDBStoreProvider) PreloadStores(configDir string, configs []config.Config) {
-	// No-op for now
 }
 
 func (p *DynamoDBStoreProvider) GetValue(storeName, key string) (interface{}, bool) {

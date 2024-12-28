@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gatehill/imposter-go/internal/config"
 	"github.com/go-redis/redis/v8"
 	"golang.org/x/net/context"
 )
@@ -24,10 +23,6 @@ func (p *RedisStoreProvider) InitStores() {
 		Password: os.Getenv("REDIS_PASSWORD"),
 		DB:       0,
 	})
-}
-
-func (p *RedisStoreProvider) PreloadStores(configDir string, configs []config.Config) {
-	// No-op for now
 }
 
 func (p *RedisStoreProvider) GetValue(storeName, key string) (interface{}, bool) {

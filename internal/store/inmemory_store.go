@@ -1,13 +1,7 @@
 package store
 
 import (
-	"encoding/json"
-	"fmt"
-	"io/ioutil"
-	"path/filepath"
 	"strings"
-
-	"github.com/gatehill/imposter-go/internal/config"
 )
 
 type InMemoryStoreProvider struct {
@@ -20,41 +14,6 @@ type storeData struct {
 
 func (p *InMemoryStoreProvider) InitStores() {
 	p.stores = make(map[string]*storeData)
-}
-
-func (p *InMemoryStoreProvider) PreloadStores(configDir string, configs []config.Config) {
-	for _, cfg := range configs {
-		if cfg.System != nil && cfg.System.Stores != nil {
-			for storeName, definition := range cfg.System.Stores {
-				if _, ok := p.stores[storeName]; !ok {
-					p.stores[storeName] = &storeData{data: make(map[string]interface{})}
-				}
-				if definition.PreloadFile != "" {
-					path := filepath.Join(configDir, definition.PreloadFile)
-					fmt.Printf("Preloading store '%s' from file: %s\n", storeName, path)
-					jsonBytes, err := ioutil.ReadFile(path)
-					if err != nil {
-						fmt.Printf("Warning: failed to read %s: %v\n", path, err)
-						continue
-					}
-					var jsonData map[string]interface{}
-					if err := json.Unmarshal(jsonBytes, &jsonData); err != nil {
-						fmt.Printf("Warning: invalid JSON in %s: %v\n", path, err)
-						continue
-					}
-					for k, v := range jsonData {
-						p.stores[storeName].data[k] = v
-					}
-				}
-				if len(definition.PreloadData) > 0 {
-					fmt.Printf("Preloading store '%s' from inline data\n", storeName)
-					for k, v := range definition.PreloadData {
-						p.stores[storeName].data[k] = v
-					}
-				}
-			}
-		}
-	}
 }
 
 func (p *InMemoryStoreProvider) GetValue(storeName, key string) (interface{}, bool) {
