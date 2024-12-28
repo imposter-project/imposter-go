@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"time"
+	"strconv"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -16,8 +18,12 @@ type DynamoDBStoreProvider struct {
 }
 
 func (p *DynamoDBStoreProvider) InitStores() {
+	region := os.Getenv("IMPOSTER_DYNAMODB_REGION")
+	if region == "" {
+		region = os.Getenv("AWS_REGION")
+	}
 	sess := session.Must(session.NewSession(&aws.Config{
-		Region: aws.String(os.Getenv("AWS_REGION")),
+		Region: aws.String(region),
 	}))
 	p.ddb = dynamodb.New(sess)
 	p.tableName = os.Getenv("IMPOSTER_DYNAMODB_TABLE")
@@ -54,13 +60,21 @@ func (p *DynamoDBStoreProvider) StoreValue(storeName, key string, value interfac
 		fmt.Printf("Failed to marshal value: %v\n", err)
 		return
 	}
+
+	item := map[string]*dynamodb.AttributeValue{
+		"StoreName": {S: aws.String(storeName)},
+		"Key":       {S: aws.String(key)},
+		"Value":     {S: aws.String(string(valueBytes))},
+	}
+
+	ttl := getTTL()
+	if ttl > 0 {
+		item[getTTLAttributeName()] = &dynamodb.AttributeValue{N: aws.String(fmt.Sprintf("%d", time.Now().Add(time.Duration(ttl)*time.Second).Unix()))}
+	}
+
 	_, err = p.ddb.PutItem(&dynamodb.PutItemInput{
 		TableName: aws.String(p.tableName),
-		Item: map[string]*dynamodb.AttributeValue{
-			"StoreName": {S: aws.String(storeName)},
-			"Key":       {S: aws.String(key)},
-			"Value":     {S: aws.String(string(valueBytes))},
-		},
+		Item:      item,
 	})
 	if err != nil {
 		fmt.Printf("Failed to put item: %v\n", err)
@@ -113,4 +127,25 @@ func (p *DynamoDBStoreProvider) DeleteValue(storeName, key string) {
 
 func (p *DynamoDBStoreProvider) DeleteStore(storeName string) {
 	// No-op for now
+}
+
+func getTTL() int64 {
+	ttlStr := os.Getenv("IMPOSTER_DYNAMODB_TTL")
+	if ttlStr == "" {
+		return -1
+	}
+	ttl, err := strconv.ParseInt(ttlStr, 10, 64)
+	if err != nil {
+		fmt.Printf("Invalid TTL value: %v\n", err)
+		return -1
+	}
+	return ttl
+}
+
+func getTTLAttributeName() string {
+	attributeName := os.Getenv("IMPOSTER_DYNAMODB_TTL_ATTRIBUTE")
+	if attributeName == "" {
+		return "ttl"
+	}
+	return attributeName
 }

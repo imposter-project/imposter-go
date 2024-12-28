@@ -25,7 +25,7 @@ func main() {
 
 	configs := config.LoadConfig(configDir)
 
-	store.InitStores()
+	store.InitStoreProvider()
 	store.PreloadStores(configDir, configs)
 
 	// Optional: check that at least one config is rest
