@@ -24,6 +24,8 @@ func InitStoreProvider() {
 	switch driver {
 	case "store-dynamodb":
 		storeProvider = &DynamoDBStoreProvider{}
+	case "store-redis":
+		storeProvider = &RedisStoreProvider{}
 	default:
 		storeProvider = &InMemoryStoreProvider{}
 	}

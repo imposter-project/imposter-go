@@ -10,11 +10,16 @@ require (
 	k8s.io/client-go v0.32.0
 )
 
-require github.com/jmespath/go-jmespath v0.4.0 // indirect
+require (
+	github.com/cespare/xxhash/v2 v2.1.2 // indirect
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
+	github.com/jmespath/go-jmespath v0.4.0 // indirect
+)
 
 require (
 	github.com/antchfx/xpath v1.3.3
 	github.com/aws/aws-sdk-go v1.55.5
+	github.com/go-redis/redis/v8 v8.11.5
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/satori/go.uuid v1.2.0
 	golang.org/x/net v0.33.0 // indirect
