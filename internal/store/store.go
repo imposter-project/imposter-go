@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -55,11 +56,32 @@ func PreloadStores(configDir string, configs []config.Config) {
 	}
 }
 
+func getStoreKeyPrefix() string {
+	return os.Getenv("IMPOSTER_STORE_KEY_PREFIX")
+}
+
+func applyKeyPrefix(key string) string {
+	prefix := getStoreKeyPrefix()
+	if prefix != "" {
+		return prefix + "." + key
+	}
+	return key
+}
+
+func removeKeyPrefix(key string) string {
+	prefix := getStoreKeyPrefix()
+	if prefix != "" {
+		return strings.TrimPrefix(key, prefix+".")
+	}
+	return key
+}
+
 func GetValue(storeName, key string) (interface{}, bool) {
 	store, ok := stores[storeName]
 	if !ok {
 		return nil, false
 	}
+	key = applyKeyPrefix(key)
 	val, found := store.data[key]
 	return val, found
 }
@@ -68,18 +90,20 @@ func StoreValue(storeName, key string, value interface{}) {
 	if _, ok := stores[storeName]; !ok {
 		stores[storeName] = &storeData{data: make(map[string]interface{})}
 	}
+	key = applyKeyPrefix(key)
 	stores[storeName].data[key] = value
 }
 
-func GetAllValues(storeName, keyPrefix string) map[string]interface{} {
+func GetAllValues(storeName, searchPrefix string) map[string]interface{} {
 	store, ok := stores[storeName]
 	if !ok {
 		return nil
 	}
 	result := make(map[string]interface{})
 	for k, v := range store.data {
-		if strings.HasPrefix(k, keyPrefix) {
-			result[k] = v
+		if strings.HasPrefix(k, searchPrefix) {
+			deprefixedKey := removeKeyPrefix(k)
+			result[deprefixedKey] = v
 		}
 	}
 	return result
@@ -88,6 +112,7 @@ func GetAllValues(storeName, keyPrefix string) map[string]interface{} {
 func DeleteValue(storeName, key string) {
 	store, ok := stores[storeName]
 	if ok {
+		key = applyKeyPrefix(key)
 		delete(store.data, key)
 	}
 }

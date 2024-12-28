@@ -7,8 +7,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gatehill/imposter-go/internal/store"
 	"log"
+
+	"github.com/gatehill/imposter-go/internal/store"
 )
 
 // HandleStoreRequest handles requests to the /system/store API.
@@ -33,7 +34,7 @@ func HandleStoreRequest(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPost:
 		handlePostStore(w, r, storeName)
 	case http.MethodDelete:
-		handleDeleteStore(w, r, storeName, key)
+		handleDeleteStore(w, storeName, key)
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
@@ -97,7 +98,7 @@ func handlePostStore(w http.ResponseWriter, r *http.Request, storeName string) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func handleDeleteStore(w http.ResponseWriter, r *http.Request, storeName, key string) {
+func handleDeleteStore(w http.ResponseWriter, storeName, key string) {
 	if key == "" {
 		store.DeleteStore(storeName)
 		log.Printf("Deleted store: %s", storeName)
