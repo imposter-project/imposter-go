@@ -16,3 +16,8 @@ go.sum
 .vscode/
 *.iml
 __debug_bin*
+
+# Binaries
+bootstrap
+imposter
+imposter.zip

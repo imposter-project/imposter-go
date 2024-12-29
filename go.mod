@@ -18,6 +18,7 @@ require (
 
 require (
 	github.com/antchfx/xpath v1.3.3
+	github.com/aws/aws-lambda-go v1.47.0
 	github.com/aws/aws-sdk-go v1.55.5
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect

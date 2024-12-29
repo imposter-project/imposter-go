@@ -185,6 +185,14 @@ func LoadConfig(configDir string) []Config {
 	if err != nil {
 		panic(err)
 	}
+
+	// TODO remove guard for rest plugin support
+	for _, cfg := range configs {
+		if cfg.Plugin != "rest" {
+			panic("Unsupported plugin type")
+		}
+	}
+
 	return configs
 }
 
