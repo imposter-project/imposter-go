@@ -1,4 +1,4 @@
-# Imposter-Go
+# Imposter-Go [![CI](https://github.com/imposter-project/imposter-go/actions/workflows/ci.yml/badge.svg)](https://github.com/imposter-project/imposter-go/actions/workflows/ci.yml)
 
 A Go implementation of the [Imposter Mock Engine](https://www.imposter.sh).
 
