@@ -1,12 +1,17 @@
 # Imposter-Go
 
-A Go implementation of the Imposter tool (https://github.com/outofcoffee/imposter), designed for HTTP mocking.
+A Go implementation of the [Imposter Mock Engine](https://www.imposter.sh).
 
 ## Features
 
-- Lightweight HTTP server
-- Mock response capabilities
-- Configurable via environment variables
+- Local: Lightweight local HTTP mock server
+- AWS Lambda: low latency, high throughput, ~15ms cold start
+- [REST/HTTP API mock](https://docs.imposter.sh/rest_plugin/) support
+
+## ⚠️ Limitations
+
+- No support for [scripting](https://docs.imposter.sh/scripting/)
+- No support (yet) for [SOAP/WSDL](https://docs.imposter.sh/soap_plugin/) or [OpenAPI](https://docs.imposter.sh/openapi_plugin/) mocks
 
 ## Requirements
 
@@ -22,12 +27,12 @@ A Go implementation of the Imposter tool (https://github.com/outofcoffee/imposte
 
 2. Build and run the server:
    ```bash
-   go run cmd/imposter/main.go
+   go run ./cmd/imposter/main.go ./examples/simple
    ```
 
-3. Visit `http://localhost:8080` in your browser or use `curl`:
+3. Visit `http://localhost:8080/hello` in your browser or use `curl`:
    ```bash
-   curl http://localhost:8080
+   curl http://localhost:8080/hello
    ```
 
 ## Configuration
