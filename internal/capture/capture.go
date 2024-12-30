@@ -5,13 +5,13 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/PaesslerAG/jsonpath"
 	"github.com/antchfx/xmlquery"
 	"github.com/antchfx/xpath"
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/store"
 	"github.com/imposter-project/imposter-go/internal/template"
 	"github.com/imposter-project/imposter-go/pkg/utils"
-	"k8s.io/client-go/util/jsonpath"
 )
 
 // CaptureRequestData captures elements of the request and stores them in the specified store.
@@ -59,23 +59,18 @@ func getValueFromCaptureKey(key config.CaptureKey, defaultKey string, r *http.Re
 }
 
 // extractJSONPath extracts a value from the JSON body using a JSONPath expression.
-func extractJSONPath(body []byte, jsonPath string) string {
+func extractJSONPath(body []byte, jsonPathExpr string) string {
 	var jsonData interface{}
 	if err := json.Unmarshal(body, &jsonData); err != nil {
 		return ""
 	}
 
-	jpath := jsonpath.New("jsonpath")
-	if err := jpath.Parse(jsonPath); err != nil {
+	result, err := jsonpath.Get(jsonPathExpr, jsonData)
+	if err != nil {
 		return ""
 	}
 
-	results := new(bytes.Buffer)
-	if err := jpath.Execute(results, jsonData); err != nil {
-		return ""
-	}
-
-	return results.String()
+	return result.(string)
 }
 
 // extractXPath extracts a value from the XML body using an XPath expression.

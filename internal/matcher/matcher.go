@@ -6,10 +6,10 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/PaesslerAG/jsonpath"
 	"github.com/antchfx/xmlquery"
 	"github.com/antchfx/xpath"
 	"github.com/imposter-project/imposter-go/internal/config"
-	"k8s.io/client-go/util/jsonpath"
 )
 
 // MatchXPath matches XML body content using XPath query
@@ -45,17 +45,12 @@ func MatchJSONPath(body []byte, condition config.BodyMatchCondition) bool {
 		return false
 	}
 
-	jpath := jsonpath.New("jsonpath")
-	if err := jpath.Parse(condition.JSONPath); err != nil {
+	results, err := jsonpath.Get(condition.JSONPath, jsonData)
+	if err != nil {
 		return false
 	}
 
-	results := new(bytes.Buffer)
-	if err := jpath.Execute(results, jsonData); err != nil {
-		return false
-	}
-
-	return MatchCondition(results.String(), condition.MatchCondition)
+	return MatchCondition(results.(string), condition.MatchCondition)
 }
 
 // MatchSimpleOrAdvancedCondition checks if a value matches a condition based on the operator
