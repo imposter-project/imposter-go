@@ -9,7 +9,7 @@ import (
 
 	"log"
 
-	"github.com/gatehill/imposter-go/internal/store"
+	"github.com/imposter-project/imposter-go/internal/store"
 )
 
 // HandleStoreRequest handles requests to the /system/store API.

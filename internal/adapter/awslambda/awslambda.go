@@ -8,10 +8,10 @@ import (
 	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
-	"github.com/gatehill/imposter-go/internal/config"
-	"github.com/gatehill/imposter-go/internal/handler"
-	"github.com/gatehill/imposter-go/internal/store"
-	"github.com/gatehill/imposter-go/pkg/utils"
+	"github.com/imposter-project/imposter-go/internal/config"
+	"github.com/imposter-project/imposter-go/internal/handler"
+	"github.com/imposter-project/imposter-go/internal/store"
+	"github.com/imposter-project/imposter-go/pkg/utils"
 )
 
 // HandleLambdaRequest handles incoming Lambda requests and routes them to the appropriate handler.

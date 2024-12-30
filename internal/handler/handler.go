@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gatehill/imposter-go/internal/capture"
-	"github.com/gatehill/imposter-go/internal/config"
-	"github.com/gatehill/imposter-go/internal/matcher"
-	"github.com/gatehill/imposter-go/internal/template"
+	"github.com/imposter-project/imposter-go/internal/capture"
+	"github.com/imposter-project/imposter-go/internal/config"
+	"github.com/imposter-project/imposter-go/internal/matcher"
+	"github.com/imposter-project/imposter-go/internal/template"
 	"golang.org/x/exp/rand"
 )
 

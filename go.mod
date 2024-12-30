@@ -1,4 +1,4 @@
-module github.com/gatehill/imposter-go
+module github.com/imposter-project/imposter-go
 
 go 1.23.4
 

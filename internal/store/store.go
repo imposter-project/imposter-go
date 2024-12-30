@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/gatehill/imposter-go/internal/config"
+	"github.com/imposter-project/imposter-go/internal/config"
 )
 
 type StoreProvider interface {

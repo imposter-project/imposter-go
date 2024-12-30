@@ -8,7 +8,7 @@ import (
 
 	"github.com/antchfx/xmlquery"
 	"github.com/antchfx/xpath"
-	"github.com/gatehill/imposter-go/internal/config"
+	"github.com/imposter-project/imposter-go/internal/config"
 	"k8s.io/client-go/util/jsonpath"
 )
 

@@ -4,8 +4,8 @@ import (
 	"os"
 
 	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/gatehill/imposter-go/internal/adapter/awslambda"
-	"github.com/gatehill/imposter-go/internal/adapter/httpserver"
+	"github.com/imposter-project/imposter-go/internal/adapter/awslambda"
+	"github.com/imposter-project/imposter-go/internal/adapter/httpserver"
 )
 
 func main() {

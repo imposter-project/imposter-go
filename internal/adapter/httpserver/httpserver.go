@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/gatehill/imposter-go/internal/config"
-	"github.com/gatehill/imposter-go/internal/handler"
-	"github.com/gatehill/imposter-go/internal/store"
+	"github.com/imposter-project/imposter-go/internal/config"
+	"github.com/imposter-project/imposter-go/internal/handler"
+	"github.com/imposter-project/imposter-go/internal/store"
 )
 
 // httpServer represents the HTTP server configuration.

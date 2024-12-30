@@ -7,10 +7,10 @@ import (
 
 	"github.com/antchfx/xmlquery"
 	"github.com/antchfx/xpath"
-	"github.com/gatehill/imposter-go/internal/config"
-	"github.com/gatehill/imposter-go/internal/store"
-	"github.com/gatehill/imposter-go/internal/template"
-	"github.com/gatehill/imposter-go/pkg/utils"
+	"github.com/imposter-project/imposter-go/internal/config"
+	"github.com/imposter-project/imposter-go/internal/store"
+	"github.com/imposter-project/imposter-go/internal/template"
+	"github.com/imposter-project/imposter-go/pkg/utils"
 	"k8s.io/client-go/util/jsonpath"
 )
 

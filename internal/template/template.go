@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gatehill/imposter-go/internal/config"
-	"github.com/gatehill/imposter-go/internal/store"
-	"github.com/gatehill/imposter-go/pkg/utils"
+	"github.com/imposter-project/imposter-go/internal/config"
+	"github.com/imposter-project/imposter-go/internal/store"
+	"github.com/imposter-project/imposter-go/pkg/utils"
 	uuid "github.com/satori/go.uuid"
 	"golang.org/x/exp/rand"
 )
