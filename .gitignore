@@ -9,15 +9,12 @@ bin/
 *.log
 *.out
 
-# Module cache
-go.sum
-
 .idea/
 .vscode/
 *.iml
 __debug_bin*
 
-# Binaries
+# Outputs
 bootstrap
 imposter
 imposter.zip
