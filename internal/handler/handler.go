@@ -16,23 +16,25 @@ import (
 	"golang.org/x/exp/rand"
 )
 
+// matchResult represents a match between a request and a resource
+type matchResult struct {
+	Resource config.Resource
+	Score    int
+	Wildcard bool
+}
+
 // HandleRequest processes incoming HTTP requests based on resources
 func HandleRequest(w http.ResponseWriter, r *http.Request, configDir string, configs []config.Config, imposterConfig *config.ImposterConfig) {
 	body, _ := ioutil.ReadAll(r.Body)
 	r.Body = ioutil.NopCloser(bytes.NewReader(body))
 
-	type matchResult struct {
-		Resource config.Resource
-		Score    int
-	}
-
 	var allMatches []matchResult
 
 	for _, cfg := range configs {
 		for _, res := range cfg.Resources {
-			score := calculateMatchScore(res, r, body)
+			score, isWildcard := calculateMatchScore(res, r, body)
 			if score > 0 {
-				allMatches = append(allMatches, matchResult{Resource: res, Score: score})
+				allMatches = append(allMatches, matchResult{Resource: res, Score: score, Wildcard: isWildcard})
 			}
 		}
 	}
@@ -46,15 +48,21 @@ func HandleRequest(w http.ResponseWriter, r *http.Request, configDir string, con
 		return
 	}
 
-	// Find the match with the highest score; track if there's a tie
+	// Find the best match considering both score and wildcard status
 	best := allMatches[0]
 	tie := false
 	for _, m := range allMatches[1:] {
-		if m.Score > best.Score {
+		// If scores are equal, prefer non-wildcard matches
+		if m.Score == best.Score {
+			if best.Wildcard && !m.Wildcard {
+				best = m
+				tie = false
+			} else if !best.Wildcard && !m.Wildcard || best.Wildcard && m.Wildcard {
+				tie = true
+			}
+		} else if m.Score > best.Score {
 			best = m
 			tie = false
-		} else if m.Score == best.Score {
-			tie = true
 		}
 	}
 
@@ -150,36 +158,46 @@ func matchBodyCondition(body []byte, condition config.BodyMatchCondition) bool {
 	return condition.Match(string(body))
 }
 
-// calculateMatchScore returns the number of matched constraints.
-// Returns 0 if any required condition fails, meaning no match.
-func calculateMatchScore(res config.Resource, r *http.Request, body []byte) int {
+// calculateMatchScore returns the match score and whether the match used a wildcard.
+// Returns (0, false) if any required condition fails, meaning no match.
+func calculateMatchScore(res config.Resource, r *http.Request, body []byte) (int, bool) {
 	score := 0
 
 	// Match method
 	if r.Method != res.Method {
-		return 0
+		return 0, false
 	}
 	score++
 
-	// Match path with optional pathParams
+	// Match path with optional pathParams and trailing wildcard
 	requestSegments := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
 	resourceSegments := strings.Split(strings.Trim(res.Path, "/"), "/")
-	if len(requestSegments) != len(resourceSegments) {
-		return 0
+
+	// Check for trailing wildcard
+	hasWildcard := len(resourceSegments) > 0 && resourceSegments[len(resourceSegments)-1] == "*"
+	if hasWildcard {
+		resourceSegments = resourceSegments[:len(resourceSegments)-1]
+		// For wildcard matches, we require at least the base path to match
+		if len(requestSegments) < len(resourceSegments) {
+			return 0, false
+		}
+	} else if len(requestSegments) != len(resourceSegments) {
+		return 0, false
 	}
 
+	// Match path segments
 	for i, segment := range resourceSegments {
 		if strings.HasPrefix(segment, "{") && strings.HasSuffix(segment, "}") {
 			paramName := strings.Trim(segment, "{}")
 			if condition, hasParam := res.PathParams[paramName]; hasParam {
 				if !condition.Matcher.Match(requestSegments[i]) {
-					return 0
+					return 0, false
 				}
 				score++
 			}
 		} else {
 			if requestSegments[i] != segment {
-				return 0
+				return 0, false
 			}
 		}
 	}
@@ -188,7 +206,7 @@ func calculateMatchScore(res config.Resource, r *http.Request, body []byte) int 
 	for key, condition := range res.QueryParams {
 		actualValue := r.URL.Query().Get(key)
 		if !condition.Matcher.Match(actualValue) {
-			return 0
+			return 0, false
 		}
 		score++
 	}
@@ -197,7 +215,7 @@ func calculateMatchScore(res config.Resource, r *http.Request, body []byte) int 
 	for key, condition := range res.Headers {
 		actualValue := r.Header.Get(key)
 		if !condition.Matcher.Match(actualValue) {
-			return 0
+			return 0, false
 		}
 		score++
 	}
@@ -205,11 +223,11 @@ func calculateMatchScore(res config.Resource, r *http.Request, body []byte) int 
 	// Match form parameters (if content type is application/x-www-form-urlencoded)
 	if len(res.FormParams) > 0 && strings.HasPrefix(r.Header.Get("Content-Type"), "application/x-www-form-urlencoded") {
 		if err := r.ParseForm(); err != nil {
-			return 0
+			return 0, false
 		}
 		for key, condition := range res.FormParams {
 			if !condition.Matcher.Match(r.FormValue(key)) {
-				return 0
+				return 0, false
 			}
 			score++
 		}
@@ -218,13 +236,13 @@ func calculateMatchScore(res config.Resource, r *http.Request, body []byte) int 
 	// Match request body
 	if res.RequestBody.JSONPath != "" || res.RequestBody.XPath != "" || res.RequestBody.Value != "" {
 		if !matchBodyCondition(body, res.RequestBody.BodyMatchCondition) {
-			return 0
+			return 0, false
 		}
 		score++
 	} else if len(res.RequestBody.AllOf) > 0 {
 		for _, condition := range res.RequestBody.AllOf {
 			if !matchBodyCondition(body, condition) {
-				return 0
+				return 0, false
 			}
 		}
 		score++
@@ -237,10 +255,10 @@ func calculateMatchScore(res config.Resource, r *http.Request, body []byte) int 
 			}
 		}
 		if !matched {
-			return 0
+			return 0, false
 		}
 		score++
 	}
 
-	return score
+	return score, hasWildcard
 }
