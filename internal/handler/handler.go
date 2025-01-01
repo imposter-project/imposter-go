@@ -140,6 +140,16 @@ func HandleRequest(w http.ResponseWriter, r *http.Request, configDir string, con
 		r.Method, r.URL.Path, statusCode, len(responseContent))
 }
 
+// matchBodyCondition handles matching a single body condition against the request body
+func matchBodyCondition(body []byte, condition config.BodyMatchCondition) bool {
+	if condition.JSONPath != "" {
+		return matcher.MatchJSONPath(body, condition)
+	} else if condition.XPath != "" {
+		return matcher.MatchXPath(body, condition)
+	}
+	return condition.Match(string(body))
+}
+
 // calculateMatchScore returns the number of matched constraints.
 // Returns 0 if any required condition fails, meaning no match.
 func calculateMatchScore(res config.Resource, r *http.Request, body []byte) int {
@@ -206,32 +216,14 @@ func calculateMatchScore(res config.Resource, r *http.Request, body []byte) int 
 	}
 
 	// Match request body
-	if res.RequestBody.JSONPath != "" {
-		if !matcher.MatchJSONPath(body, res.RequestBody.BodyMatchCondition) {
-			return 0
-		}
-		score++
-	} else if res.RequestBody.XPath != "" {
-		if !matcher.MatchXPath(body, res.RequestBody.BodyMatchCondition) {
-			return 0
-		}
-		score++
-	} else if res.RequestBody.Value != "" {
-		if !res.RequestBody.Match(string(body)) {
+	if res.RequestBody.JSONPath != "" || res.RequestBody.XPath != "" || res.RequestBody.Value != "" {
+		if !matchBodyCondition(body, res.RequestBody.BodyMatchCondition) {
 			return 0
 		}
 		score++
 	} else if len(res.RequestBody.AllOf) > 0 {
 		for _, condition := range res.RequestBody.AllOf {
-			if condition.JSONPath != "" {
-				if !matcher.MatchJSONPath(body, condition) {
-					return 0
-				}
-			} else if condition.XPath != "" {
-				if !matcher.MatchXPath(body, condition) {
-					return 0
-				}
-			} else if !condition.Match(string(body)) {
+			if !matchBodyCondition(body, condition) {
 				return 0
 			}
 		}
@@ -239,17 +231,7 @@ func calculateMatchScore(res config.Resource, r *http.Request, body []byte) int 
 	} else if len(res.RequestBody.AnyOf) > 0 {
 		matched := false
 		for _, condition := range res.RequestBody.AnyOf {
-			if condition.JSONPath != "" {
-				if matcher.MatchJSONPath(body, condition) {
-					matched = true
-					break
-				}
-			} else if condition.XPath != "" {
-				if matcher.MatchXPath(body, condition) {
-					matched = true
-					break
-				}
-			} else if condition.Match(string(body)) {
+			if matchBodyCondition(body, condition) {
 				matched = true
 				break
 			}
