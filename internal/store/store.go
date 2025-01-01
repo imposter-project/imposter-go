@@ -11,6 +11,9 @@ import (
 	"github.com/imposter-project/imposter-go/internal/config"
 )
 
+// Store represents a key-value store with string keys and arbitrary values
+type Store map[string]interface{}
+
 type StoreProvider interface {
 	InitStores()
 	GetValue(storeName, key string) (interface{}, bool)

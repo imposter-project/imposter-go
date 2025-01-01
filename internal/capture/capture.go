@@ -15,7 +15,7 @@ import (
 )
 
 // CaptureRequestData captures elements of the request and stores them in the specified store.
-func CaptureRequestData(imposterConfig *config.ImposterConfig, resource config.Resource, r *http.Request, body []byte, requestStore map[string]interface{}) {
+func CaptureRequestData(imposterConfig *config.ImposterConfig, resource config.Resource, r *http.Request, body []byte, requestStore store.Store) {
 	for key, capture := range resource.Capture {
 		if !capture.Enabled {
 			continue
@@ -35,7 +35,7 @@ func CaptureRequestData(imposterConfig *config.ImposterConfig, resource config.R
 }
 
 // getValueFromCaptureKey retrieves the value based on the capture key configuration.
-func getValueFromCaptureKey(key config.CaptureKey, defaultKey string, r *http.Request, body []byte, imposterConfig *config.ImposterConfig, requestStore map[string]interface{}) string {
+func getValueFromCaptureKey(key config.CaptureKey, defaultKey string, r *http.Request, body []byte, imposterConfig *config.ImposterConfig, requestStore store.Store) string {
 	if key.PathParam != "" {
 		return utils.ExtractPathParams(r.URL.Path, r.URL.Path)[key.PathParam]
 	} else if key.QueryParam != "" {

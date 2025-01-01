@@ -12,6 +12,7 @@ import (
 	"github.com/imposter-project/imposter-go/internal/capture"
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/matcher"
+	"github.com/imposter-project/imposter-go/internal/store"
 	"github.com/imposter-project/imposter-go/internal/template"
 	"golang.org/x/exp/rand"
 )
@@ -70,7 +71,7 @@ func HandleRequest(w http.ResponseWriter, r *http.Request, configDir string, con
 	r.Body = ioutil.NopCloser(bytes.NewReader(body))
 
 	// Initialize request-scoped store
-	requestStore := make(map[string]interface{})
+	requestStore := make(store.Store)
 	responseState := newResponseState()
 
 	// Process interceptors first
@@ -141,7 +142,7 @@ func HandleRequest(w http.ResponseWriter, r *http.Request, configDir string, con
 }
 
 // processInterceptor handles an interceptor and returns true if request processing should continue
-func processInterceptor(rs *responseState, r *http.Request, body []byte, interceptor config.Interceptor, configDir string, imposterConfig *config.ImposterConfig, requestStore map[string]interface{}) bool {
+func processInterceptor(rs *responseState, r *http.Request, body []byte, interceptor config.Interceptor, configDir string, imposterConfig *config.ImposterConfig, requestStore store.Store) bool {
 	// Capture request data if specified
 	if interceptor.Capture != nil {
 		capture.CaptureRequestData(imposterConfig, config.Resource{
@@ -160,7 +161,7 @@ func processInterceptor(rs *responseState, r *http.Request, body []byte, interce
 }
 
 // processResponse handles preparing the response state
-func processResponse(rs *responseState, r *http.Request, response config.Response, configDir string, imposterConfig *config.ImposterConfig, requestStore map[string]interface{}) {
+func processResponse(rs *responseState, r *http.Request, response config.Response, configDir string, imposterConfig *config.ImposterConfig, requestStore store.Store) {
 	// Handle delay if specified
 	if response.Delay.Exact > 0 {
 		delay := response.Delay.Exact
