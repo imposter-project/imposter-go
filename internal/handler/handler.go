@@ -162,7 +162,7 @@ func calculateMatchScore(res config.Resource, r *http.Request, body []byte) int 
 		if strings.HasPrefix(segment, "{") && strings.HasSuffix(segment, "}") {
 			paramName := strings.Trim(segment, "{}")
 			if condition, hasParam := res.PathParams[paramName]; hasParam {
-				if !matcher.MatchSimpleOrAdvancedCondition(requestSegments[i], condition) {
+				if !condition.Matcher.Match(requestSegments[i]) {
 					return 0
 				}
 				score++
@@ -177,7 +177,7 @@ func calculateMatchScore(res config.Resource, r *http.Request, body []byte) int 
 	// Match query parameters
 	for key, condition := range res.QueryParams {
 		actualValue := r.URL.Query().Get(key)
-		if !matcher.MatchSimpleOrAdvancedCondition(actualValue, condition) {
+		if !condition.Matcher.Match(actualValue) {
 			return 0
 		}
 		score++
@@ -186,7 +186,7 @@ func calculateMatchScore(res config.Resource, r *http.Request, body []byte) int 
 	// Match headers
 	for key, condition := range res.Headers {
 		actualValue := r.Header.Get(key)
-		if !matcher.MatchSimpleOrAdvancedCondition(actualValue, condition) {
+		if !condition.Matcher.Match(actualValue) {
 			return 0
 		}
 		score++
@@ -198,7 +198,7 @@ func calculateMatchScore(res config.Resource, r *http.Request, body []byte) int 
 			return 0
 		}
 		for key, condition := range res.FormParams {
-			if !matcher.MatchSimpleOrAdvancedCondition(r.FormValue(key), condition) {
+			if !condition.Matcher.Match(r.FormValue(key)) {
 				return 0
 			}
 			score++
@@ -217,7 +217,7 @@ func calculateMatchScore(res config.Resource, r *http.Request, body []byte) int 
 		}
 		score++
 	} else if res.RequestBody.Value != "" {
-		if !matcher.MatchCondition(string(body), res.RequestBody.MatchCondition) {
+		if !res.RequestBody.Match(string(body)) {
 			return 0
 		}
 		score++
@@ -231,7 +231,7 @@ func calculateMatchScore(res config.Resource, r *http.Request, body []byte) int 
 				if !matcher.MatchXPath(body, condition) {
 					return 0
 				}
-			} else if !matcher.MatchCondition(string(body), condition.MatchCondition) {
+			} else if !condition.Match(string(body)) {
 				return 0
 			}
 		}
@@ -249,7 +249,7 @@ func calculateMatchScore(res config.Resource, r *http.Request, body []byte) int 
 					matched = true
 					break
 				}
-			} else if matcher.MatchCondition(string(body), condition.MatchCondition) {
+			} else if condition.Match(string(body)) {
 				matched = true
 				break
 			}

@@ -3,8 +3,6 @@ package matcher
 import (
 	"bytes"
 	"encoding/json"
-	"regexp"
-	"strings"
 
 	"github.com/PaesslerAG/jsonpath"
 	"github.com/antchfx/xmlquery"
@@ -32,10 +30,10 @@ func MatchXPath(body []byte, condition config.BodyMatchCondition) bool {
 	// Select the node using the compiled expression.
 	result := xmlquery.QuerySelector(doc, expr)
 	if result == nil {
-		return MatchCondition("", condition.MatchCondition)
+		return condition.Match("")
 	}
 
-	return MatchCondition(result.InnerText(), condition.MatchCondition)
+	return condition.Match(result.InnerText())
 }
 
 // MatchJSONPath matches JSON body content using JSONPath query
@@ -50,43 +48,5 @@ func MatchJSONPath(body []byte, condition config.BodyMatchCondition) bool {
 		return false
 	}
 
-	return MatchCondition(results.(string), condition.MatchCondition)
-}
-
-// MatchSimpleOrAdvancedCondition checks if a value matches a condition based on the operator
-func MatchSimpleOrAdvancedCondition(actualValue string, condition interface{}) bool {
-	switch cond := condition.(type) {
-	case string:
-		return actualValue == cond
-	case config.MatchCondition:
-		return MatchCondition(actualValue, cond)
-	default:
-		return false
-	}
-}
-
-// MatchCondition checks if a value matches a condition based on the operator
-func MatchCondition(actualValue string, condition config.MatchCondition) bool {
-	switch condition.Operator {
-	case "EqualTo", "":
-		return actualValue == condition.Value
-	case "NotEqualTo":
-		return actualValue != condition.Value
-	case "Exists":
-		return actualValue != ""
-	case "NotExists":
-		return actualValue == ""
-	case "Contains":
-		return strings.Contains(actualValue, condition.Value)
-	case "NotContains":
-		return !strings.Contains(actualValue, condition.Value)
-	case "Matches":
-		matched, _ := regexp.MatchString(condition.Value, actualValue)
-		return matched
-	case "NotMatches":
-		matched, _ := regexp.MatchString(condition.Value, actualValue)
-		return !matched
-	default:
-		return false
-	}
+	return condition.Match(results.(string))
 }

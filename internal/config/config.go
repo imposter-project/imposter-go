@@ -29,10 +29,47 @@ type Delay struct {
 	Max   int `yaml:"max"`
 }
 
+// Matcher represents anything that can be matched against a value
+type Matcher interface {
+	Match(actualValue string) bool
+}
+
+// StringMatcher is a simple string matcher that checks for exact equality
+type StringMatcher string
+
+func (s StringMatcher) Match(actualValue string) bool {
+	return string(s) == actualValue
+}
+
 // MatchCondition represents a condition for matching requests
 type MatchCondition struct {
 	Value    string `yaml:"value"`
 	Operator string `yaml:"operator"`
+}
+
+func (m MatchCondition) Match(actualValue string) bool {
+	switch m.Operator {
+	case "EqualTo", "":
+		return actualValue == m.Value
+	case "NotEqualTo":
+		return actualValue != m.Value
+	case "Exists":
+		return actualValue != ""
+	case "NotExists":
+		return actualValue == ""
+	case "Contains":
+		return strings.Contains(actualValue, m.Value)
+	case "NotContains":
+		return !strings.Contains(actualValue, m.Value)
+	case "Matches":
+		matched, _ := regexp.MatchString(m.Value, actualValue)
+		return matched
+	case "NotMatches":
+		matched, _ := regexp.MatchString(m.Value, actualValue)
+		return !matched
+	default:
+		return false
+	}
 }
 
 // BodyMatchCondition represents a condition for matching request bodies
@@ -43,6 +80,10 @@ type BodyMatchCondition struct {
 	XMLNamespaces map[string]string `yaml:"xmlNamespaces"`
 }
 
+func (b BodyMatchCondition) Match(actualValue string) bool {
+	return b.MatchCondition.Match(actualValue)
+}
+
 // RequestBody represents the request body matching configuration
 type RequestBody struct {
 	BodyMatchCondition
@@ -50,7 +91,7 @@ type RequestBody struct {
 	AnyOf []BodyMatchCondition `yaml:"anyOf"`
 }
 
-// Response represents an HTTP response
+// Capture defines how to capture request data for later use in the response
 type Capture struct {
 	Enabled    bool       `yaml:"enabled,omitempty"`
 	Store      string     `yaml:"store"`
@@ -75,15 +116,15 @@ type CaptureKey struct {
 
 // Resource represents an HTTP resource
 type Resource struct {
-	Method      string                 `yaml:"method"`
-	Path        string                 `yaml:"path"`
-	QueryParams map[string]interface{} `yaml:"queryParams"`
-	Headers     map[string]interface{} `yaml:"headers"`
-	RequestBody RequestBody            `yaml:"requestBody"`
-	FormParams  map[string]interface{} `yaml:"formParams"`
-	PathParams  map[string]interface{} `yaml:"pathParams"`
-	Response    Response               `yaml:"response"`
-	Capture     map[string]Capture     `yaml:"capture,omitempty"`
+	Method      string                        `yaml:"method"`
+	Path        string                        `yaml:"path"`
+	QueryParams map[string]MatcherUnmarshaler `yaml:"queryParams"`
+	Headers     map[string]MatcherUnmarshaler `yaml:"headers"`
+	RequestBody RequestBody                   `yaml:"requestBody"`
+	FormParams  map[string]MatcherUnmarshaler `yaml:"formParams"`
+	PathParams  map[string]MatcherUnmarshaler `yaml:"pathParams"`
+	Response    Response                      `yaml:"response"`
+	Capture     map[string]Capture            `yaml:"capture,omitempty"`
 }
 
 type System struct {
@@ -263,4 +304,42 @@ func substituteEnvVars(content string) string {
 		}
 		return defaultValue
 	})
+}
+
+// UnmarshalYAML implements the yaml.Unmarshaler interface for Matcher
+func (m *MatchCondition) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	// First try to unmarshal as a simple string
+	var str string
+	if err := unmarshal(&str); err == nil {
+		*m = MatchCondition{Value: str}
+		return nil
+	}
+
+	// If that fails, try to unmarshal as a MatchCondition struct
+	type matchConditionAlias MatchCondition
+	return unmarshal((*matchConditionAlias)(m))
+}
+
+// MatcherUnmarshaler is a helper type for unmarshaling Matcher from YAML
+type MatcherUnmarshaler struct {
+	Matcher Matcher
+}
+
+// UnmarshalYAML implements the yaml.Unmarshaler interface for MatcherUnmarshaler
+func (mu *MatcherUnmarshaler) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	// First try to unmarshal as a simple string
+	var str string
+	if err := unmarshal(&str); err == nil {
+		mu.Matcher = StringMatcher(str)
+		return nil
+	}
+
+	// If that fails, try to unmarshal as a MatchCondition
+	var mc MatchCondition
+	if err := unmarshal(&mc); err == nil {
+		mu.Matcher = mc
+		return nil
+	}
+
+	return fmt.Errorf("failed to unmarshal as either string or MatchCondition")
 }
