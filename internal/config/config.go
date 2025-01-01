@@ -114,8 +114,8 @@ type CaptureKey struct {
 	} `yaml:"requestBody,omitempty"`
 }
 
-// Resource represents an HTTP resource
-type Resource struct {
+// RequestMatcher contains the common fields for matching requests
+type RequestMatcher struct {
 	Method      string                        `yaml:"method"`
 	Path        string                        `yaml:"path"`
 	QueryParams map[string]MatcherUnmarshaler `yaml:"queryParams"`
@@ -123,8 +123,20 @@ type Resource struct {
 	RequestBody RequestBody                   `yaml:"requestBody"`
 	FormParams  map[string]MatcherUnmarshaler `yaml:"formParams"`
 	PathParams  map[string]MatcherUnmarshaler `yaml:"pathParams"`
-	Response    Response                      `yaml:"response"`
 	Capture     map[string]Capture            `yaml:"capture,omitempty"`
+}
+
+// Resource represents an HTTP resource
+type Resource struct {
+	RequestMatcher `yaml:",inline"`
+	Response       Response `yaml:"response"`
+}
+
+// Interceptor represents an HTTP interceptor that can be executed before resources
+type Interceptor struct {
+	RequestMatcher `yaml:",inline"`
+	Response       *Response `yaml:"response,omitempty"`
+	Continue       bool      `yaml:"continue"`
 }
 
 type System struct {
@@ -137,10 +149,11 @@ type StoreDefinition struct {
 }
 
 type Config struct {
-	Plugin    string `yaml:"plugin"`
-	BasePath  string `yaml:"basePath"`
-	Resources []Resource
-	System    *System `yaml:"system,omitempty"`
+	Plugin       string `yaml:"plugin"`
+	BasePath     string `yaml:"basePath"`
+	Resources    []Resource
+	Interceptors []Interceptor `yaml:"interceptors,omitempty"`
+	System       *System       `yaml:"system,omitempty"`
 }
 
 // Application-wide configuration
