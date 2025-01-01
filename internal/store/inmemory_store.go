@@ -2,10 +2,12 @@ package store
 
 import (
 	"strings"
+	"sync"
 )
 
 type InMemoryStoreProvider struct {
 	stores map[string]*storeData
+	mu     sync.RWMutex
 }
 
 type storeData struct {
@@ -17,6 +19,9 @@ func (p *InMemoryStoreProvider) InitStores() {
 }
 
 func (p *InMemoryStoreProvider) GetValue(storeName, key string) (interface{}, bool) {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+
 	store, ok := p.stores[storeName]
 	if !ok {
 		return nil, false
@@ -27,6 +32,9 @@ func (p *InMemoryStoreProvider) GetValue(storeName, key string) (interface{}, bo
 }
 
 func (p *InMemoryStoreProvider) StoreValue(storeName, key string, value interface{}) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	if _, ok := p.stores[storeName]; !ok {
 		p.stores[storeName] = &storeData{data: make(map[string]interface{})}
 	}
@@ -35,22 +43,33 @@ func (p *InMemoryStoreProvider) StoreValue(storeName, key string, value interfac
 }
 
 func (p *InMemoryStoreProvider) GetAllValues(storeName, keyPrefix string) map[string]interface{} {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+
 	store, ok := p.stores[storeName]
 	if !ok {
 		return nil
 	}
+
 	result := make(map[string]interface{})
-	keyPrefix = applyKeyPrefix(keyPrefix)
+	prefixToMatch := applyKeyPrefix(keyPrefix)
+
 	for k, v := range store.data {
-		if strings.HasPrefix(k, keyPrefix) {
-			deprefixedKey := removeKeyPrefix(k)
-			result[deprefixedKey] = v
+		if strings.HasPrefix(k, prefixToMatch) {
+			// Remove the prefix we're searching for from the key
+			key := strings.TrimPrefix(k, prefixToMatch)
+			// If there's a dot at the start (from the prefix), remove it
+			key = strings.TrimPrefix(key, ".")
+			result[key] = v
 		}
 	}
 	return result
 }
 
 func (p *InMemoryStoreProvider) DeleteValue(storeName, key string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	store, ok := p.stores[storeName]
 	if ok {
 		key = applyKeyPrefix(key)
@@ -59,5 +78,8 @@ func (p *InMemoryStoreProvider) DeleteValue(storeName, key string) {
 }
 
 func (p *InMemoryStoreProvider) DeleteStore(storeName string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	delete(p.stores, storeName)
 }
