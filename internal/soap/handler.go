@@ -5,7 +5,6 @@ import (
 	"encoding/xml"
 	"fmt"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -265,23 +264,25 @@ func (h *Handler) matchesSOAPOperation(resource *config.Resource, operation, soa
 }
 
 // HandleRequest processes incoming SOAP requests
-func (h *Handler) HandleRequest(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HandleRequest(r *http.Request) *plugin.ResponseState {
+	// Initialize request-scoped store and response state
+	requestStore := make(store.Store)
+	responseState := plugin.NewResponseState()
+
 	// Only handle POST requests for SOAP
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
+		responseState.StatusCode = http.StatusMethodNotAllowed
+		responseState.Body = []byte("Method not allowed")
+		return responseState
 	}
 
 	// Read and parse the SOAP request
 	body, err := plugin.GetRequestBody(r)
 	if err != nil {
-		http.Error(w, "Failed to read request body", http.StatusBadRequest)
-		return
+		responseState.StatusCode = http.StatusBadRequest
+		responseState.Body = []byte("Failed to read request body")
+		return responseState
 	}
-
-	// Initialize request-scoped store and response state
-	requestStore := make(store.Store)
-	responseState := plugin.NewResponseState()
 
 	// Process interceptors first
 	for _, interceptor := range h.config.Interceptors {
@@ -303,8 +304,7 @@ func (h *Handler) HandleRequest(w http.ResponseWriter, r *http.Request) {
 			if interceptor.Response != nil {
 				h.processResponse(responseState, r, *interceptor.Response, requestStore)
 				if !interceptor.Continue {
-					responseState.WriteToResponseWriter(w)
-					return
+					return responseState
 				}
 			}
 		}
@@ -314,8 +314,7 @@ func (h *Handler) HandleRequest(w http.ResponseWriter, r *http.Request) {
 	bodyHolder, err := h.parseBody(body)
 	if err != nil {
 		h.sendSOAPFault(responseState, "Invalid SOAP envelope", http.StatusBadRequest)
-		responseState.WriteToResponseWriter(w)
-		return
+		return responseState
 	}
 
 	// Get SOAPAction from headers
@@ -325,8 +324,7 @@ func (h *Handler) HandleRequest(w http.ResponseWriter, r *http.Request) {
 	op := h.determineOperation(soapAction, bodyHolder)
 	if op == nil {
 		h.sendSOAPFault(responseState, "No matching SOAP operation found", http.StatusNotFound)
-		responseState.WriteToResponseWriter(w)
-		return
+		return responseState
 	}
 
 	// Find matching resources
@@ -340,8 +338,7 @@ func (h *Handler) HandleRequest(w http.ResponseWriter, r *http.Request) {
 
 	if len(matches) == 0 {
 		h.sendSOAPFault(responseState, "No matching SOAP operation found", http.StatusNotFound)
-		responseState.WriteToResponseWriter(w)
-		return
+		return responseState
 	}
 
 	// Find the best match
@@ -355,7 +352,7 @@ func (h *Handler) HandleRequest(w http.ResponseWriter, r *http.Request) {
 
 	// Process the response
 	h.processResponse(responseState, r, best.Resource.Response, requestStore)
-	responseState.WriteToResponseWriter(w)
+	return responseState
 }
 
 // sendSOAPFault sends a SOAP fault response
@@ -395,45 +392,9 @@ func (h *Handler) sendSOAPFault(rs *plugin.ResponseState, message string, status
 
 // processResponse processes and sends the SOAP response
 func (h *Handler) processResponse(rs *plugin.ResponseState, r *http.Request, response config.Response, requestStore store.Store) {
-	// Handle delay if specified
-	plugin.SimulateDelay(response.Delay, r)
-
 	// Set content type for SOAP response
 	rs.Headers["Content-Type"] = "application/soap+xml"
 
-	// Set custom headers if any
-	for key, value := range response.Headers {
-		rs.Headers[key] = value
-	}
-
-	// Set status code
-	if response.StatusCode != 0 {
-		rs.StatusCode = response.StatusCode
-	} else {
-		rs.StatusCode = http.StatusOK
-	}
-
-	// Handle failure simulation
-	if response.Fail != "" {
-		if plugin.SimulateFailure(rs, response.Fail, r) {
-			return
-		}
-	}
-
-	// Write response content
-	if response.File != "" {
-		filePath := filepath.Join(h.configDir, response.File)
-		data, err := os.ReadFile(filePath)
-		if err != nil {
-			rs.StatusCode = http.StatusInternalServerError
-			rs.Body = []byte("Failed to read file")
-			return
-		}
-		rs.Body = data
-	} else {
-		rs.Body = []byte(response.Content)
-	}
-
-	fmt.Printf("Handled request - method:%s, path:%s, status:%d, length:%d\n",
-		r.Method, r.URL.Path, rs.StatusCode, len(rs.Body))
+	// Process the response using common handler
+	plugin.ProcessResponse(rs, r, response, h.configDir, requestStore, nil)
 }

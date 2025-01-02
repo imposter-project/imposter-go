@@ -46,7 +46,8 @@ func TestHandler_HandleRequest_NoMatchingResource(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	// Handle request
-	handler.HandleRequest(w, req)
+	responseState := handler.HandleRequest(req)
+	responseState.WriteToResponseWriter(w)
 
 	// Check response
 	if w.Code != http.StatusNotFound {
@@ -89,7 +90,8 @@ func TestHandler_HandleRequest_MatchingResource(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	// Handle request
-	handler.HandleRequest(w, req)
+	responseState := handler.HandleRequest(req)
+	responseState.WriteToResponseWriter(w)
 
 	// Check response
 	if w.Code != http.StatusOK {
@@ -148,7 +150,8 @@ func TestHandler_HandleRequest_WithInterceptor(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	// Handle request
-	handler.HandleRequest(w, req)
+	responseState := handler.HandleRequest(req)
+	responseState.WriteToResponseWriter(w)
 
 	// Check response
 	if w.Code != http.StatusOK {
@@ -203,7 +206,8 @@ func TestHandler_HandleRequest_WithPathParams(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	// Handle request
-	handler.HandleRequest(w, req)
+	responseState := handler.HandleRequest(req)
+	responseState.WriteToResponseWriter(w)
 
 	// Check response
 	if w.Code != http.StatusOK {
@@ -257,7 +261,8 @@ func TestHandler_HandleRequest_WithResponseFile(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	// Handle request
-	handler.HandleRequest(w, req)
+	responseState := handler.HandleRequest(req)
+	responseState.WriteToResponseWriter(w)
 
 	// Check response
 	if w.Code != http.StatusOK {
@@ -312,7 +317,8 @@ func TestHandler_HandleRequest_WithRequestBody(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	// Handle request
-	handler.HandleRequest(w, req)
+	responseState := handler.HandleRequest(req)
+	responseState.WriteToResponseWriter(w)
 
 	// Check response
 	if w.Code != http.StatusOK {

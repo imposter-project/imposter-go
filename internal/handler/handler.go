@@ -5,9 +5,15 @@ import (
 	"strings"
 
 	"github.com/imposter-project/imposter-go/internal/config"
+	"github.com/imposter-project/imposter-go/internal/plugin"
 	"github.com/imposter-project/imposter-go/internal/rest"
 	"github.com/imposter-project/imposter-go/internal/soap"
 )
+
+// PluginHandler defines the interface that all plugin handlers must implement
+type PluginHandler interface {
+	HandleRequest(r *http.Request) *plugin.ResponseState
+}
 
 // HandleRequest processes incoming HTTP requests and routes them to the appropriate handler
 func HandleRequest(w http.ResponseWriter, r *http.Request, configDir string, configs []config.Config, imposterConfig *config.ImposterConfig) {
@@ -18,15 +24,30 @@ func HandleRequest(w http.ResponseWriter, r *http.Request, configDir string, con
 
 	// Process each config
 	for _, cfg := range configs {
+		var handler PluginHandler
+		var err error
+
 		switch cfg.Plugin {
 		case "rest":
-			handleRestRequest(w, r, &cfg, configDir, imposterConfig)
+			handler, err = rest.NewHandler(&cfg, configDir, imposterConfig)
 		case "soap":
-			handleSOAPRequest(w, r, &cfg, configDir)
+			handler, err = soap.NewHandler(&cfg, configDir)
 		default:
 			http.Error(w, "Unsupported plugin type", http.StatusInternalServerError)
 			return
 		}
+
+		if err != nil {
+			http.Error(w, "Failed to initialize handler", http.StatusInternalServerError)
+			return
+		}
+
+		// Get response state from handler
+		responseState := handler.HandleRequest(r)
+
+		// Write response to client
+		responseState.WriteToResponseWriter(w)
+		return
 	}
 }
 
@@ -37,24 +58,4 @@ func handleSystemEndpoint(w http.ResponseWriter, r *http.Request) bool {
 		return true
 	}
 	return false
-}
-
-// handleRestRequest handles REST API requests
-func handleRestRequest(w http.ResponseWriter, r *http.Request, cfg *config.Config, configDir string, imposterConfig *config.ImposterConfig) {
-	handler, err := rest.NewHandler(cfg, configDir, imposterConfig)
-	if err != nil {
-		http.Error(w, "Failed to initialize REST handler", http.StatusInternalServerError)
-		return
-	}
-	handler.HandleRequest(w, r)
-}
-
-// handleSOAPRequest handles SOAP requests using the SOAP plugin
-func handleSOAPRequest(w http.ResponseWriter, r *http.Request, cfg *config.Config, configDir string) {
-	handler, err := soap.NewHandler(cfg, configDir)
-	if err != nil {
-		http.Error(w, "Failed to initialize SOAP handler", http.StatusInternalServerError)
-		return
-	}
-	handler.HandleRequest(w, r)
 }

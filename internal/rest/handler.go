@@ -3,8 +3,6 @@ package rest
 import (
 	"fmt"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/imposter-project/imposter-go/internal/capture"
@@ -12,7 +10,6 @@ import (
 	"github.com/imposter-project/imposter-go/internal/matcher"
 	"github.com/imposter-project/imposter-go/internal/plugin"
 	"github.com/imposter-project/imposter-go/internal/store"
-	"github.com/imposter-project/imposter-go/internal/template"
 )
 
 // Handler handles REST API requests
@@ -32,11 +29,13 @@ func NewHandler(cfg *config.Config, configDir string, imposterConfig *config.Imp
 }
 
 // HandleRequest processes incoming REST API requests
-func (h *Handler) HandleRequest(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HandleRequest(r *http.Request) *plugin.ResponseState {
 	body, err := plugin.GetRequestBody(r)
 	if err != nil {
-		http.Error(w, "Failed to read request body", http.StatusBadRequest)
-		return
+		rs := plugin.NewResponseState()
+		rs.StatusCode = http.StatusBadRequest
+		rs.Body = []byte("Failed to read request body")
+		return rs
 	}
 
 	// Initialize request-scoped store
@@ -51,8 +50,7 @@ func (h *Handler) HandleRequest(w http.ResponseWriter, r *http.Request) {
 				r.Method, r.URL.Path, isWildcard)
 			// Process the interceptor
 			if !h.processInterceptor(responseState, r, body, interceptor, requestStore) {
-				responseState.WriteToResponseWriter(w)
-				return // Short-circuit if interceptor responded and continue is false
+				return responseState // Short-circuit if interceptor responded and continue is false
 			}
 		}
 	}
@@ -69,10 +67,9 @@ func (h *Handler) HandleRequest(w http.ResponseWriter, r *http.Request) {
 		notFoundMsg := "Resource not found"
 		responseState.StatusCode = http.StatusNotFound
 		responseState.Body = []byte(notFoundMsg)
-		responseState.WriteToResponseWriter(w)
 		fmt.Printf("Handled request - method:%s, path:%s, status:%d, length:%d\n",
 			r.Method, r.URL.Path, http.StatusNotFound, len(notFoundMsg))
-		return
+		return responseState
 	}
 
 	// Find the best match
@@ -86,7 +83,7 @@ func (h *Handler) HandleRequest(w http.ResponseWriter, r *http.Request) {
 
 	// Process the response
 	h.processResponse(responseState, r, best.Resource.Response, requestStore)
-	responseState.WriteToResponseWriter(w)
+	return responseState
 }
 
 // processInterceptor handles an interceptor and returns true if request processing should continue
@@ -110,45 +107,7 @@ func (h *Handler) processInterceptor(rs *plugin.ResponseState, r *http.Request, 
 
 // processResponse handles preparing the response state
 func (h *Handler) processResponse(rs *plugin.ResponseState, r *http.Request, response config.Response, requestStore store.Store) {
-	// Handle delay if specified
-	plugin.SimulateDelay(response.Delay, r)
-
-	if response.StatusCode > 0 {
-		rs.StatusCode = response.StatusCode
-	}
-
-	// Set response headers
-	for key, value := range response.Headers {
-		rs.Headers[key] = value
-	}
-
-	var responseContent string
-	if response.File != "" {
-		filePath := filepath.Join(h.configDir, response.File)
-		data, err := os.ReadFile(filePath)
-		if err != nil {
-			rs.StatusCode = http.StatusInternalServerError
-			rs.Body = []byte("Failed to read file")
-			return
-		}
-		responseContent = string(data)
-	} else {
-		responseContent = response.Content
-	}
-
-	if response.Template {
-		responseContent = template.ProcessTemplate(responseContent, r, h.imposterConfig, requestStore)
-	}
-
-	if response.Fail != "" {
-		if plugin.SimulateFailure(rs, response.Fail, r) {
-			return
-		}
-	}
-
-	rs.Body = []byte(responseContent)
-	fmt.Printf("Handled request - method:%s, path:%s, status:%d, length:%d\n",
-		r.Method, r.URL.Path, rs.StatusCode, len(responseContent))
+	plugin.ProcessResponse(rs, r, response, h.configDir, requestStore, h.imposterConfig)
 }
 
 // matchBodyCondition handles matching a single body condition against the request body

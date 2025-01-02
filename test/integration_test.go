@@ -11,6 +11,7 @@ import (
 
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/handler"
+	"github.com/imposter-project/imposter-go/internal/rest"
 	"github.com/imposter-project/imposter-go/test/testutils"
 	"github.com/stretchr/testify/require"
 )
@@ -195,7 +196,13 @@ func TestInterceptors_Passthrough(t *testing.T) {
 	req.Header.Set("User-Agent", "Test-Agent")
 
 	rec := httptest.NewRecorder()
-	handler.HandleRequest(rec, req, "", configs, imposterConfig)
+	h, err := rest.NewHandler(&configs[0], "", imposterConfig)
+	if err != nil {
+		t.Fatalf("Could not create handler: %v", err)
+	}
+
+	responseState := h.HandleRequest(req)
+	responseState.WriteToResponseWriter(rec)
 
 	if status := rec.Code; status != http.StatusOK {
 		t.Errorf("Expected status code %d, got %d", http.StatusOK, status)

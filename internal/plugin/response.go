@@ -4,9 +4,13 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/imposter-project/imposter-go/internal/config"
+	"github.com/imposter-project/imposter-go/internal/store"
+	"github.com/imposter-project/imposter-go/internal/template"
 )
 
 // ResponseState tracks the state of the HTTP response
@@ -79,4 +83,51 @@ func SimulateFailure(rs *ResponseState, failureType string, r *http.Request) boo
 		return true
 	}
 	return false
+}
+
+// ProcessResponse handles common response processing logic
+func ProcessResponse(rs *ResponseState, r *http.Request, response config.Response, configDir string, requestStore store.Store, imposterConfig *config.ImposterConfig) {
+	// Handle delay if specified
+	SimulateDelay(response.Delay, r)
+
+	// Set status code
+	if response.StatusCode > 0 {
+		rs.StatusCode = response.StatusCode
+	}
+
+	// Set response headers
+	for key, value := range response.Headers {
+		rs.Headers[key] = value
+	}
+
+	// Handle failure simulation
+	if response.Fail != "" {
+		if SimulateFailure(rs, response.Fail, r) {
+			return
+		}
+	}
+
+	// Get response content
+	var responseContent string
+	if response.File != "" {
+		filePath := filepath.Join(configDir, response.File)
+		data, err := os.ReadFile(filePath)
+		if err != nil {
+			rs.StatusCode = http.StatusInternalServerError
+			rs.Body = []byte("Failed to read file")
+			return
+		}
+		responseContent = string(data)
+	} else {
+		responseContent = response.Content
+	}
+
+	// Process template if enabled
+	if response.Template {
+		responseContent = template.ProcessTemplate(responseContent, r, imposterConfig, requestStore)
+	}
+
+	rs.Body = []byte(responseContent)
+	fmt.Printf("Handled request - method:%s, path:%s, status:%d, length:%d\n",
+		r.Method, r.URL.Path, rs.StatusCode, len(responseContent))
 }
