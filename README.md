@@ -28,7 +28,7 @@ A Go implementation of the [Imposter Mock Engine](https://www.imposter.sh).
 
 2. Build and run the server:
    ```bash
-   go run ./cmd/imposter/main.go ./examples/simple
+   go run ./cmd/imposter/main.go ./examples/rest/simple
    ```
 
 3. Visit `http://localhost:8080/hello` in your browser or use `curl`:

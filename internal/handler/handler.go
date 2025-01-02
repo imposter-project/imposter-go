@@ -2,12 +2,12 @@ package handler
 
 import (
 	"github.com/imposter-project/imposter-go/internal/response"
+	"github.com/imposter-project/imposter-go/plugin/rest"
+	"github.com/imposter-project/imposter-go/plugin/soap"
 	"net/http"
 	"strings"
 
 	"github.com/imposter-project/imposter-go/internal/config"
-	"github.com/imposter-project/imposter-go/internal/rest"
-	"github.com/imposter-project/imposter-go/internal/soap"
 	"github.com/imposter-project/imposter-go/internal/store"
 )
 
