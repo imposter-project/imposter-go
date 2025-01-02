@@ -237,38 +237,50 @@ func splitQName(qname string) (namespace, localPart string) {
 	return "", qname
 }
 
-// matchesSOAPOperation checks if a request matcher matches the SOAP operation and action
-func (h *Handler) matchesSOAPOperation(matcher *config.RequestMatcher, operation, soapAction string) bool {
-	// Check operation match if specified
+// calculateScore calculates a unified match score for SOAP requests
+func (h *Handler) calculateScore(matcher *config.RequestMatcher, r *http.Request, body []byte, operation string, soapAction string) (score int, isWildcard bool) {
+	// Get base score from plugin matcher
+	score, isWildcard = plugin.CalculateMatchScore(matcher, r, body)
+
+	// Check SOAP-specific matches
 	if matcher.Operation != "" {
 		// Remove 'Request' suffix from operation name if present
 		if strings.HasSuffix(operation, "Request") {
 			operation = strings.TrimSuffix(operation, "Request")
 		}
 		if matcher.Operation != operation {
-			return false
+			return 0, false
 		}
+		score++
 	}
 
-	// Check SOAPAction match if specified
-	if matcher.SOAPAction != "" && matcher.SOAPAction != soapAction {
-		return false
+	if matcher.SOAPAction != "" {
+		if matcher.SOAPAction != soapAction {
+			return 0, false
+		}
+		score++
 	}
 
-	// Check binding match if specified
 	if matcher.Binding != "" {
 		op := h.wsdlParser.GetOperation(operation)
 		if op == nil {
-			return false
+			return 0, false
 		}
-		// Get the binding name from the WSDL parser
 		bindingName := h.wsdlParser.GetBindingName(op)
 		if matcher.Binding != bindingName {
-			return false
+			return 0, false
 		}
+		score++
 	}
 
-	return true
+	// If no matchers were specified at all, return 0
+	if score == 0 && matcher.Method == "" && matcher.Path == "" &&
+		matcher.Operation == "" && matcher.SOAPAction == "" && matcher.Binding == "" &&
+		len(matcher.Headers) == 0 && len(matcher.QueryParams) == 0 && len(matcher.FormParams) == 0 {
+		return 0, false
+	}
+
+	return score, isWildcard
 }
 
 // HandleRequest processes incoming SOAP requests
@@ -311,8 +323,8 @@ func (h *Handler) HandleRequest(r *http.Request) *plugin.ResponseState {
 
 	// Process interceptors first
 	for _, interceptor := range h.config.Interceptors {
-		score, isWildcard := plugin.CalculateMatchScore(&interceptor.RequestMatcher, r, body)
-		if score > 0 && h.matchesSOAPOperation(&interceptor.RequestMatcher, op.Name, soapAction) {
+		score, isWildcard := h.calculateScore(&interceptor.RequestMatcher, r, body, op.Name, soapAction)
+		if score > 0 {
 			fmt.Printf("Matched interceptor - method:%s, path:%s, wildcard:%v\n",
 				r.Method, r.URL.Path, isWildcard)
 
@@ -338,8 +350,8 @@ func (h *Handler) HandleRequest(r *http.Request) *plugin.ResponseState {
 	// Find matching resources
 	var matches []plugin.MatchResult
 	for _, resource := range h.config.Resources {
-		score, isWildcard := plugin.CalculateMatchScore(&resource.RequestMatcher, r, body)
-		if score > 0 && h.matchesSOAPOperation(&resource.RequestMatcher, op.Name, soapAction) {
+		score, isWildcard := h.calculateScore(&resource.RequestMatcher, r, body, op.Name, soapAction)
+		if score > 0 {
 			matches = append(matches, plugin.MatchResult{Resource: &resource, Score: score, Wildcard: isWildcard})
 		}
 	}

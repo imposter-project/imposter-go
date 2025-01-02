@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"regexp"
 	"strings"
 
 	"github.com/imposter-project/imposter-go/internal/config"
@@ -32,12 +31,40 @@ func CalculateMatchScore(matcher *config.RequestMatcher, r *http.Request, body [
 
 	// Path match
 	if matcher.Path != "" {
-		pathMatches, wildcard := matchPath(matcher.Path, r.URL.Path)
-		if !pathMatches {
+		// Split paths into segments
+		resourceSegments := strings.Split(strings.Trim(matcher.Path, "/"), "/")
+		requestSegments := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+
+		// Check for trailing wildcard
+		if len(resourceSegments) > 0 && resourceSegments[len(resourceSegments)-1] == "*" {
+			isWildcard = true
+			resourceSegments = resourceSegments[:len(resourceSegments)-1]
+			// For wildcard matches, we require at least the base path to match
+			if len(requestSegments) < len(resourceSegments) {
+				return 0, false
+			}
+			requestSegments = requestSegments[:len(resourceSegments)]
+		} else if len(resourceSegments) != len(requestSegments) {
 			return 0, false
 		}
-		score++
-		isWildcard = wildcard
+
+		// Match path segments, including path parameters
+		for i, segment := range resourceSegments {
+			if strings.HasPrefix(segment, "{") && strings.HasSuffix(segment, "}") {
+				paramName := strings.Trim(segment, "{}")
+				if condition, hasParam := matcher.PathParams[paramName]; hasParam {
+					if !condition.Matcher.Match(requestSegments[i]) {
+						return 0, false
+					}
+					score++
+				}
+			} else {
+				if requestSegments[i] != segment {
+					return 0, false
+				}
+				score++
+			}
+		}
 	}
 
 	// Headers match
@@ -75,6 +102,25 @@ func CalculateMatchScore(matcher *config.RequestMatcher, r *http.Request, body [
 	// Request body match
 	if matcher.RequestBody.Value != "" || matcher.RequestBody.JSONPath != "" || matcher.RequestBody.XPath != "" {
 		if !matchBodyCondition(body, matcher.RequestBody.BodyMatchCondition) {
+			return 0, false
+		}
+		score++
+	} else if len(matcher.RequestBody.AllOf) > 0 {
+		for _, condition := range matcher.RequestBody.AllOf {
+			if !matchBodyCondition(body, condition) {
+				return 0, false
+			}
+		}
+		score++
+	} else if len(matcher.RequestBody.AnyOf) > 0 {
+		matched := false
+		for _, condition := range matcher.RequestBody.AnyOf {
+			if matchBodyCondition(body, condition) {
+				matched = true
+				break
+			}
+		}
+		if !matched {
 			return 0, false
 		}
 		score++
@@ -128,15 +174,4 @@ func GetRequestBody(r *http.Request) ([]byte, error) {
 	}
 	r.Body = io.NopCloser(bytes.NewReader(body))
 	return body, nil
-}
-
-// matchPath checks if a request path matches a pattern, returns if it matches and if it's a wildcard match
-func matchPath(pattern string, requestPath string) (matches bool, wildcard bool) {
-	if strings.Contains(pattern, "*") {
-		wildcard = true
-		pattern = strings.ReplaceAll(pattern, "*", ".*")
-		matched, _ := regexp.MatchString("^"+pattern+"$", requestPath)
-		return matched, wildcard
-	}
-	return pattern == requestPath, wildcard
 }
