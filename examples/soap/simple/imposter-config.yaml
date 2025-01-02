@@ -1,0 +1,37 @@
+plugin: soap
+wsdlFile: petstore.wsdl
+
+resources:
+  - path: "/pets/"
+    operation:
+      name: getPetById
+      soapAction: getPetById
+    response:
+      content: |
+        <?xml version="1.0" encoding="UTF-8"?>
+        <env:Envelope xmlns:env="http://www.w3.org/2001/12/soap-envelope">
+            <env:Header/>
+            <env:Body>
+                <getPetByIdResponse xmlns="urn:com:example:petstore">
+                    <id>3</id>
+                    <name>Custom pet name</name>
+                </getPetByIdResponse>
+            </env:Body>
+        </env:Envelope>
+      statusCode: 200
+
+  - path: "/pets/"
+    soapAction: "invalid-pet-action"
+    response:
+      statusCode: 400
+      content: |
+        <?xml version="1.0" encoding="UTF-8"?>
+        <env:Envelope xmlns:env="http://www.w3.org/2001/12/soap-envelope">
+            <env:Header/>
+            <env:Body>
+                <env:Fault>
+                    <faultcode>env:Client</faultcode>
+                    <faultstring>Invalid SOAPAction</faultstring>
+                </env:Fault>
+            </env:Body>
+        </env:Envelope> 

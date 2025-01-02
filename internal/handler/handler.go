@@ -1,9 +1,8 @@
 package handler
 
 import (
-	"bytes"
 	"fmt"
-	"io"
+	"math/rand"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -13,9 +12,10 @@ import (
 	"github.com/imposter-project/imposter-go/internal/capture"
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/matcher"
+	"github.com/imposter-project/imposter-go/internal/plugin"
+	"github.com/imposter-project/imposter-go/internal/soap"
 	"github.com/imposter-project/imposter-go/internal/store"
 	"github.com/imposter-project/imposter-go/internal/template"
-	"golang.org/x/exp/rand"
 )
 
 // matchResult represents a match between a request and a resource or interceptor
@@ -66,43 +66,71 @@ func (rs *responseState) writeToResponseWriter(w http.ResponseWriter) {
 	}
 }
 
-// HandleRequest processes incoming HTTP requests based on resources
+// HandleRequest processes incoming HTTP requests and routes them to the appropriate handler
 func HandleRequest(w http.ResponseWriter, r *http.Request, configDir string, configs []config.Config, imposterConfig *config.ImposterConfig) {
-	body, _ := io.ReadAll(r.Body)
-	r.Body = io.NopCloser(bytes.NewReader(body))
+	// Handle system endpoints
+	if handleSystemEndpoint(w, r) {
+		return
+	}
+
+	// Process each config
+	for _, cfg := range configs {
+		switch cfg.Plugin {
+		case "rest":
+			handleRestRequest(w, r, &cfg, configDir, imposterConfig)
+		case "soap":
+			handleSOAPRequest(w, r, &cfg, configDir)
+		default:
+			http.Error(w, "Unsupported plugin type", http.StatusInternalServerError)
+			return
+		}
+	}
+}
+
+// handleSystemEndpoint handles system-level endpoints like /system/store
+func handleSystemEndpoint(w http.ResponseWriter, r *http.Request) bool {
+	if strings.HasPrefix(r.URL.Path, "/system/store") {
+		HandleStoreRequest(w, r)
+		return true
+	}
+	return false
+}
+
+// handleRestRequest handles REST API requests
+func handleRestRequest(w http.ResponseWriter, r *http.Request, cfg *config.Config, configDir string, imposterConfig *config.ImposterConfig) {
+	body, err := plugin.GetRequestBody(r)
+	if err != nil {
+		http.Error(w, "Failed to read request body", http.StatusBadRequest)
+		return
+	}
 
 	// Initialize request-scoped store
 	requestStore := make(store.Store)
 	responseState := newResponseState()
 
 	// Process interceptors first
-	for _, cfg := range configs {
-		for _, interceptor := range cfg.Interceptors {
-			score, isWildcard := calculateMatchScore(&interceptor, r, body)
-			if score > 0 {
-				fmt.Printf("Matched interceptor - method:%s, path:%s, wildcard:%v\n",
-					r.Method, r.URL.Path, isWildcard)
-				// Process the interceptor
-				if !processInterceptor(responseState, r, body, interceptor, configDir, imposterConfig, requestStore) {
-					responseState.writeToResponseWriter(w)
-					return // Short-circuit if interceptor responded and continue is false
-				}
+	for _, interceptor := range cfg.Interceptors {
+		score, isWildcard := plugin.CalculateMatchScore(&interceptor.RequestMatcher, r, body)
+		if score > 0 {
+			fmt.Printf("Matched interceptor - method:%s, path:%s, wildcard:%v\n",
+				r.Method, r.URL.Path, isWildcard)
+			// Process the interceptor
+			if !processInterceptor(responseState, r, body, interceptor, configDir, imposterConfig, requestStore) {
+				responseState.writeToResponseWriter(w)
+				return // Short-circuit if interceptor responded and continue is false
 			}
 		}
 	}
 
-	var allMatches []matchResult
-
-	for _, cfg := range configs {
-		for _, res := range cfg.Resources {
-			score, isWildcard := calculateMatchScore(&res, r, body)
-			if score > 0 {
-				allMatches = append(allMatches, matchResult{Resource: &res, Score: score, Wildcard: isWildcard})
-			}
+	var matches []plugin.MatchResult
+	for _, res := range cfg.Resources {
+		score, isWildcard := plugin.CalculateMatchScore(&res.RequestMatcher, r, body)
+		if score > 0 {
+			matches = append(matches, plugin.MatchResult{Resource: &res, Score: score, Wildcard: isWildcard})
 		}
 	}
 
-	if len(allMatches) == 0 {
+	if len(matches) == 0 {
 		notFoundMsg := "Resource not found"
 		responseState.statusCode = http.StatusNotFound
 		responseState.body = []byte(notFoundMsg)
@@ -112,24 +140,8 @@ func HandleRequest(w http.ResponseWriter, r *http.Request, configDir string, con
 		return
 	}
 
-	// Find the best match considering both score and wildcard status
-	best := allMatches[0]
-	tie := false
-	for _, m := range allMatches[1:] {
-		// If scores are equal, prefer non-wildcard matches
-		if m.Score == best.Score {
-			if best.Wildcard && !m.Wildcard {
-				best = m
-				tie = false
-			} else if !best.Wildcard && !m.Wildcard || best.Wildcard && m.Wildcard {
-				tie = true
-			}
-		} else if m.Score > best.Score {
-			best = m
-			tie = false
-		}
-	}
-
+	// Find the best match
+	best, tie := plugin.FindBestMatch(matches)
 	if tie {
 		fmt.Printf("Warning: multiple equally specific matches. Using the first.\n")
 	}
@@ -140,6 +152,16 @@ func HandleRequest(w http.ResponseWriter, r *http.Request, configDir string, con
 	// Process the response
 	processResponse(responseState, r, best.Resource.Response, configDir, imposterConfig, requestStore)
 	responseState.writeToResponseWriter(w)
+}
+
+// handleSOAPRequest handles SOAP requests using the SOAP plugin
+func handleSOAPRequest(w http.ResponseWriter, r *http.Request, cfg *config.Config, configDir string) {
+	handler, err := soap.NewHandler(cfg, configDir)
+	if err != nil {
+		http.Error(w, "Failed to initialize SOAP handler", http.StatusInternalServerError)
+		return
+	}
+	handler.HandleRequest(w, r)
 }
 
 // processInterceptor handles an interceptor and returns true if request processing should continue

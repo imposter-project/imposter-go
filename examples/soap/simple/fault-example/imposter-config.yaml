@@ -1,0 +1,27 @@
+plugin: soap
+wsdlFile: petstore.wsdl
+
+resources:
+  - path: "/pets/"
+    operation:
+      name: getPetById
+      soapAction: getPetById
+    response:
+      statusCode: 500
+      content: |
+        <?xml version="1.0" encoding="UTF-8"?>
+        <env:Envelope xmlns:env="http://www.w3.org/2001/12/soap-envelope">
+            <env:Header/>
+            <env:Body>
+                <env:Fault>
+                    <faultcode>env:Server</faultcode>
+                    <faultstring>Internal server error</faultstring>
+                    <detail>
+                        <fault xmlns="urn:com:example:petstore">
+                            <code>ERR-001</code>
+                            <message>Failed to retrieve pet details</message>
+                        </fault>
+                    </detail>
+                </env:Fault>
+            </env:Body>
+        </env:Envelope> 

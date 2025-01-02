@@ -1,0 +1,55 @@
+plugin: soap
+wsdlFile: petstore.wsdl
+
+interceptors:
+  # Log all requests
+  - path: "/pets/"
+    method: POST
+    capture:
+      request:
+        store: request
+        key:
+          requestBody:
+            xPath: "//id"
+    continue: true
+
+  # Block requests with invalid authentication
+  - path: "/pets/"
+    method: POST
+    headers:
+      Authorization:
+        operator: NotExists
+    response:
+      statusCode: 401
+      content: |
+        <?xml version="1.0" encoding="UTF-8"?>
+        <env:Envelope xmlns:env="http://www.w3.org/2001/12/soap-envelope">
+            <env:Header/>
+            <env:Body>
+                <env:Fault>
+                    <faultcode>env:Client</faultcode>
+                    <faultstring>Authentication required</faultstring>
+                </env:Fault>
+            </env:Body>
+        </env:Envelope>
+    continue: false
+
+resources:
+  - path: "/pets/"
+    operation:
+      name: getPetById
+      soapAction: getPetById
+    response:
+      content: |
+        <?xml version="1.0" encoding="UTF-8"?>
+        <env:Envelope xmlns:env="http://www.w3.org/2001/12/soap-envelope">
+            <env:Header/>
+            <env:Body>
+                <getPetByIdResponse xmlns="urn:com:example:petstore">
+                    <id>${stores.request.request}</id>
+                    <name>Pet ${stores.request.request}</name>
+                </getPetByIdResponse>
+            </env:Body>
+        </env:Envelope>
+      statusCode: 200
+      template: true 

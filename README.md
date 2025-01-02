@@ -7,11 +7,12 @@ A Go implementation of the [Imposter Mock Engine](https://www.imposter.sh).
 - Local: Lightweight local HTTP mock server
 - AWS Lambda: low latency, high throughput, ~15ms cold start
 - [REST/HTTP API mock](https://docs.imposter.sh/rest_plugin/) support
+- [SOAP/WSDL mock](https://docs.imposter.sh/soap_plugin/) support
 
 ## ⚠️ Limitations
 
 - No support for [scripting](https://docs.imposter.sh/scripting/)
-- No support (yet) for [SOAP/WSDL](https://docs.imposter.sh/soap_plugin/) or [OpenAPI](https://docs.imposter.sh/openapi_plugin/) mocks
+- No support (yet) for [OpenAPI](https://docs.imposter.sh/openapi_plugin/) mocks
 
 ## Requirements
 
@@ -41,6 +42,14 @@ Set the `IMPOSTER_PORT` environment variable to change the default port:
 ```bash
 export IMPOSTER_PORT=9090
 ```
+
+## Examples
+
+The repository includes several examples demonstrating different features:
+
+- [Simple REST API](examples/simple) - Basic REST API mocking
+- [SOAP Web Service](examples/soap/simple) - SOAP/WSDL-based service mocking
+- [AWS Lambda](examples/lambda) - Running Imposter in AWS Lambda
 
 ## Testing
 

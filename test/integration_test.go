@@ -1,98 +1,100 @@
 package test
 
 import (
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/handler"
 	"github.com/imposter-project/imposter-go/test/testutils"
+	"github.com/stretchr/testify/require"
 )
 
 func TestHomeRoute(t *testing.T) {
-	configs := []config.Config{
-		{
-			Resources: []config.Resource{
-				testutils.NewResource("GET", "/example", config.Response{
-					StatusCode: 200,
-					Content:    "Hello, world!",
-				}),
-			},
-		},
-	}
-	imposterConfig := &config.ImposterConfig{
-		ServerPort: "8080",
-	}
+	// Create a temporary directory for test files
+	tempDir := t.TempDir()
 
-	// Create a test request with an empty body
-	req, err := http.NewRequest("GET", "/example", new(strings.Reader))
-	if err != nil {
-		t.Fatalf("Could not create request: %v", err)
-	}
+	// Create test configuration
+	configContent := `plugin: rest
+resources:
+  - path: /
+    method: GET
+    response:
+      content: "Hello, world!"
+      statusCode: 200`
 
-	rec := httptest.NewRecorder()
-	handler.HandleRequest(rec, req, "", configs, imposterConfig)
+	err := os.WriteFile(filepath.Join(tempDir, "test-config.yaml"), []byte(configContent), 0644)
+	require.NoError(t, err)
 
-	if status := rec.Code; status != http.StatusOK {
-		t.Errorf("Expected status code %d, got %d", http.StatusOK, status)
-	}
+	// Start the server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		handler.HandleRequest(w, r, tempDir, config.LoadConfig(tempDir), config.LoadImposterConfig())
+	}))
+	defer server.Close()
 
-	expectedBody := "Hello, world!"
-	if rec.Body.String() != expectedBody {
-		t.Errorf("Expected body %q, got %q", expectedBody, rec.Body.String())
-	}
+	// Make request
+	resp, err := http.Get(server.URL + "/")
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	// Check response
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.Equal(t, "Hello, world!", string(body))
 }
 
 func TestIntegration_MatchJSONBody(t *testing.T) {
-	configs := []config.Config{
-		{
-			Resources: []config.Resource{
-				{
-					RequestMatcher: config.RequestMatcher{
-						Method: "POST",
-						Path:   "/match-json",
-						RequestBody: config.RequestBody{
-							BodyMatchCondition: config.BodyMatchCondition{
-								JSONPath: "$.user.name",
-								MatchCondition: config.MatchCondition{
-									Value: "Ada",
-								},
-							},
-						},
-					},
-					Response: config.Response{
-						StatusCode: 200,
-						Content:    "Hello, Ada!",
-					},
-				},
-			},
-		},
-	}
-	imposterConfig := &config.ImposterConfig{
-		ServerPort: "8080",
-	}
+	// Create a temporary directory for test files
+	tempDir := t.TempDir()
 
-	// Set up a test HTTP server
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		handler.HandleRequest(w, r, "", configs, imposterConfig)
-	})
+	// Create test configuration
+	configContent := `plugin: rest
+resources:
+  - path: /example
+    method: POST
+    requestBody:
+      value: '{"name": "test"}'
+    response:
+      content: "Matched JSON body"
+      statusCode: 200`
 
-	server := httptest.NewServer(handler)
+	err := os.WriteFile(filepath.Join(tempDir, "test-config.yaml"), []byte(configContent), 0644)
+	require.NoError(t, err)
+
+	// Start the server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		handler.HandleRequest(w, r, tempDir, config.LoadConfig(tempDir), config.LoadImposterConfig())
+	}))
 	defer server.Close()
 
-	// Create a test request
-	resp, err := http.Post(server.URL+"/match-json", "application/json", strings.NewReader(`{"user": {"name": "Ada"}}`))
-	if err != nil {
-		t.Fatalf("Failed to make POST request: %v", err)
-	}
+	// Make request with matching JSON body
+	jsonBody := `{"name": "test"}`
+	resp, err := http.Post(server.URL+"/example", "application/json", strings.NewReader(jsonBody))
+	require.NoError(t, err)
 	defer resp.Body.Close()
 
-	// Validate response
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("Expected status code 200, got %d", resp.StatusCode)
-	}
+	// Check response
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.Equal(t, "Matched JSON body", string(body))
+
+	// Make request with non-matching JSON body
+	jsonBody = `{"name": "wrong"}`
+	resp, err = http.Post(server.URL+"/example", "application/json", strings.NewReader(jsonBody))
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	// Check response
+	require.Equal(t, http.StatusNotFound, resp.StatusCode)
 }
 
 func TestInterceptors_ShortCircuit(t *testing.T) {

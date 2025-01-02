@@ -129,6 +129,10 @@ type RequestMatcher struct {
 type Resource struct {
 	RequestMatcher `yaml:",inline"`
 	Response       Response `yaml:"response"`
+	// SOAP-specific fields
+	Operation  *SOAPOperation `yaml:"operation,omitempty"`
+	Binding    *SOAPBinding   `yaml:"binding,omitempty"`
+	SOAPAction string         `yaml:"soapAction,omitempty"`
 }
 
 // Interceptor represents an HTTP interceptor that can be executed before resources
@@ -147,12 +151,15 @@ type StoreDefinition struct {
 	PreloadData map[string]interface{} `yaml:"preloadData,omitempty"`
 }
 
+// Config represents the configuration for a mock service
 type Config struct {
-	Plugin       string `yaml:"plugin"`
-	BasePath     string `yaml:"basePath"`
-	Resources    []Resource
+	Plugin       string        `yaml:"plugin"`
+	BasePath     string        `yaml:"basePath"`
+	Resources    []Resource    `yaml:"resources,omitempty"`
 	Interceptors []Interceptor `yaml:"interceptors,omitempty"`
 	System       *System       `yaml:"system,omitempty"`
+	// SOAP-specific fields
+	WSDLFile string `yaml:"wsdlFile,omitempty"`
 }
 
 // Application-wide configuration
@@ -222,6 +229,8 @@ func LoadConfig(configDir string) []Config {
 			if err != nil {
 				return err
 			}
+
+			// Handle REST resources
 			for i := range fileConfig.Resources {
 				if fileConfig.Resources[i].Response.File != "" && relDir != "." {
 					fileConfig.Resources[i].Response.File = filepath.Join(relDir, fileConfig.Resources[i].Response.File)
@@ -231,6 +240,25 @@ func LoadConfig(configDir string) []Config {
 					fileConfig.Resources[i].Path = filepath.Join(fileConfig.BasePath, fileConfig.Resources[i].Path)
 				}
 			}
+
+			// Handle SOAP resources
+			if fileConfig.Plugin == "soap" {
+				// Resolve WSDL file path relative to config file
+				if fileConfig.WSDLFile != "" && !filepath.IsAbs(fileConfig.WSDLFile) {
+					fileConfig.WSDLFile = filepath.Join(relDir, fileConfig.WSDLFile)
+				}
+
+				for i := range fileConfig.Resources {
+					if fileConfig.Resources[i].Response.File != "" && relDir != "." {
+						fileConfig.Resources[i].Response.File = filepath.Join(relDir, fileConfig.Resources[i].Response.File)
+					}
+					// Prefix paths with basePath
+					if fileConfig.BasePath != "" {
+						fileConfig.Resources[i].Path = filepath.Join(fileConfig.BasePath, fileConfig.Resources[i].Path)
+					}
+				}
+			}
+
 			configs = append(configs, *fileConfig)
 		}
 		return nil
@@ -239,10 +267,13 @@ func LoadConfig(configDir string) []Config {
 		panic(err)
 	}
 
-	// TODO remove guard for rest plugin support
+	// Validate plugin types
 	for _, cfg := range configs {
-		if cfg.Plugin != "rest" {
-			panic("Unsupported plugin type")
+		switch cfg.Plugin {
+		case "rest", "soap":
+			// Valid plugins
+		default:
+			panic("Unsupported plugin type: " + cfg.Plugin)
 		}
 	}
 
@@ -354,4 +385,29 @@ func (mu *MatcherUnmarshaler) UnmarshalYAML(unmarshal func(interface{}) error) e
 	}
 
 	return fmt.Errorf("failed to unmarshal as either string or MatchCondition")
+}
+
+// SOAPOperation represents a SOAP operation configuration
+type SOAPOperation struct {
+	Name       string `yaml:"name"`
+	SOAPAction string `yaml:"soapAction"`
+}
+
+// SOAPBinding represents a SOAP binding configuration
+type SOAPBinding struct {
+	Name string `yaml:"name"`
+}
+
+// SOAPRequestMatcher contains SOAP-specific fields for matching requests
+type SOAPRequestMatcher struct {
+	RequestMatcher `yaml:",inline"`
+	Operation      *SOAPOperation `yaml:"operation,omitempty"`
+	Binding        *SOAPBinding   `yaml:"binding,omitempty"`
+	SOAPAction     string         `yaml:"soapAction,omitempty"`
+}
+
+// SOAPResource represents a SOAP resource with its request matcher and response
+type SOAPResource struct {
+	SOAPRequestMatcher `yaml:",inline"`
+	Response           Response `yaml:"response"`
 }
