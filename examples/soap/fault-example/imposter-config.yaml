@@ -3,9 +3,7 @@ wsdlFile: petstore.wsdl
 
 resources:
   - path: "/pets/"
-    operation:
-      name: getPetById
-      soapAction: getPetById
+    operation: getPetById
     response:
       statusCode: 500
       content: |

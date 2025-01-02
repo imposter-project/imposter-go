@@ -25,15 +25,13 @@ func TestLoadConfig_SOAP(t *testing.T) {
 wsdlFile: test.wsdl
 resources:
   - path: /test
-    operation:
-      name: testOperation
-      soapAction: testAction
+    operation: testOperation
+    soapAction: testAction
     response:
       content: test response
       statusCode: 200
   - path: /another
-    operation:
-      name: anotherOperation
+    operation: anotherOperation
     response:
       content: another response
       statusCode: 200`
@@ -52,16 +50,14 @@ resources:
 
 	// Check first resource
 	require.Equal(t, "/test", cfg.Resources[0].Path)
-	require.NotNil(t, cfg.Resources[0].Operation)
-	require.Equal(t, "testOperation", cfg.Resources[0].Operation.Name)
-	require.Equal(t, "testAction", cfg.Resources[0].Operation.SOAPAction)
+	require.Equal(t, "testOperation", cfg.Resources[0].Operation)
+	require.Equal(t, "testAction", cfg.Resources[0].SOAPAction)
 	require.Equal(t, "test response", cfg.Resources[0].Response.Content)
 	require.Equal(t, 200, cfg.Resources[0].Response.StatusCode)
 
 	// Check second resource
 	require.Equal(t, "/another", cfg.Resources[1].Path)
-	require.NotNil(t, cfg.Resources[1].Operation)
-	require.Equal(t, "anotherOperation", cfg.Resources[1].Operation.Name)
+	require.Equal(t, "anotherOperation", cfg.Resources[1].Operation)
 	require.Equal(t, "another response", cfg.Resources[1].Response.Content)
 	require.Equal(t, 200, cfg.Resources[1].Response.StatusCode)
 }

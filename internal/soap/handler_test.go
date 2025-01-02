@@ -32,10 +32,8 @@ func TestSOAPHandler_HandleRequest(t *testing.T) {
 		Resources: []config.Resource{
 			{
 				RequestMatcher: config.RequestMatcher{
-					Path: "/pets/",
-				},
-				Operation: &config.SOAPOperation{
-					Name:       "getPetById",
+					Path:       "/pets/",
+					Operation:  "getPetById",
 					SOAPAction: "getPetById",
 				},
 				Response: config.Response{
@@ -106,10 +104,8 @@ func TestSOAPHandler_HandleRequest_InvalidMethod(t *testing.T) {
 		Resources: []config.Resource{
 			{
 				RequestMatcher: config.RequestMatcher{
-					Path: "/pets/",
-				},
-				Operation: &config.SOAPOperation{
-					Name:       "getPetById",
+					Path:       "/pets/",
+					Operation:  "getPetById",
 					SOAPAction: "getPetById",
 				},
 				Response: config.Response{
@@ -146,10 +142,8 @@ func TestSOAPHandler_HandleRequest_NoMatchingOperation(t *testing.T) {
 		Resources: []config.Resource{
 			{
 				RequestMatcher: config.RequestMatcher{
-					Path: "/pets/",
-				},
-				Operation: &config.SOAPOperation{
-					Name:       "getPetById",
+					Path:       "/pets/",
+					Operation:  "getPetById",
 					SOAPAction: "getPetById",
 				},
 				Response: config.Response{
@@ -223,10 +217,8 @@ func TestSOAPHandler_HandleRequest_WithInterceptor(t *testing.T) {
 		Resources: []config.Resource{
 			{
 				RequestMatcher: config.RequestMatcher{
-					Path: "/pets/",
-				},
-				Operation: &config.SOAPOperation{
-					Name:       "getPetById",
+					Path:       "/pets/",
+					Operation:  "getPetById",
 					SOAPAction: "getPetById",
 				},
 				Response: config.Response{
@@ -312,8 +304,10 @@ func TestSOAPHandler_HandleRequest_WithPassthroughInterceptor(t *testing.T) {
 		Interceptors: []config.Interceptor{
 			{
 				RequestMatcher: config.RequestMatcher{
-					Method: "POST",
-					Path:   "/pets/",
+					Method:     "POST",
+					Path:       "/pets/",
+					Operation:  "getPetById",
+					SOAPAction: "getPetById",
 				},
 				Response: &config.Response{
 					Content: "Intercepted but continuing",
@@ -327,10 +321,8 @@ func TestSOAPHandler_HandleRequest_WithPassthroughInterceptor(t *testing.T) {
 		Resources: []config.Resource{
 			{
 				RequestMatcher: config.RequestMatcher{
-					Path: "/pets/",
-				},
-				Operation: &config.SOAPOperation{
-					Name:       "getPetById",
+					Path:       "/pets/",
+					Operation:  "getPetById",
 					SOAPAction: "getPetById",
 				},
 				Response: config.Response{

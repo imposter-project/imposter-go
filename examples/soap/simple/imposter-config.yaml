@@ -3,9 +3,7 @@ wsdlFile: petstore.wsdl
 
 resources:
   - path: "/pets/"
-    operation:
-      name: getPetById
-      soapAction: getPetById
+    operation: getPetById
     response:
       content: |
         <?xml version="1.0" encoding="UTF-8"?>

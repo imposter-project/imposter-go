@@ -237,27 +237,35 @@ func splitQName(qname string) (namespace, localPart string) {
 	return "", qname
 }
 
-// matchesSOAPOperation checks if a resource matches the SOAP operation and action
-func (h *Handler) matchesSOAPOperation(resource *config.Resource, operation, soapAction string) bool {
+// matchesSOAPOperation checks if a request matcher matches the SOAP operation and action
+func (h *Handler) matchesSOAPOperation(matcher *config.RequestMatcher, operation, soapAction string) bool {
 	// Check operation match if specified
-	if resource.Operation != nil {
-		if resource.Operation.Name != "" {
-			// Remove 'Request' suffix from operation name if present
-			if strings.HasSuffix(operation, "Request") {
-				operation = strings.TrimSuffix(operation, "Request")
-			}
-			if resource.Operation.Name != operation {
-				return false
-			}
+	if matcher.Operation != "" {
+		// Remove 'Request' suffix from operation name if present
+		if strings.HasSuffix(operation, "Request") {
+			operation = strings.TrimSuffix(operation, "Request")
 		}
-		if resource.Operation.SOAPAction != "" && resource.Operation.SOAPAction != soapAction {
+		if matcher.Operation != operation {
 			return false
 		}
 	}
 
-	// Check direct SOAPAction match if specified
-	if resource.SOAPAction != "" && resource.SOAPAction != soapAction {
+	// Check SOAPAction match if specified
+	if matcher.SOAPAction != "" && matcher.SOAPAction != soapAction {
 		return false
+	}
+
+	// Check binding match if specified
+	if matcher.Binding != "" {
+		op := h.wsdlParser.GetOperation(operation)
+		if op == nil {
+			return false
+		}
+		// Get the binding name from the WSDL parser
+		bindingName := h.wsdlParser.GetBindingName(op)
+		if matcher.Binding != bindingName {
+			return false
+		}
 	}
 
 	return true
@@ -284,10 +292,27 @@ func (h *Handler) HandleRequest(r *http.Request) *plugin.ResponseState {
 		return responseState
 	}
 
+	// Parse the SOAP body first since we need it for both interceptors and resources
+	bodyHolder, err := h.parseBody(body)
+	if err != nil {
+		h.sendSOAPFault(responseState, "Invalid SOAP envelope", http.StatusBadRequest)
+		return responseState
+	}
+
+	// Get SOAPAction from headers
+	soapAction := h.getSoapAction(r)
+
+	// Determine operation
+	op := h.determineOperation(soapAction, bodyHolder)
+	if op == nil {
+		h.sendSOAPFault(responseState, "No matching SOAP operation found", http.StatusNotFound)
+		return responseState
+	}
+
 	// Process interceptors first
 	for _, interceptor := range h.config.Interceptors {
 		score, isWildcard := plugin.CalculateMatchScore(&interceptor.RequestMatcher, r, body)
-		if score > 0 {
+		if score > 0 && h.matchesSOAPOperation(&interceptor.RequestMatcher, op.Name, soapAction) {
 			fmt.Printf("Matched interceptor - method:%s, path:%s, wildcard:%v\n",
 				r.Method, r.URL.Path, isWildcard)
 
@@ -310,28 +335,11 @@ func (h *Handler) HandleRequest(r *http.Request) *plugin.ResponseState {
 		}
 	}
 
-	// Parse the SOAP body
-	bodyHolder, err := h.parseBody(body)
-	if err != nil {
-		h.sendSOAPFault(responseState, "Invalid SOAP envelope", http.StatusBadRequest)
-		return responseState
-	}
-
-	// Get SOAPAction from headers
-	soapAction := h.getSoapAction(r)
-
-	// Determine operation
-	op := h.determineOperation(soapAction, bodyHolder)
-	if op == nil {
-		h.sendSOAPFault(responseState, "No matching SOAP operation found", http.StatusNotFound)
-		return responseState
-	}
-
 	// Find matching resources
 	var matches []plugin.MatchResult
 	for _, resource := range h.config.Resources {
 		score, isWildcard := plugin.CalculateMatchScore(&resource.RequestMatcher, r, body)
-		if score > 0 && h.matchesSOAPOperation(&resource, op.Name, soapAction) {
+		if score > 0 && h.matchesSOAPOperation(&resource.RequestMatcher, op.Name, soapAction) {
 			matches = append(matches, plugin.MatchResult{Resource: &resource, Score: score, Wildcard: isWildcard})
 		}
 	}

@@ -123,16 +123,16 @@ type RequestMatcher struct {
 	FormParams  map[string]MatcherUnmarshaler `yaml:"formParams"`
 	PathParams  map[string]MatcherUnmarshaler `yaml:"pathParams"`
 	Capture     map[string]Capture            `yaml:"capture,omitempty"`
+	// SOAP-specific fields
+	Operation  string `yaml:"operation,omitempty"`
+	SOAPAction string `yaml:"soapAction,omitempty"`
+	Binding    string `yaml:"binding,omitempty"`
 }
 
 // Resource represents an HTTP resource
 type Resource struct {
 	RequestMatcher `yaml:",inline"`
 	Response       Response `yaml:"response"`
-	// SOAP-specific fields
-	Operation  *SOAPOperation `yaml:"operation,omitempty"`
-	Binding    *SOAPBinding   `yaml:"binding,omitempty"`
-	SOAPAction string         `yaml:"soapAction,omitempty"`
 }
 
 // Interceptor represents an HTTP interceptor that can be executed before resources
@@ -387,23 +387,11 @@ func (mu *MatcherUnmarshaler) UnmarshalYAML(unmarshal func(interface{}) error) e
 	return fmt.Errorf("failed to unmarshal as either string or MatchCondition")
 }
 
-// SOAPOperation represents a SOAP operation configuration
-type SOAPOperation struct {
-	Name       string `yaml:"name"`
-	SOAPAction string `yaml:"soapAction"`
-}
-
-// SOAPBinding represents a SOAP binding configuration
-type SOAPBinding struct {
-	Name string `yaml:"name"`
-}
-
 // SOAPRequestMatcher contains SOAP-specific fields for matching requests
 type SOAPRequestMatcher struct {
 	RequestMatcher `yaml:",inline"`
-	Operation      *SOAPOperation `yaml:"operation,omitempty"`
-	Binding        *SOAPBinding   `yaml:"binding,omitempty"`
-	SOAPAction     string         `yaml:"soapAction,omitempty"`
+	Operation      string `yaml:"operation,omitempty"`
+	SOAPAction     string `yaml:"soapAction,omitempty"`
 }
 
 // SOAPResource represents a SOAP resource with its request matcher and response

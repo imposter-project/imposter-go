@@ -31,6 +31,7 @@ type WSDLParser interface {
 	GetOperations() map[string]*Operation
 	GetOperation(name string) *Operation
 	ValidateRequest(operation string, body []byte) error
+	GetBindingName(op *Operation) string
 }
 
 // Operation represents a WSDL operation
@@ -40,6 +41,7 @@ type Operation struct {
 	Input      *Message
 	Output     *Message
 	Fault      *Message
+	Binding    string
 }
 
 // Message represents a WSDL message
@@ -169,6 +171,11 @@ func (p *wsdl1Parser) parseOperations() error {
 			op.SOAPAction = soapActionNode.SelectAttr("soapAction")
 		}
 
+		// Get binding name
+		if bindingNode := xmlquery.FindOne(node, "ancestor::wsdl:binding|ancestor::binding"); bindingNode != nil {
+			op.Binding = bindingNode.SelectAttr("name")
+		}
+
 		p.operations[op.Name] = op
 	}
 
@@ -253,8 +260,27 @@ func (p *wsdl2Parser) parseOperations() error {
 			op.SOAPAction = soapActionNode.SelectAttr("soapAction")
 		}
 
+		// Get binding name
+		if bindingNode := xmlquery.FindOne(node, "ancestor::binding"); bindingNode != nil {
+			op.Binding = bindingNode.SelectAttr("name")
+		}
+
 		p.operations[op.Name] = op
 	}
 
 	return nil
+}
+
+func (p *wsdl1Parser) GetBindingName(op *Operation) string {
+	if op == nil {
+		return ""
+	}
+	return op.Binding
+}
+
+func (p *wsdl2Parser) GetBindingName(op *Operation) string {
+	if op == nil {
+		return ""
+	}
+	return op.Binding
 }
