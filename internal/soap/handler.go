@@ -5,6 +5,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -278,8 +279,9 @@ func (h *Handler) HandleRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Initialize request-scoped store
+	// Initialize request-scoped store and response state
 	requestStore := make(store.Store)
+	responseState := plugin.NewResponseState()
 
 	// Process interceptors first
 	for _, interceptor := range h.config.Interceptors {
@@ -299,8 +301,9 @@ func (h *Handler) HandleRequest(w http.ResponseWriter, r *http.Request) {
 
 			// If the interceptor has a response and continue is false, send the response and stop processing
 			if interceptor.Response != nil {
-				h.handleResponse(w, *interceptor.Response)
+				h.processResponse(responseState, r, *interceptor.Response, requestStore)
 				if !interceptor.Continue {
+					responseState.WriteToResponseWriter(w)
 					return
 				}
 			}
@@ -310,7 +313,8 @@ func (h *Handler) HandleRequest(w http.ResponseWriter, r *http.Request) {
 	// Parse the SOAP body
 	bodyHolder, err := h.parseBody(body)
 	if err != nil {
-		h.sendSOAPFault(w, "Invalid SOAP envelope", http.StatusBadRequest)
+		h.sendSOAPFault(responseState, "Invalid SOAP envelope", http.StatusBadRequest)
+		responseState.WriteToResponseWriter(w)
 		return
 	}
 
@@ -320,7 +324,8 @@ func (h *Handler) HandleRequest(w http.ResponseWriter, r *http.Request) {
 	// Determine operation
 	op := h.determineOperation(soapAction, bodyHolder)
 	if op == nil {
-		h.sendSOAPFault(w, "No matching SOAP operation found", http.StatusNotFound)
+		h.sendSOAPFault(responseState, "No matching SOAP operation found", http.StatusNotFound)
+		responseState.WriteToResponseWriter(w)
 		return
 	}
 
@@ -334,7 +339,8 @@ func (h *Handler) HandleRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(matches) == 0 {
-		h.sendSOAPFault(w, "No matching SOAP operation found", http.StatusNotFound)
+		h.sendSOAPFault(responseState, "No matching SOAP operation found", http.StatusNotFound)
+		responseState.WriteToResponseWriter(w)
 		return
 	}
 
@@ -347,14 +353,15 @@ func (h *Handler) HandleRequest(w http.ResponseWriter, r *http.Request) {
 	// Capture request data
 	capture.CaptureRequestData(nil, *best.Resource, r, body, requestStore)
 
-	// Handle the response
-	h.handleResponse(w, best.Resource.Response)
+	// Process the response
+	h.processResponse(responseState, r, best.Resource.Response, requestStore)
+	responseState.WriteToResponseWriter(w)
 }
 
 // sendSOAPFault sends a SOAP fault response
-func (h *Handler) sendSOAPFault(w http.ResponseWriter, message string, statusCode int) {
-	w.Header().Set("Content-Type", "application/soap+xml")
-	w.WriteHeader(statusCode)
+func (h *Handler) sendSOAPFault(rs *plugin.ResponseState, message string, statusCode int) {
+	rs.Headers["Content-Type"] = "application/soap+xml"
+	rs.StatusCode = statusCode
 
 	var faultXML string
 	if h.wsdlParser.GetSOAPVersion() == SOAP12 {
@@ -383,55 +390,50 @@ func (h *Handler) sendSOAPFault(w http.ResponseWriter, message string, statusCod
 </env:Envelope>`, message)
 	}
 
-	fmt.Fprint(w, faultXML)
+	rs.Body = []byte(faultXML)
 }
 
-// handleResponse processes and sends the SOAP response
-func (h *Handler) handleResponse(w http.ResponseWriter, response config.Response) {
+// processResponse processes and sends the SOAP response
+func (h *Handler) processResponse(rs *plugin.ResponseState, r *http.Request, response config.Response, requestStore store.Store) {
+	// Handle delay if specified
+	plugin.SimulateDelay(response.Delay, r)
+
 	// Set content type for SOAP response
-	w.Header().Set("Content-Type", "application/soap+xml")
+	rs.Headers["Content-Type"] = "application/soap+xml"
 
 	// Set custom headers if any
 	for key, value := range response.Headers {
-		w.Header().Set(key, value)
+		rs.Headers[key] = value
 	}
 
 	// Set status code
 	if response.StatusCode != 0 {
-		w.WriteHeader(response.StatusCode)
+		rs.StatusCode = response.StatusCode
 	} else {
-		w.WriteHeader(http.StatusOK)
+		rs.StatusCode = http.StatusOK
+	}
+
+	// Handle failure simulation
+	if response.Fail != "" {
+		if plugin.SimulateFailure(rs, response.Fail, r) {
+			return
+		}
 	}
 
 	// Write response content
 	if response.File != "" {
-		// TODO: Implement file-based response
-		http.Error(w, "File-based responses not yet implemented", http.StatusInternalServerError)
-		return
+		filePath := filepath.Join(h.configDir, response.File)
+		data, err := os.ReadFile(filePath)
+		if err != nil {
+			rs.StatusCode = http.StatusInternalServerError
+			rs.Body = []byte("Failed to read file")
+			return
+		}
+		rs.Body = data
+	} else {
+		rs.Body = []byte(response.Content)
 	}
 
-	// If the response is not already a SOAP envelope, wrap it
-	if !strings.Contains(response.Content, "<Envelope") {
-		var soapResponse string
-		if h.wsdlParser.GetSOAPVersion() == SOAP12 {
-			soapResponse = fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
-<env:Envelope xmlns:env="http://www.w3.org/2003/05/soap-envelope">
-    <env:Header/>
-    <env:Body>
-        %s
-    </env:Body>
-</env:Envelope>`, response.Content)
-		} else {
-			soapResponse = fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
-<env:Envelope xmlns:env="http://schemas.xmlsoap.org/soap/envelope/">
-    <env:Header/>
-    <env:Body>
-        %s
-    </env:Body>
-</env:Envelope>`, response.Content)
-		}
-		fmt.Fprint(w, soapResponse)
-	} else {
-		fmt.Fprint(w, response.Content)
-	}
+	fmt.Printf("Handled request - method:%s, path:%s, status:%d, length:%d\n",
+		r.Method, r.URL.Path, rs.StatusCode, len(rs.Body))
 }
