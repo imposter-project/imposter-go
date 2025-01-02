@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -56,8 +56,8 @@ func ProcessTemplate(template string, r *http.Request, imposterConfig *config.Im
 	}
 
 	// Replace request body
-	body, _ := ioutil.ReadAll(r.Body)
-	r.Body = ioutil.NopCloser(bytes.NewReader(body))
+	body, _ := io.ReadAll(r.Body)
+	r.Body = io.NopCloser(bytes.NewReader(body))
 	template = strings.ReplaceAll(template, "${context.request.body}", string(body))
 
 	// Replace request path

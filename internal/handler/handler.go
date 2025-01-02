@@ -3,8 +3,9 @@ package handler
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -67,8 +68,8 @@ func (rs *responseState) writeToResponseWriter(w http.ResponseWriter) {
 
 // HandleRequest processes incoming HTTP requests based on resources
 func HandleRequest(w http.ResponseWriter, r *http.Request, configDir string, configs []config.Config, imposterConfig *config.ImposterConfig) {
-	body, _ := ioutil.ReadAll(r.Body)
-	r.Body = ioutil.NopCloser(bytes.NewReader(body))
+	body, _ := io.ReadAll(r.Body)
+	r.Body = io.NopCloser(bytes.NewReader(body))
 
 	// Initialize request-scoped store
 	requestStore := make(store.Store)
@@ -186,7 +187,7 @@ func processResponse(rs *responseState, r *http.Request, response config.Respons
 	var responseContent string
 	if response.File != "" {
 		filePath := filepath.Join(configDir, response.File)
-		data, err := ioutil.ReadFile(filePath)
+		data, err := os.ReadFile(filePath)
 		if err != nil {
 			rs.statusCode = http.StatusInternalServerError
 			rs.body = []byte("Failed to read file")

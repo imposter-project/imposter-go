@@ -3,7 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 
@@ -73,7 +73,7 @@ func handlePutStore(w http.ResponseWriter, r *http.Request, storeName, key strin
 		http.Error(w, "Key is required", http.StatusBadRequest)
 		return
 	}
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Printf("Failed to read request body: %v", err)
 		http.Error(w, "Failed to read request body", http.StatusInternalServerError)

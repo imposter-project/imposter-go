@@ -3,7 +3,6 @@ package store
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -45,7 +44,7 @@ func PreloadStores(configDir string, configs []config.Config) {
 				if definition.PreloadFile != "" {
 					path := filepath.Join(configDir, definition.PreloadFile)
 					fmt.Printf("Preloading store '%s' from file: %s\n", storeName, path)
-					jsonBytes, err := ioutil.ReadFile(path)
+					jsonBytes, err := os.ReadFile(path)
 					if err != nil {
 						fmt.Printf("Warning: failed to read %s: %v\n", path, err)
 						continue

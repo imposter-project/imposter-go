@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -259,7 +258,7 @@ func loadIgnorePaths(configDir string) []string {
 		return defaultIgnorePaths
 	}
 
-	data, err := ioutil.ReadFile(ignoreFilePath)
+	data, err := os.ReadFile(ignoreFilePath)
 	if err != nil {
 		fmt.Printf("Failed to read .imposterignore file: %v\n", err)
 		return defaultIgnorePaths
@@ -289,7 +288,7 @@ func shouldIgnorePath(path string, ignorePaths []string) bool {
 
 // parseConfig loads and parses a YAML configuration file
 func parseConfig(path string) (*Config, error) {
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file: %w", err)
 	}
