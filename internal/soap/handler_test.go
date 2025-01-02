@@ -1,6 +1,7 @@
 package soap
 
 import (
+	"github.com/imposter-project/imposter-go/internal/response"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -9,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/imposter-project/imposter-go/internal/config"
-	"github.com/imposter-project/imposter-go/internal/plugin"
 	"github.com/imposter-project/imposter-go/internal/store"
 )
 
@@ -56,7 +56,7 @@ func TestSOAPHandler_HandleRequest(t *testing.T) {
 	}
 
 	// Create handler
-	handler, err := NewHandler(cfg, tempDir)
+	handler, err := NewHandler(cfg, tempDir, &config.ImposterConfig{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,7 +78,7 @@ func TestSOAPHandler_HandleRequest(t *testing.T) {
 
 	// Initialize store and response state
 	requestStore := make(store.Store)
-	responseState := plugin.NewResponseState()
+	responseState := response.NewResponseState()
 
 	// Handle request
 	handler.HandleRequest(req, requestStore, responseState)
@@ -126,7 +126,7 @@ func TestSOAPHandler_HandleRequest_InvalidMethod(t *testing.T) {
 	}
 
 	// Create handler
-	handler, err := NewHandler(cfg, ".")
+	handler, err := NewHandler(cfg, ".", &config.ImposterConfig{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -136,7 +136,7 @@ func TestSOAPHandler_HandleRequest_InvalidMethod(t *testing.T) {
 
 	// Initialize store and response state
 	requestStore := make(store.Store)
-	responseState := plugin.NewResponseState()
+	responseState := response.NewResponseState()
 
 	// Handle request
 	handler.HandleRequest(req, requestStore, responseState)
@@ -172,7 +172,7 @@ func TestSOAPHandler_HandleRequest_NoMatchingOperation(t *testing.T) {
 	}
 
 	// Create handler
-	handler, err := NewHandler(cfg, ".")
+	handler, err := NewHandler(cfg, ".", &config.ImposterConfig{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -194,7 +194,7 @@ func TestSOAPHandler_HandleRequest_NoMatchingOperation(t *testing.T) {
 
 	// Initialize store and response state
 	requestStore := make(store.Store)
-	responseState := plugin.NewResponseState()
+	responseState := response.NewResponseState()
 
 	// Handle request
 	handler.HandleRequest(req, requestStore, responseState)
@@ -260,7 +260,7 @@ func TestSOAPHandler_HandleRequest_WithInterceptor(t *testing.T) {
 	}
 
 	// Create handler
-	handler, err := NewHandler(cfg, ".")
+	handler, err := NewHandler(cfg, ".", &config.ImposterConfig{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -283,7 +283,7 @@ func TestSOAPHandler_HandleRequest_WithInterceptor(t *testing.T) {
 
 	// Initialize store and response state
 	requestStore := make(store.Store)
-	responseState := plugin.NewResponseState()
+	responseState := response.NewResponseState()
 
 	// Handle request
 	handler.HandleRequest(req, requestStore, responseState)
@@ -361,7 +361,7 @@ func TestSOAPHandler_HandleRequest_WithPassthroughInterceptor(t *testing.T) {
 	}
 
 	// Create handler
-	handler, err := NewHandler(cfg, ".")
+	handler, err := NewHandler(cfg, ".", &config.ImposterConfig{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -384,7 +384,7 @@ func TestSOAPHandler_HandleRequest_WithPassthroughInterceptor(t *testing.T) {
 
 	// Initialize store and response state
 	requestStore := make(store.Store)
-	responseState := plugin.NewResponseState()
+	responseState := response.NewResponseState()
 
 	// Handle request
 	handler.HandleRequest(req, requestStore, responseState)

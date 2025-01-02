@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/xml"
 	"fmt"
+	"github.com/imposter-project/imposter-go/internal/response"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -11,7 +12,7 @@ import (
 	"github.com/antchfx/xmlquery"
 	"github.com/imposter-project/imposter-go/internal/capture"
 	"github.com/imposter-project/imposter-go/internal/config"
-	"github.com/imposter-project/imposter-go/internal/plugin"
+	"github.com/imposter-project/imposter-go/internal/matcher"
 	"github.com/imposter-project/imposter-go/internal/store"
 )
 
@@ -88,13 +89,14 @@ type SOAP12Fault struct {
 
 // Handler handles SOAP requests based on WSDL configuration
 type Handler struct {
-	config     *config.Config
-	configDir  string
-	wsdlParser WSDLParser
+	config         *config.Config
+	configDir      string
+	wsdlParser     WSDLParser
+	imposterConfig *config.ImposterConfig
 }
 
 // NewHandler creates a new SOAP handler
-func NewHandler(cfg *config.Config, configDir string) (*Handler, error) {
+func NewHandler(cfg *config.Config, configDir string, imposterConfig *config.ImposterConfig) (*Handler, error) {
 	// If WSDLFile is not absolute, make it relative to configDir
 	wsdlPath := cfg.WSDLFile
 	if !filepath.IsAbs(wsdlPath) {
@@ -107,9 +109,10 @@ func NewHandler(cfg *config.Config, configDir string) (*Handler, error) {
 	}
 
 	return &Handler{
-		config:     cfg,
-		configDir:  configDir,
-		wsdlParser: parser,
+		config:         cfg,
+		configDir:      configDir,
+		wsdlParser:     parser,
+		imposterConfig: imposterConfig,
 	}, nil
 }
 
@@ -238,45 +241,47 @@ func splitQName(qname string) (namespace, localPart string) {
 }
 
 // calculateScore calculates a unified match score for SOAP requests
-func (h *Handler) calculateScore(matcher *config.RequestMatcher, r *http.Request, body []byte, operation string, soapAction string) (score int, isWildcard bool) {
-	// Get base score from plugin matcher
-	score, isWildcard = plugin.CalculateMatchScore(matcher, r, body)
+func (h *Handler) calculateScore(reqMatcher *config.RequestMatcher, r *http.Request, body []byte, operation string, soapAction string) (score int, isWildcard bool) {
+	// Get base score from matcher
+	baseScore, baseWildcard := matcher.CalculateMatchScore(reqMatcher, r, body)
+	score = baseScore
+	isWildcard = baseWildcard
 
 	// Check SOAP-specific matches
-	if matcher.Operation != "" {
+	if reqMatcher.Operation != "" {
 		// Remove 'Request' suffix from operation name if present
 		if strings.HasSuffix(operation, "Request") {
 			operation = strings.TrimSuffix(operation, "Request")
 		}
-		if matcher.Operation != operation {
+		if reqMatcher.Operation != operation {
 			return 0, false
 		}
 		score++
 	}
 
-	if matcher.SOAPAction != "" {
-		if matcher.SOAPAction != soapAction {
+	if reqMatcher.SOAPAction != "" {
+		if reqMatcher.SOAPAction != soapAction {
 			return 0, false
 		}
 		score++
 	}
 
-	if matcher.Binding != "" {
+	if reqMatcher.Binding != "" {
 		op := h.wsdlParser.GetOperation(operation)
 		if op == nil {
 			return 0, false
 		}
 		bindingName := h.wsdlParser.GetBindingName(op)
-		if matcher.Binding != bindingName {
+		if reqMatcher.Binding != bindingName {
 			return 0, false
 		}
 		score++
 	}
 
 	// If no matchers were specified at all, return 0
-	if score == 0 && matcher.Method == "" && matcher.Path == "" &&
-		matcher.Operation == "" && matcher.SOAPAction == "" && matcher.Binding == "" &&
-		len(matcher.Headers) == 0 && len(matcher.QueryParams) == 0 && len(matcher.FormParams) == 0 {
+	if score == 0 && reqMatcher.Method == "" && reqMatcher.Path == "" &&
+		reqMatcher.Operation == "" && reqMatcher.SOAPAction == "" && reqMatcher.Binding == "" &&
+		len(reqMatcher.Headers) == 0 && len(reqMatcher.QueryParams) == 0 && len(reqMatcher.FormParams) == 0 {
 		return 0, false
 	}
 
@@ -284,7 +289,7 @@ func (h *Handler) calculateScore(matcher *config.RequestMatcher, r *http.Request
 }
 
 // HandleRequest processes incoming SOAP requests
-func (h *Handler) HandleRequest(r *http.Request, requestStore store.Store, responseState *plugin.ResponseState) {
+func (h *Handler) HandleRequest(r *http.Request, requestStore store.Store, responseState *response.ResponseState) {
 	// Only handle POST requests for SOAP
 	if r.Method != http.MethodPost {
 		responseState.StatusCode = http.StatusMethodNotAllowed
@@ -294,11 +299,9 @@ func (h *Handler) HandleRequest(r *http.Request, requestStore store.Store, respo
 	}
 
 	// Read and parse the SOAP request
-	body, err := plugin.GetRequestBody(r)
+	body, err := matcher.GetRequestBody(r)
 	if err != nil {
-		responseState.StatusCode = http.StatusBadRequest
-		responseState.Body = []byte("Failed to read request body")
-		responseState.Handled = true
+		h.sendSOAPFault(responseState, "Failed to read request body", http.StatusBadRequest)
 		return
 	}
 
@@ -328,7 +331,7 @@ func (h *Handler) HandleRequest(r *http.Request, requestStore store.Store, respo
 
 			// Capture request data if specified
 			if interceptor.Capture != nil {
-				capture.CaptureRequestData(nil, config.Resource{
+				capture.CaptureRequestData(h.imposterConfig, config.Resource{
 					RequestMatcher: config.RequestMatcher{
 						Capture: interceptor.Capture,
 					},
@@ -347,11 +350,11 @@ func (h *Handler) HandleRequest(r *http.Request, requestStore store.Store, respo
 	}
 
 	// Find matching resources
-	var matches []plugin.MatchResult
+	var matches []matcher.MatchResult
 	for _, resource := range h.config.Resources {
 		score, isWildcard := h.calculateScore(&resource.RequestMatcher, r, body, op.Name, soapAction)
 		if score > 0 {
-			matches = append(matches, plugin.MatchResult{Resource: &resource, Score: score, Wildcard: isWildcard})
+			matches = append(matches, matcher.MatchResult{Resource: &resource, Score: score, Wildcard: isWildcard})
 		}
 	}
 
@@ -360,13 +363,13 @@ func (h *Handler) HandleRequest(r *http.Request, requestStore store.Store, respo
 	}
 
 	// Find the best match
-	best, tie := plugin.FindBestMatch(matches)
+	best, tie := matcher.FindBestMatch(matches)
 	if tie {
 		fmt.Printf("Warning: multiple equally specific matches. Using the first.\n")
 	}
 
 	// Capture request data
-	capture.CaptureRequestData(nil, *best.Resource, r, body, requestStore)
+	capture.CaptureRequestData(h.imposterConfig, *best.Resource, r, body, requestStore)
 
 	// Process the response
 	h.processResponse(responseState, r, best.Resource.Response, requestStore)
@@ -374,7 +377,7 @@ func (h *Handler) HandleRequest(r *http.Request, requestStore store.Store, respo
 }
 
 // sendSOAPFault sends a SOAP fault response
-func (h *Handler) sendSOAPFault(rs *plugin.ResponseState, message string, statusCode int) {
+func (h *Handler) sendSOAPFault(rs *response.ResponseState, message string, statusCode int) {
 	rs.Headers["Content-Type"] = "application/soap+xml"
 	rs.StatusCode = statusCode
 
@@ -409,10 +412,10 @@ func (h *Handler) sendSOAPFault(rs *plugin.ResponseState, message string, status
 }
 
 // processResponse processes and sends the SOAP response
-func (h *Handler) processResponse(rs *plugin.ResponseState, r *http.Request, response config.Response, requestStore store.Store) {
+func (h *Handler) processResponse(rs *response.ResponseState, r *http.Request, resp config.Response, requestStore store.Store) {
 	// Set content type for SOAP response
 	rs.Headers["Content-Type"] = "application/soap+xml"
 
 	// Process the response using common handler
-	plugin.ProcessResponse(rs, r, response, h.configDir, requestStore, nil)
+	response.ProcessResponse(rs, r, resp, h.configDir, requestStore, nil)
 }

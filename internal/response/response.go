@@ -1,4 +1,4 @@
-package plugin
+package response
 
 import (
 	"fmt"
@@ -87,31 +87,31 @@ func SimulateFailure(rs *ResponseState, failureType string, r *http.Request) boo
 }
 
 // ProcessResponse handles common response processing logic
-func ProcessResponse(rs *ResponseState, r *http.Request, response config.Response, configDir string, requestStore store.Store, imposterConfig *config.ImposterConfig) {
+func ProcessResponse(rs *ResponseState, req *http.Request, resp config.Response, configDir string, requestStore store.Store, imposterConfig *config.ImposterConfig) {
 	// Handle delay if specified
-	SimulateDelay(response.Delay, r)
+	SimulateDelay(resp.Delay, req)
 
 	// Set status code
-	if response.StatusCode > 0 {
-		rs.StatusCode = response.StatusCode
+	if resp.StatusCode > 0 {
+		rs.StatusCode = resp.StatusCode
 	}
 
-	// Set response headers
-	for key, value := range response.Headers {
+	// Set resp headers
+	for key, value := range resp.Headers {
 		rs.Headers[key] = value
 	}
 
 	// Handle failure simulation
-	if response.Fail != "" {
-		if SimulateFailure(rs, response.Fail, r) {
+	if resp.Fail != "" {
+		if SimulateFailure(rs, resp.Fail, req) {
 			return
 		}
 	}
 
-	// Get response content
+	// Get resp content
 	var responseContent string
-	if response.File != "" {
-		filePath := filepath.Join(configDir, response.File)
+	if resp.File != "" {
+		filePath := filepath.Join(configDir, resp.File)
 		data, err := os.ReadFile(filePath)
 		if err != nil {
 			rs.StatusCode = http.StatusInternalServerError
@@ -120,15 +120,15 @@ func ProcessResponse(rs *ResponseState, r *http.Request, response config.Respons
 		}
 		responseContent = string(data)
 	} else {
-		responseContent = response.Content
+		responseContent = resp.Content
 	}
 
 	// Process template if enabled
-	if response.Template {
-		responseContent = template.ProcessTemplate(responseContent, r, imposterConfig, requestStore)
+	if resp.Template {
+		responseContent = template.ProcessTemplate(responseContent, req, imposterConfig, requestStore)
 	}
 
 	rs.Body = []byte(responseContent)
 	fmt.Printf("Handled request - method:%s, path:%s, status:%d, length:%d\n",
-		r.Method, r.URL.Path, rs.StatusCode, len(responseContent))
+		req.Method, req.URL.Path, rs.StatusCode, len(responseContent))
 }

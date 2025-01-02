@@ -2,11 +2,12 @@ package rest
 
 import (
 	"fmt"
+	"github.com/imposter-project/imposter-go/internal/response"
 	"net/http"
 
 	"github.com/imposter-project/imposter-go/internal/capture"
 	"github.com/imposter-project/imposter-go/internal/config"
-	"github.com/imposter-project/imposter-go/internal/plugin"
+	"github.com/imposter-project/imposter-go/internal/matcher"
 	"github.com/imposter-project/imposter-go/internal/store"
 )
 
@@ -27,8 +28,8 @@ func NewHandler(cfg *config.Config, configDir string, imposterConfig *config.Imp
 }
 
 // HandleRequest processes incoming REST API requests
-func (h *Handler) HandleRequest(r *http.Request, requestStore store.Store, responseState *plugin.ResponseState) {
-	body, err := plugin.GetRequestBody(r)
+func (h *Handler) HandleRequest(r *http.Request, requestStore store.Store, responseState *response.ResponseState) {
+	body, err := matcher.GetRequestBody(r)
 	if err != nil {
 		responseState.StatusCode = http.StatusBadRequest
 		responseState.Body = []byte("Failed to read request body")
@@ -38,7 +39,7 @@ func (h *Handler) HandleRequest(r *http.Request, requestStore store.Store, respo
 
 	// Process interceptors first
 	for _, interceptor := range h.config.Interceptors {
-		score, isWildcard := plugin.CalculateMatchScore(&interceptor.RequestMatcher, r, body)
+		score, isWildcard := matcher.CalculateMatchScore(&interceptor.RequestMatcher, r, body)
 		if score > 0 {
 			fmt.Printf("Matched interceptor - method:%s, path:%s, wildcard:%v\n",
 				r.Method, r.URL.Path, isWildcard)
@@ -50,11 +51,11 @@ func (h *Handler) HandleRequest(r *http.Request, requestStore store.Store, respo
 		}
 	}
 
-	var matches []plugin.MatchResult
+	var matches []matcher.MatchResult
 	for _, res := range h.config.Resources {
-		score, isWildcard := plugin.CalculateMatchScore(&res.RequestMatcher, r, body)
+		score, isWildcard := matcher.CalculateMatchScore(&res.RequestMatcher, r, body)
 		if score > 0 {
-			matches = append(matches, plugin.MatchResult{Resource: &res, Score: score, Wildcard: isWildcard})
+			matches = append(matches, matcher.MatchResult{Resource: &res, Score: score, Wildcard: isWildcard})
 		}
 	}
 
@@ -63,7 +64,7 @@ func (h *Handler) HandleRequest(r *http.Request, requestStore store.Store, respo
 	}
 
 	// Find the best match
-	best, tie := plugin.FindBestMatch(matches)
+	best, tie := matcher.FindBestMatch(matches)
 	if tie {
 		fmt.Printf("Warning: multiple equally specific matches. Using the first.\n")
 	}
@@ -77,7 +78,7 @@ func (h *Handler) HandleRequest(r *http.Request, requestStore store.Store, respo
 }
 
 // processInterceptor handles an interceptor and returns true if request processing should continue
-func (h *Handler) processInterceptor(rs *plugin.ResponseState, r *http.Request, body []byte, interceptor config.Interceptor, requestStore store.Store) bool {
+func (h *Handler) processInterceptor(rs *response.ResponseState, r *http.Request, body []byte, interceptor config.Interceptor, requestStore store.Store) bool {
 	// Capture request data if specified
 	if interceptor.Capture != nil {
 		capture.CaptureRequestData(h.imposterConfig, config.Resource{
@@ -96,6 +97,6 @@ func (h *Handler) processInterceptor(rs *plugin.ResponseState, r *http.Request, 
 }
 
 // processResponse handles preparing the response state
-func (h *Handler) processResponse(rs *plugin.ResponseState, r *http.Request, response config.Response, requestStore store.Store) {
-	plugin.ProcessResponse(rs, r, response, h.configDir, requestStore, h.imposterConfig)
+func (h *Handler) processResponse(rs *response.ResponseState, r *http.Request, resp config.Response, requestStore store.Store) {
+	response.ProcessResponse(rs, r, resp, h.configDir, requestStore, h.imposterConfig)
 }

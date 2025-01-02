@@ -1,11 +1,11 @@
 package handler
 
 import (
+	"github.com/imposter-project/imposter-go/internal/response"
 	"net/http"
 	"strings"
 
 	"github.com/imposter-project/imposter-go/internal/config"
-	"github.com/imposter-project/imposter-go/internal/plugin"
 	"github.com/imposter-project/imposter-go/internal/rest"
 	"github.com/imposter-project/imposter-go/internal/soap"
 	"github.com/imposter-project/imposter-go/internal/store"
@@ -13,14 +13,14 @@ import (
 
 // PluginHandler defines the interface that all plugin handlers must implement
 type PluginHandler interface {
-	HandleRequest(r *http.Request, requestStore store.Store, responseState *plugin.ResponseState)
+	HandleRequest(r *http.Request, requestStore store.Store, responseState *response.ResponseState)
 }
 
 // HandleRequest processes incoming HTTP requests and routes them to the appropriate handler
 func HandleRequest(w http.ResponseWriter, r *http.Request, configDir string, configs []config.Config, imposterConfig *config.ImposterConfig) {
 	// Initialize request-scoped store and response state
 	requestStore := make(store.Store)
-	responseState := plugin.NewResponseState()
+	responseState := response.NewResponseState()
 
 	// Handle system endpoints
 	if handleSystemEndpoint(w, r) {
@@ -36,7 +36,7 @@ func HandleRequest(w http.ResponseWriter, r *http.Request, configDir string, con
 		case "rest":
 			handler, err = rest.NewHandler(&cfg, configDir, imposterConfig)
 		case "soap":
-			handler, err = soap.NewHandler(&cfg, configDir)
+			handler, err = soap.NewHandler(&cfg, configDir, imposterConfig)
 		default:
 			http.Error(w, "Unsupported plugin type", http.StatusInternalServerError)
 			return

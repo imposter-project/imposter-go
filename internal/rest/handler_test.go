@@ -2,6 +2,7 @@ package rest
 
 import (
 	"bytes"
+	"github.com/imposter-project/imposter-go/internal/response"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -9,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/imposter-project/imposter-go/internal/config"
-	"github.com/imposter-project/imposter-go/internal/plugin"
 	"github.com/imposter-project/imposter-go/internal/store"
 )
 
@@ -48,7 +48,7 @@ func TestHandler_HandleRequest_NoMatchingResource(t *testing.T) {
 
 	// Initialize store and response state
 	requestStore := make(store.Store)
-	responseState := plugin.NewResponseState()
+	responseState := response.NewResponseState()
 
 	// Handle request
 	handler.HandleRequest(req, requestStore, responseState)
@@ -94,7 +94,7 @@ func TestHandler_HandleRequest_MatchingResource(t *testing.T) {
 
 	// Initialize store and response state
 	requestStore := make(store.Store)
-	responseState := plugin.NewResponseState()
+	responseState := response.NewResponseState()
 
 	// Handle request
 	handler.HandleRequest(req, requestStore, responseState)
@@ -160,7 +160,7 @@ func TestHandler_HandleRequest_WithInterceptor(t *testing.T) {
 
 	// Initialize store and response state
 	requestStore := make(store.Store)
-	responseState := plugin.NewResponseState()
+	responseState := response.NewResponseState()
 
 	// Handle request
 	handler.HandleRequest(req, requestStore, responseState)
@@ -222,7 +222,7 @@ func TestHandler_HandleRequest_WithPathParams(t *testing.T) {
 
 	// Initialize store and response state
 	requestStore := make(store.Store)
-	responseState := plugin.NewResponseState()
+	responseState := response.NewResponseState()
 
 	// Handle request
 	handler.HandleRequest(req, requestStore, responseState)
@@ -283,7 +283,7 @@ func TestHandler_HandleRequest_WithResponseFile(t *testing.T) {
 
 	// Initialize store and response state
 	requestStore := make(store.Store)
-	responseState := plugin.NewResponseState()
+	responseState := response.NewResponseState()
 
 	// Handle request
 	handler.HandleRequest(req, requestStore, responseState)
@@ -345,7 +345,7 @@ func TestHandler_HandleRequest_WithRequestBody(t *testing.T) {
 
 	// Initialize store and response state
 	requestStore := make(store.Store)
-	responseState := plugin.NewResponseState()
+	responseState := response.NewResponseState()
 
 	// Handle request
 	handler.HandleRequest(req, requestStore, responseState)
