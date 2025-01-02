@@ -8,15 +8,20 @@ import (
 	"github.com/imposter-project/imposter-go/internal/plugin"
 	"github.com/imposter-project/imposter-go/internal/rest"
 	"github.com/imposter-project/imposter-go/internal/soap"
+	"github.com/imposter-project/imposter-go/internal/store"
 )
 
 // PluginHandler defines the interface that all plugin handlers must implement
 type PluginHandler interface {
-	HandleRequest(r *http.Request) *plugin.ResponseState
+	HandleRequest(r *http.Request, requestStore store.Store, responseState *plugin.ResponseState)
 }
 
 // HandleRequest processes incoming HTTP requests and routes them to the appropriate handler
 func HandleRequest(w http.ResponseWriter, r *http.Request, configDir string, configs []config.Config, imposterConfig *config.ImposterConfig) {
+	// Initialize request-scoped store and response state
+	requestStore := make(store.Store)
+	responseState := plugin.NewResponseState()
+
 	// Handle system endpoints
 	if handleSystemEndpoint(w, r) {
 		return
@@ -42,13 +47,23 @@ func HandleRequest(w http.ResponseWriter, r *http.Request, configDir string, con
 			return
 		}
 
-		// Get response state from handler
-		responseState := handler.HandleRequest(r)
+		// Process request with handler
+		handler.HandleRequest(r, requestStore, responseState)
 
-		// Write response to client
-		responseState.WriteToResponseWriter(w)
-		return
+		// If the response has been handled by the handler, break the loop
+		if responseState.Handled {
+			break
+		}
 	}
+
+	// If no handler handled the response, return 404
+	if !responseState.Handled {
+		responseState.StatusCode = http.StatusNotFound
+		responseState.Body = []byte("Resource not found")
+	}
+
+	// Write response to client
+	responseState.WriteToResponseWriter(w)
 }
 
 // handleSystemEndpoint handles system-level endpoints like /system/store

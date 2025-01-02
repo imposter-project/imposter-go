@@ -18,7 +18,8 @@ type ResponseState struct {
 	StatusCode int
 	Headers    map[string]string
 	Body       []byte
-	Completed  bool // indicates if the response is complete (e.g., connection closed)
+	Stopped    bool // indicates if the response has been stopped (e.g., connection closed)
+	Handled    bool // indicates if a handler has handled the request
 }
 
 // NewResponseState creates a new ResponseState with default values
@@ -31,7 +32,7 @@ func NewResponseState() *ResponseState {
 
 // WriteToResponseWriter writes the final state to the http.ResponseWriter
 func (rs *ResponseState) WriteToResponseWriter(w http.ResponseWriter) {
-	if rs.Completed {
+	if rs.Stopped {
 		// Handle connection closing
 		if hijacker, ok := w.(http.Hijacker); ok {
 			if conn, _, err := hijacker.Hijack(); err == nil {
@@ -77,8 +78,8 @@ func SimulateFailure(rs *ResponseState, failureType string, r *http.Request) boo
 		return true
 
 	case "CloseConnection":
-		// Mark the response as completed to prevent writing the body
-		rs.Completed = true
+		// Mark the response as stopped to prevent writing the body
+		rs.Stopped = true
 		fmt.Printf("Handled request (simulated failure: CloseConnection) - method:%s, path:%s\n", r.Method, r.URL.Path)
 		return true
 	}

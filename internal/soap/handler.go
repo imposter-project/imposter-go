@@ -284,16 +284,13 @@ func (h *Handler) calculateScore(matcher *config.RequestMatcher, r *http.Request
 }
 
 // HandleRequest processes incoming SOAP requests
-func (h *Handler) HandleRequest(r *http.Request) *plugin.ResponseState {
-	// Initialize request-scoped store and response state
-	requestStore := make(store.Store)
-	responseState := plugin.NewResponseState()
-
+func (h *Handler) HandleRequest(r *http.Request, requestStore store.Store, responseState *plugin.ResponseState) {
 	// Only handle POST requests for SOAP
 	if r.Method != http.MethodPost {
 		responseState.StatusCode = http.StatusMethodNotAllowed
 		responseState.Body = []byte("Method not allowed")
-		return responseState
+		responseState.Handled = true
+		return
 	}
 
 	// Read and parse the SOAP request
@@ -301,14 +298,16 @@ func (h *Handler) HandleRequest(r *http.Request) *plugin.ResponseState {
 	if err != nil {
 		responseState.StatusCode = http.StatusBadRequest
 		responseState.Body = []byte("Failed to read request body")
-		return responseState
+		responseState.Handled = true
+		return
 	}
 
 	// Parse the SOAP body first since we need it for both interceptors and resources
 	bodyHolder, err := h.parseBody(body)
 	if err != nil {
 		h.sendSOAPFault(responseState, "Invalid SOAP envelope", http.StatusBadRequest)
-		return responseState
+		responseState.Handled = true
+		return
 	}
 
 	// Get SOAPAction from headers
@@ -317,8 +316,7 @@ func (h *Handler) HandleRequest(r *http.Request) *plugin.ResponseState {
 	// Determine operation
 	op := h.determineOperation(soapAction, bodyHolder)
 	if op == nil {
-		h.sendSOAPFault(responseState, "No matching SOAP operation found", http.StatusNotFound)
-		return responseState
+		return // Let the main handler deal with no operation match
 	}
 
 	// Process interceptors first
@@ -341,7 +339,8 @@ func (h *Handler) HandleRequest(r *http.Request) *plugin.ResponseState {
 			if interceptor.Response != nil {
 				h.processResponse(responseState, r, *interceptor.Response, requestStore)
 				if !interceptor.Continue {
-					return responseState
+					responseState.Handled = true
+					return
 				}
 			}
 		}
@@ -357,8 +356,7 @@ func (h *Handler) HandleRequest(r *http.Request) *plugin.ResponseState {
 	}
 
 	if len(matches) == 0 {
-		h.sendSOAPFault(responseState, "No matching SOAP operation found", http.StatusNotFound)
-		return responseState
+		return // Let the main handler deal with no matches
 	}
 
 	// Find the best match
@@ -372,7 +370,7 @@ func (h *Handler) HandleRequest(r *http.Request) *plugin.ResponseState {
 
 	// Process the response
 	h.processResponse(responseState, r, best.Resource.Response, requestStore)
-	return responseState
+	responseState.Handled = true
 }
 
 // sendSOAPFault sends a SOAP fault response

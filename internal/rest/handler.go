@@ -27,18 +27,14 @@ func NewHandler(cfg *config.Config, configDir string, imposterConfig *config.Imp
 }
 
 // HandleRequest processes incoming REST API requests
-func (h *Handler) HandleRequest(r *http.Request) *plugin.ResponseState {
+func (h *Handler) HandleRequest(r *http.Request, requestStore store.Store, responseState *plugin.ResponseState) {
 	body, err := plugin.GetRequestBody(r)
 	if err != nil {
-		rs := plugin.NewResponseState()
-		rs.StatusCode = http.StatusBadRequest
-		rs.Body = []byte("Failed to read request body")
-		return rs
+		responseState.StatusCode = http.StatusBadRequest
+		responseState.Body = []byte("Failed to read request body")
+		responseState.Handled = true
+		return
 	}
-
-	// Initialize request-scoped store
-	requestStore := make(store.Store)
-	responseState := plugin.NewResponseState()
 
 	// Process interceptors first
 	for _, interceptor := range h.config.Interceptors {
@@ -48,7 +44,8 @@ func (h *Handler) HandleRequest(r *http.Request) *plugin.ResponseState {
 				r.Method, r.URL.Path, isWildcard)
 			// Process the interceptor
 			if !h.processInterceptor(responseState, r, body, interceptor, requestStore) {
-				return responseState // Short-circuit if interceptor responded and continue is false
+				responseState.Handled = true
+				return // Short-circuit if interceptor responded and continue is false
 			}
 		}
 	}
@@ -62,12 +59,7 @@ func (h *Handler) HandleRequest(r *http.Request) *plugin.ResponseState {
 	}
 
 	if len(matches) == 0 {
-		notFoundMsg := "Resource not found"
-		responseState.StatusCode = http.StatusNotFound
-		responseState.Body = []byte(notFoundMsg)
-		fmt.Printf("Handled request - method:%s, path:%s, status:%d, length:%d\n",
-			r.Method, r.URL.Path, http.StatusNotFound, len(notFoundMsg))
-		return responseState
+		return // Let the main handler deal with no matches
 	}
 
 	// Find the best match
@@ -81,7 +73,7 @@ func (h *Handler) HandleRequest(r *http.Request) *plugin.ResponseState {
 
 	// Process the response
 	h.processResponse(responseState, r, best.Resource.Response, requestStore)
-	return responseState
+	responseState.Handled = true
 }
 
 // processInterceptor handles an interceptor and returns true if request processing should continue

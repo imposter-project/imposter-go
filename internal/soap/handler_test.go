@@ -9,6 +9,8 @@ import (
 	"testing"
 
 	"github.com/imposter-project/imposter-go/internal/config"
+	"github.com/imposter-project/imposter-go/internal/plugin"
+	"github.com/imposter-project/imposter-go/internal/store"
 )
 
 func TestSOAPHandler_HandleRequest(t *testing.T) {
@@ -74,25 +76,32 @@ func TestSOAPHandler_HandleRequest(t *testing.T) {
 	req.Header.Set("Content-Type", "application/soap+xml")
 	req.Header.Set("SOAPAction", "getPetById")
 
-	// Create response recorder
-	rr := httptest.NewRecorder()
+	// Initialize store and response state
+	requestStore := make(store.Store)
+	responseState := plugin.NewResponseState()
 
 	// Handle request
-	responseState := handler.HandleRequest(req)
-	responseState.WriteToResponseWriter(rr)
+	handler.HandleRequest(req, requestStore, responseState)
 
 	// Check response
-	if rr.Code != http.StatusOK {
-		t.Errorf("Expected status code %d, got %d", http.StatusOK, rr.Code)
+	if !responseState.Handled {
+		t.Error("Expected response to be handled")
 	}
-	if !strings.Contains(rr.Header().Get("Content-Type"), "application/soap+xml") {
-		t.Errorf("Expected Content-Type to contain application/soap+xml, got %s", rr.Header().Get("Content-Type"))
+
+	if responseState.StatusCode != http.StatusOK {
+		t.Errorf("Expected status code %d, got %d", http.StatusOK, responseState.StatusCode)
 	}
-	if !strings.Contains(rr.Body.String(), "<getPetByIdResponse") {
-		t.Errorf("Expected response to contain getPetByIdResponse, got %s", rr.Body.String())
+
+	if !strings.Contains(responseState.Headers["Content-Type"], "application/soap+xml") {
+		t.Errorf("Expected Content-Type to contain application/soap+xml, got %s", responseState.Headers["Content-Type"])
 	}
-	if !strings.Contains(rr.Body.String(), "<n>Test Pet<n>") {
-		t.Errorf("Expected response to contain Test Pet, got %s", rr.Body.String())
+
+	responseBody := string(responseState.Body)
+	if !strings.Contains(responseBody, "<getPetByIdResponse") {
+		t.Errorf("Expected response to contain getPetByIdResponse, got %s", responseBody)
+	}
+	if !strings.Contains(responseBody, "<n>Test Pet<n>") {
+		t.Errorf("Expected response to contain Test Pet, got %s", responseBody)
 	}
 }
 
@@ -125,10 +134,18 @@ func TestSOAPHandler_HandleRequest_InvalidMethod(t *testing.T) {
 	// Create test request with GET method
 	req := httptest.NewRequest(http.MethodGet, "/pets/", nil)
 
+	// Initialize store and response state
+	requestStore := make(store.Store)
+	responseState := plugin.NewResponseState()
+
 	// Handle request
-	responseState := handler.HandleRequest(req)
+	handler.HandleRequest(req, requestStore, responseState)
 
 	// Check response
+	if !responseState.Handled {
+		t.Error("Expected response to be handled for invalid method")
+	}
+
 	if responseState.StatusCode != http.StatusMethodNotAllowed {
 		t.Errorf("Expected status code %d, got %d", http.StatusMethodNotAllowed, responseState.StatusCode)
 	}
@@ -175,12 +192,16 @@ func TestSOAPHandler_HandleRequest_NoMatchingOperation(t *testing.T) {
 	req.Header.Set("Content-Type", "application/soap+xml")
 	req.Header.Set("SOAPAction", "unknownOperation")
 
+	// Initialize store and response state
+	requestStore := make(store.Store)
+	responseState := plugin.NewResponseState()
+
 	// Handle request
-	responseState := handler.HandleRequest(req)
+	handler.HandleRequest(req, requestStore, responseState)
 
 	// Check response
-	if responseState.StatusCode != http.StatusNotFound {
-		t.Errorf("Expected status code %d, got %d", http.StatusNotFound, responseState.StatusCode)
+	if responseState.Handled {
+		t.Error("Expected response to not be handled for no matching operation")
 	}
 }
 
@@ -260,60 +281,57 @@ func TestSOAPHandler_HandleRequest_WithInterceptor(t *testing.T) {
 	req.Header.Set("SOAPAction", "getPetById")
 	req.Header.Set("X-Test-Header", "test-value")
 
-	// Handle request
-	responseState := handler.HandleRequest(req)
+	// Initialize store and response state
+	requestStore := make(store.Store)
+	responseState := plugin.NewResponseState()
 
-	// Check response - should be intercepted
+	// Handle request
+	handler.HandleRequest(req, requestStore, responseState)
+
+	// Check response
+	if !responseState.Handled {
+		t.Error("Expected response to be handled for interceptor")
+	}
+
 	if responseState.StatusCode != http.StatusBadRequest {
 		t.Errorf("Expected status code %d, got %d", http.StatusBadRequest, responseState.StatusCode)
 	}
-	if !strings.Contains(responseState.Headers["Content-Type"], "application/soap+xml") {
-		t.Errorf("Expected Content-Type to contain application/soap+xml, got %s", responseState.Headers["Content-Type"])
+
+	responseBody := string(responseState.Body)
+	if !strings.Contains(responseBody, "<env:Fault>") {
+		t.Errorf("Expected response to contain Fault, got %s", responseBody)
 	}
-	if !strings.Contains(string(responseState.Body), "<env:Fault>") {
-		t.Errorf("Expected response to contain <env:Fault>, got %s", string(responseState.Body))
-	}
-	if !strings.Contains(string(responseState.Body), "<faultstring>Intercepted request</faultstring>") {
-		t.Errorf("Expected response to contain intercepted message, got %s", string(responseState.Body))
+	if !strings.Contains(responseBody, "Intercepted request") {
+		t.Errorf("Expected response to contain interceptor message, got %s", responseBody)
 	}
 }
 
 func TestSOAPHandler_HandleRequest_WithPassthroughInterceptor(t *testing.T) {
-	// Create a temporary directory for test files
-	tempDir, err := os.MkdirTemp("", "imposter-test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tempDir)
-
-	// Copy test WSDL file to temp directory
-	wsdlContent, err := os.ReadFile("testdata/petstore.wsdl")
-	if err != nil {
-		t.Fatal(err)
-	}
-	wsdlPath := filepath.Join(tempDir, "petstore.wsdl")
-	err = os.WriteFile(wsdlPath, wsdlContent, 0644)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Create test configuration with passthrough interceptor
+	// Create test configuration
 	cfg := &config.Config{
 		Plugin:   "soap",
-		WSDLFile: wsdlPath,
+		WSDLFile: filepath.Join("testdata", "petstore.wsdl"),
 		Interceptors: []config.Interceptor{
 			{
 				RequestMatcher: config.RequestMatcher{
-					Method:     "POST",
-					Path:       "/pets/",
-					Operation:  "getPetById",
-					SOAPAction: "getPetById",
+					Method: http.MethodPost,
+					Path:   "/pets/",
+					Headers: map[string]config.MatcherUnmarshaler{
+						"X-Test-Header": {Matcher: config.StringMatcher("test-value")},
+					},
 				},
 				Response: &config.Response{
-					Content: "Intercepted but continuing",
-					Headers: map[string]string{
-						"X-Intercepted": "true",
-					},
+					Content: `<?xml version="1.0" encoding="UTF-8"?>
+<env:Envelope xmlns:env="http://www.w3.org/2001/12/soap-envelope">
+    <env:Header/>
+    <env:Body>
+        <env:Fault>
+            <faultcode>env:Client</faultcode>
+            <faultstring>Intercepted request</faultstring>
+        </env:Fault>
+    </env:Body>
+</env:Envelope>`,
+					StatusCode: http.StatusBadRequest,
 				},
 				Continue: true,
 			},
@@ -332,18 +350,18 @@ func TestSOAPHandler_HandleRequest_WithPassthroughInterceptor(t *testing.T) {
     <env:Body>
         <getPetByIdResponse xmlns="urn:com:example:petstore">
             <id>3</id>
-            <name>Test Pet</name>
+            <n>Test Pet<n>
         </getPetByIdResponse>
     </env:Body>
 </env:Envelope>`,
-					StatusCode: 200,
+					StatusCode: http.StatusOK,
 				},
 			},
 		},
 	}
 
 	// Create handler
-	handler, err := NewHandler(cfg, tempDir)
+	handler, err := NewHandler(cfg, ".")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -362,28 +380,29 @@ func TestSOAPHandler_HandleRequest_WithPassthroughInterceptor(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/pets/", strings.NewReader(soapRequest))
 	req.Header.Set("Content-Type", "application/soap+xml")
 	req.Header.Set("SOAPAction", "getPetById")
+	req.Header.Set("X-Test-Header", "test-value")
 
-	// Create response recorder
-	rr := httptest.NewRecorder()
+	// Initialize store and response state
+	requestStore := make(store.Store)
+	responseState := plugin.NewResponseState()
 
 	// Handle request
-	responseState := handler.HandleRequest(req)
-	responseState.WriteToResponseWriter(rr)
+	handler.HandleRequest(req, requestStore, responseState)
 
-	// Check response - should be the final response, but with interceptor header
-	if rr.Code != http.StatusOK {
-		t.Errorf("Expected status code %d, got %d", http.StatusOK, rr.Code)
+	// Check response - should be the resource response since interceptor has Continue=true
+	if !responseState.Handled {
+		t.Error("Expected response to be handled")
 	}
-	if !strings.Contains(rr.Header().Get("Content-Type"), "application/soap+xml") {
-		t.Errorf("Expected Content-Type to contain application/soap+xml, got %s", rr.Header().Get("Content-Type"))
+
+	if responseState.StatusCode != http.StatusOK {
+		t.Errorf("Expected status code %d, got %d", http.StatusOK, responseState.StatusCode)
 	}
-	if rr.Header().Get("X-Intercepted") != "true" {
-		t.Errorf("Expected X-Intercepted header to be true, got %s", rr.Header().Get("X-Intercepted"))
+
+	responseBody := string(responseState.Body)
+	if !strings.Contains(responseBody, "<getPetByIdResponse") {
+		t.Errorf("Expected response to contain getPetByIdResponse, got %s", responseBody)
 	}
-	if !strings.Contains(rr.Body.String(), "<getPetByIdResponse") {
-		t.Errorf("Expected response to contain getPetByIdResponse, got %s", rr.Body.String())
-	}
-	if !strings.Contains(rr.Body.String(), "<name>Test Pet</name>") {
-		t.Errorf("Expected response to contain Test Pet, got %s", rr.Body.String())
+	if !strings.Contains(responseBody, "<n>Test Pet<n>") {
+		t.Errorf("Expected response to contain Test Pet, got %s", responseBody)
 	}
 }

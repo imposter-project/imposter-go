@@ -9,6 +9,8 @@ import (
 	"testing"
 
 	"github.com/imposter-project/imposter-go/internal/config"
+	"github.com/imposter-project/imposter-go/internal/plugin"
+	"github.com/imposter-project/imposter-go/internal/store"
 )
 
 func TestHandler_HandleRequest_NoMatchingResource(t *testing.T) {
@@ -43,15 +45,17 @@ func TestHandler_HandleRequest_NoMatchingResource(t *testing.T) {
 
 	// Create test request
 	req := httptest.NewRequest("GET", "/nonexistent", nil)
-	w := httptest.NewRecorder()
+
+	// Initialize store and response state
+	requestStore := make(store.Store)
+	responseState := plugin.NewResponseState()
 
 	// Handle request
-	responseState := handler.HandleRequest(req)
-	responseState.WriteToResponseWriter(w)
+	handler.HandleRequest(req, requestStore, responseState)
 
 	// Check response
-	if w.Code != http.StatusNotFound {
-		t.Errorf("Expected status code %d, got %d", http.StatusNotFound, w.Code)
+	if responseState.Handled {
+		t.Error("Expected response to not be handled for no match")
 	}
 }
 
@@ -87,19 +91,25 @@ func TestHandler_HandleRequest_MatchingResource(t *testing.T) {
 
 	// Create test request
 	req := httptest.NewRequest("GET", "/test", nil)
-	w := httptest.NewRecorder()
+
+	// Initialize store and response state
+	requestStore := make(store.Store)
+	responseState := plugin.NewResponseState()
 
 	// Handle request
-	responseState := handler.HandleRequest(req)
-	responseState.WriteToResponseWriter(w)
+	handler.HandleRequest(req, requestStore, responseState)
 
 	// Check response
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected status code %d, got %d", http.StatusOK, w.Code)
+	if !responseState.Handled {
+		t.Error("Expected response to be handled for match")
 	}
 
-	if w.Body.String() != "test response" {
-		t.Errorf("Expected response body %q, got %q", "test response", w.Body.String())
+	if responseState.StatusCode != http.StatusOK {
+		t.Errorf("Expected status code %d, got %d", http.StatusOK, responseState.StatusCode)
+	}
+
+	if string(responseState.Body) != "test response" {
+		t.Errorf("Expected response body %q, got %q", "test response", string(responseState.Body))
 	}
 }
 
@@ -147,19 +157,25 @@ func TestHandler_HandleRequest_WithInterceptor(t *testing.T) {
 
 	// Create test request
 	req := httptest.NewRequest("GET", "/test", nil)
-	w := httptest.NewRecorder()
+
+	// Initialize store and response state
+	requestStore := make(store.Store)
+	responseState := plugin.NewResponseState()
 
 	// Handle request
-	responseState := handler.HandleRequest(req)
-	responseState.WriteToResponseWriter(w)
+	handler.HandleRequest(req, requestStore, responseState)
 
 	// Check response
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected status code %d, got %d", http.StatusOK, w.Code)
+	if !responseState.Handled {
+		t.Error("Expected response to be handled for interceptor")
 	}
 
-	if w.Body.String() != "intercepted response" {
-		t.Errorf("Expected response body %q, got %q", "intercepted response", w.Body.String())
+	if responseState.StatusCode != http.StatusOK {
+		t.Errorf("Expected status code %d, got %d", http.StatusOK, responseState.StatusCode)
+	}
+
+	if string(responseState.Body) != "intercepted response" {
+		t.Errorf("Expected response body %q, got %q", "intercepted response", string(responseState.Body))
 	}
 }
 
@@ -203,19 +219,25 @@ func TestHandler_HandleRequest_WithPathParams(t *testing.T) {
 
 	// Create test request
 	req := httptest.NewRequest("GET", "/users/123", nil)
-	w := httptest.NewRecorder()
+
+	// Initialize store and response state
+	requestStore := make(store.Store)
+	responseState := plugin.NewResponseState()
 
 	// Handle request
-	responseState := handler.HandleRequest(req)
-	responseState.WriteToResponseWriter(w)
+	handler.HandleRequest(req, requestStore, responseState)
 
 	// Check response
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected status code %d, got %d", http.StatusOK, w.Code)
+	if !responseState.Handled {
+		t.Error("Expected response to be handled for path params match")
 	}
 
-	if w.Body.String() != "user 123" {
-		t.Errorf("Expected response body %q, got %q", "user 123", w.Body.String())
+	if responseState.StatusCode != http.StatusOK {
+		t.Errorf("Expected status code %d, got %d", http.StatusOK, responseState.StatusCode)
+	}
+
+	if string(responseState.Body) != "user 123" {
+		t.Errorf("Expected response body %q, got %q", "user 123", string(responseState.Body))
 	}
 }
 
@@ -258,19 +280,25 @@ func TestHandler_HandleRequest_WithResponseFile(t *testing.T) {
 
 	// Create test request
 	req := httptest.NewRequest("GET", "/test", nil)
-	w := httptest.NewRecorder()
+
+	// Initialize store and response state
+	requestStore := make(store.Store)
+	responseState := plugin.NewResponseState()
 
 	// Handle request
-	responseState := handler.HandleRequest(req)
-	responseState.WriteToResponseWriter(w)
+	handler.HandleRequest(req, requestStore, responseState)
 
 	// Check response
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected status code %d, got %d", http.StatusOK, w.Code)
+	if !responseState.Handled {
+		t.Error("Expected response to be handled for file response")
 	}
 
-	if w.Body.String() != responseContent {
-		t.Errorf("Expected response body %q, got %q", responseContent, w.Body.String())
+	if responseState.StatusCode != http.StatusOK {
+		t.Errorf("Expected status code %d, got %d", http.StatusOK, responseState.StatusCode)
+	}
+
+	if string(responseState.Body) != responseContent {
+		t.Errorf("Expected response body %q, got %q", responseContent, string(responseState.Body))
 	}
 }
 
@@ -314,18 +342,24 @@ func TestHandler_HandleRequest_WithRequestBody(t *testing.T) {
 
 	// Create test request
 	req := httptest.NewRequest("POST", "/test", bytes.NewBufferString("test body"))
-	w := httptest.NewRecorder()
+
+	// Initialize store and response state
+	requestStore := make(store.Store)
+	responseState := plugin.NewResponseState()
 
 	// Handle request
-	responseState := handler.HandleRequest(req)
-	responseState.WriteToResponseWriter(w)
+	handler.HandleRequest(req, requestStore, responseState)
 
 	// Check response
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected status code %d, got %d", http.StatusOK, w.Code)
+	if !responseState.Handled {
+		t.Error("Expected response to be handled for request body")
 	}
 
-	if w.Body.String() != "test response" {
-		t.Errorf("Expected response body %q, got %q", "test response", w.Body.String())
+	if responseState.StatusCode != http.StatusOK {
+		t.Errorf("Expected status code %d, got %d", http.StatusOK, responseState.StatusCode)
+	}
+
+	if string(responseState.Body) != "test response" {
+		t.Errorf("Expected response body %q, got %q", "test response", string(responseState.Body))
 	}
 }
