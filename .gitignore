@@ -18,3 +18,7 @@ __debug_bin*
 bootstrap
 imposter
 imposter.zip
+
+# Coverage files
+coverage.out
+coverage.html
