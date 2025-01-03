@@ -16,7 +16,7 @@ import (
 )
 
 func TestSystemStore(t *testing.T) {
-	// Initialize store provider
+	// Initialise store provider
 	store.InitStoreProvider()
 
 	// Start test server

@@ -13,7 +13,7 @@ var (
 )
 
 func init() {
-	// Initialise the cached response during package initialisation
+	// Create the cached response during package initialisation
 	response := struct {
 		Status  string `json:"status"`
 		Version string `json:"version"`
