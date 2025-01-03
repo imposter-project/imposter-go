@@ -56,6 +56,7 @@ The project uses Make for building and development. The following targets are av
 - `make run <path>` - Run the server directly (useful during development)
 - `make build` - Build the project with version information
 - `make install` - Install the binary to your Go bin directory
+- `make test` - Run tests with verbose output
 
 For development, use `make run` which will compile and run the server in one step:
 ```bash
@@ -83,7 +84,9 @@ The repository includes several examples demonstrating different features:
 
 ## Testing
 
-Run tests using:
+Run the test suite using:
 ```bash
-go test ./...
+make test
 ```
+
+This will run all tests with verbose output, showing the progress of each test case.

@@ -11,4 +11,8 @@ install:
 
 .PHONY: run
 run:
-	go run -ldflags "$(LDFLAGS)" ./cmd/imposter/main.go $(filter-out $@,$(MAKECMDGOALS)) 
+	go run -ldflags "$(LDFLAGS)" ./cmd/imposter/main.go $(filter-out $@,$(MAKECMDGOALS))
+
+.PHONY: test
+test:
+	go test -v ./... 
