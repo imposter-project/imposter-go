@@ -21,7 +21,7 @@ resources:
   - method: POST
     path: /match-xml
     requestBody:
-      xpath: "//user[name='John']"
+      xPath: "//user[name='John']"
     response:
       content: "Matched XML body!"
       statusCode: 200
@@ -29,7 +29,7 @@ resources:
   - method: POST
     path: /match-json
     requestBody:
-      jsonpath: "$.user.name"
+      jsonPath: "$.user.name"
     response:
       content: "Matched JSON body!"
       statusCode: 200
