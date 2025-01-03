@@ -1,4 +1,4 @@
-# Imposter-Go [![CI](https://github.com/imposter-project/imposter-go/actions/workflows/ci.yml/badge.svg)](https://github.com/imposter-project/imposter-go/actions/workflows/ci.yml)
+# imposter-go [![CI](https://github.com/imposter-project/imposter-go/actions/workflows/ci.yml/badge.svg)](https://github.com/imposter-project/imposter-go/actions/workflows/ci.yml)
 
 A Go implementation of the [Imposter Mock Engine](https://www.imposter.sh).
 
@@ -48,6 +48,18 @@ Set the `IMPOSTER_PORT` environment variable to change the default port:
 ```bash
 export IMPOSTER_PORT=9090
 ```
+
+Set the `IMPOSTER_LOG_LEVEL` environment variable to control logging verbosity:
+```bash
+export IMPOSTER_LOG_LEVEL=DEBUG  # Available levels: TRACE, DEBUG, INFO, WARN, ERROR
+```
+
+The default log level is DEBUG. Log levels are processed in order of severity:
+- TRACE - Most verbose, logs all messages
+- DEBUG - Detailed information for debugging
+- INFO - General operational messages
+- WARN - Warning messages for potentially harmful situations
+- ERROR - Error messages for serious problems
 
 ## Development
 

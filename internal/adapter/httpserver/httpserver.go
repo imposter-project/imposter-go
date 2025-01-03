@@ -1,13 +1,13 @@
 package httpserver
 
 import (
-	"fmt"
 	"net/http"
 	"os"
 
 	"github.com/imposter-project/imposter-go/internal/adapter"
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/handler"
+	"github.com/imposter-project/imposter-go/internal/logger"
 )
 
 // httpServer represents the HTTP server configuration.
@@ -42,13 +42,13 @@ func newServer(imposterConfig *config.ImposterConfig, configDir string, configs 
 
 // start begins listening for HTTP requests and handles them.
 func (s *httpServer) start(imposterConfig *config.ImposterConfig) {
-	fmt.Printf("Server is listening on %s...\n", s.Addr)
+	logger.Infof("server is listening on %s...", s.Addr)
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		handler.HandleRequest(w, r, s.ConfigDir, s.Configs, imposterConfig)
 	})
 
 	if err := http.ListenAndServe(s.Addr, nil); err != nil {
-		fmt.Printf("Error starting server: %v\n", err)
+		logger.Errorf("error starting server: %v", err)
 	}
 }

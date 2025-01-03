@@ -1,7 +1,6 @@
 package response
 
 import (
-	"fmt"
 	"math/rand"
 	"mime"
 	"net/http"
@@ -10,6 +9,7 @@ import (
 	"time"
 
 	"github.com/imposter-project/imposter-go/internal/config"
+	"github.com/imposter-project/imposter-go/internal/logger"
 	"github.com/imposter-project/imposter-go/internal/store"
 	"github.com/imposter-project/imposter-go/internal/template"
 )
@@ -58,11 +58,11 @@ func (rs *ResponseState) WriteToResponseWriter(w http.ResponseWriter) {
 // SimulateDelay simulates response delay based on the configuration
 func SimulateDelay(delay config.Delay, r *http.Request) {
 	if delay.Exact > 0 {
-		fmt.Printf("Delaying request (exact: %dms) - method:%s, path:%s\n", delay.Exact, r.Method, r.URL.Path)
+		logger.Infof("delaying request (exact: %dms) - method:%s, path:%s", delay.Exact, r.Method, r.URL.Path)
 		time.Sleep(time.Duration(delay.Exact) * time.Millisecond)
 	} else if delay.Min > 0 && delay.Max > 0 {
 		actualDelay := rand.Intn(delay.Max-delay.Min+1) + delay.Min
-		fmt.Printf("Delaying request (range: %dms-%dms, actual: %dms) - method:%s, path:%s\n",
+		logger.Infof("delaying request (range: %dms-%dms, actual: %dms) - method:%s, path:%s",
 			delay.Min, delay.Max, actualDelay, r.Method, r.URL.Path)
 		time.Sleep(time.Duration(actualDelay) * time.Millisecond)
 	}
@@ -72,16 +72,15 @@ func SimulateDelay(delay config.Delay, r *http.Request) {
 func SimulateFailure(rs *ResponseState, failureType string, r *http.Request) bool {
 	switch failureType {
 	case "EmptyResponse":
-		// Send a status but no body
 		rs.Body = nil
-		fmt.Printf("Handled request (simulated failure: EmptyResponse) - method:%s, path:%s, status:%d, length:0\n",
+		logger.Infof("handled request (simulated failure: EmptyResponse) - method:%s, path:%s, status:%d, length:0",
 			r.Method, r.URL.Path, rs.StatusCode)
 		return true
 
 	case "CloseConnection":
-		// Mark the response as stopped to prevent writing the body
 		rs.Stopped = true
-		fmt.Printf("Handled request (simulated failure: CloseConnection) - method:%s, path:%s\n", r.Method, r.URL.Path)
+		logger.Infof("handled request (simulated failure: CloseConnection) - method:%s, path:%s",
+			r.Method, r.URL.Path)
 		return true
 	}
 	return false
@@ -139,15 +138,15 @@ func ProcessResponse(rs *ResponseState, req *http.Request, resp config.Response,
 				contentType = "application/octet-stream"
 			}
 			rs.Headers["Content-Type"] = contentType
-			fmt.Printf("Inferred Content-Type %s from file extension %s\n", contentType, ext)
+			logger.Infof("inferred Content-Type %s from file extension %s", contentType, ext)
 		} else {
 			// If no file specified, assume JSON
-			fmt.Println("No file extension available - assuming JSON content type")
+			logger.Infoln("no file extension available - assuming JSON content type")
 			rs.Headers["Content-Type"] = "application/json"
 		}
 	}
 
 	rs.Body = []byte(responseContent)
-	fmt.Printf("Handled request - method:%s, path:%s, status:%d, length:%d\n",
+	logger.Infof("handled request - method:%s, path:%s, status:%d, length:%d",
 		req.Method, req.URL.Path, rs.StatusCode, len(responseContent))
 }

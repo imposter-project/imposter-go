@@ -2,12 +2,12 @@ package store
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/imposter-project/imposter-go/internal/config"
+	"github.com/imposter-project/imposter-go/internal/logger"
 )
 
 // Store represents a key-value store with string keys and arbitrary values
@@ -43,29 +43,40 @@ func PreloadStores(configDir string, configs []config.Config) {
 			for storeName, definition := range cfg.System.Stores {
 				if definition.PreloadFile != "" {
 					path := filepath.Join(configDir, definition.PreloadFile)
-					fmt.Printf("Preloading store '%s' from file: %s\n", storeName, path)
-					jsonBytes, err := os.ReadFile(path)
-					if err != nil {
-						fmt.Printf("Warning: failed to read %s: %v\n", path, err)
-						continue
-					}
-					var jsonData map[string]interface{}
-					if err := json.Unmarshal(jsonBytes, &jsonData); err != nil {
-						fmt.Printf("Warning: invalid JSON in %s: %v\n", path, err)
-						continue
-					}
-					for k, v := range jsonData {
-						storeProvider.StoreValue(storeName, k, v)
-					}
+					preloadFromFile(storeName, path)
 				}
 				if len(definition.PreloadData) > 0 {
-					fmt.Printf("Preloading store '%s' from inline data\n", storeName)
-					for k, v := range definition.PreloadData {
-						storeProvider.StoreValue(storeName, k, v)
-					}
+					preloadFromInline(storeName, definition.PreloadData)
 				}
 			}
 		}
+	}
+}
+
+func preloadFromFile(storeName string, path string) {
+	logger.Infof("preloading store '%s' from file: %s", storeName, path)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		logger.Warnf("failed to read %s: %v", path, err)
+		return
+	}
+
+	var items map[string]interface{}
+	err = json.Unmarshal(data, &items)
+	if err != nil {
+		logger.Warnf("invalid JSON in %s: %v", path, err)
+		return
+	}
+
+	for k, v := range items {
+		storeProvider.StoreValue(storeName, k, v)
+	}
+}
+
+func preloadFromInline(storeName string, data map[string]interface{}) {
+	logger.Infof("preloading store '%s' from inline data", storeName)
+	for k, v := range data {
+		storeProvider.StoreValue(storeName, k, v)
 	}
 }
 

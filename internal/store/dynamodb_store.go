@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/imposter-project/imposter-go/internal/logger"
 )
 
 type DynamoDBStoreProvider struct {
@@ -39,7 +40,7 @@ func (p *DynamoDBStoreProvider) GetValue(storeName, key string) (interface{}, bo
 		},
 	})
 	if err != nil {
-		fmt.Printf("Failed to get item: %v\n", err)
+		logger.Errorf("failed to get item: %v", err)
 		return nil, false
 	}
 	if result.Item == nil {
@@ -47,7 +48,7 @@ func (p *DynamoDBStoreProvider) GetValue(storeName, key string) (interface{}, bo
 	}
 	var value interface{}
 	if err := json.Unmarshal([]byte(*result.Item["Value"].S), &value); err != nil {
-		fmt.Printf("Failed to unmarshal value: %v\n", err)
+		logger.Errorf("failed to unmarshal value: %v", err)
 		return nil, false
 	}
 	return value, true
@@ -57,7 +58,7 @@ func (p *DynamoDBStoreProvider) StoreValue(storeName, key string, value interfac
 	key = applyKeyPrefix(key)
 	valueBytes, err := json.Marshal(value)
 	if err != nil {
-		fmt.Printf("Failed to marshal value: %v\n", err)
+		logger.Errorf("failed to marshal value: %v", err)
 		return
 	}
 
@@ -77,7 +78,7 @@ func (p *DynamoDBStoreProvider) StoreValue(storeName, key string, value interfac
 		Item:      item,
 	})
 	if err != nil {
-		fmt.Printf("Failed to put item: %v\n", err)
+		logger.Errorf("failed to put item: %v", err)
 	}
 }
 
@@ -95,14 +96,14 @@ func (p *DynamoDBStoreProvider) GetAllValues(storeName, keyPrefix string) map[st
 		},
 	})
 	if err != nil {
-		fmt.Printf("Failed to query items: %v\n", err)
+		logger.Errorf("failed to query items: %v", err)
 		return nil
 	}
 	items := make(map[string]interface{})
 	for _, item := range result.Items {
 		var value interface{}
 		if err := json.Unmarshal([]byte(*item["Value"].S), &value); err != nil {
-			fmt.Printf("Failed to unmarshal value: %v\n", err)
+			logger.Errorf("failed to unmarshal value: %v", err)
 			continue
 		}
 		deprefixedKey := removeKeyPrefix(*item["Key"].S)
@@ -121,7 +122,7 @@ func (p *DynamoDBStoreProvider) DeleteValue(storeName, key string) {
 		},
 	})
 	if err != nil {
-		fmt.Printf("Failed to delete item: %v\n", err)
+		logger.Errorf("failed to delete item: %v", err)
 	}
 }
 
@@ -136,7 +137,7 @@ func getTTL() int64 {
 	}
 	ttl, err := strconv.ParseInt(ttlStr, 10, 64)
 	if err != nil {
-		fmt.Printf("Invalid TTL value: %v\n", err)
+		logger.Errorf("invalid TTL value: %v", err)
 		return -1
 	}
 	return ttl

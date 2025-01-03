@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/imposter-project/imposter-go/internal/logger"
 	"gopkg.in/yaml.v3"
 )
 
@@ -207,7 +208,7 @@ func LoadConfig(configDir string) []Config {
 		}
 
 		if !info.IsDir() && (strings.HasSuffix(info.Name(), "-config.json") || strings.HasSuffix(info.Name(), "-config.yaml") || strings.HasSuffix(info.Name(), "-config.yml")) {
-			fmt.Printf("Loading config file: %s\n", path)
+			logger.Infof("loading config file: %s", path)
 			fileConfig, err := parseConfig(path)
 			if err != nil {
 				return err
@@ -293,7 +294,7 @@ func loadIgnorePaths(configDir string) []string {
 
 	data, err := os.ReadFile(ignoreFilePath)
 	if err != nil {
-		fmt.Printf("Failed to read .imposterignore file: %v\n", err)
+		logger.Warnf("failed to read .imposterignore file: %v", err)
 		return defaultIgnorePaths
 	}
 

@@ -1,16 +1,16 @@
 package adapter
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/imposter-project/imposter-go/internal/config"
+	"github.com/imposter-project/imposter-go/internal/logger"
 	"github.com/imposter-project/imposter-go/internal/store"
 )
 
 // InitialiseImposter performs common initialisation tasks for all adapters
 func InitialiseImposter(configDirArg string) (*config.ImposterConfig, string, []config.Config) {
-	fmt.Println("Starting Imposter-Go...")
+	logger.Infoln("starting imposter-go...")
 
 	imposterConfig := config.LoadImposterConfig()
 

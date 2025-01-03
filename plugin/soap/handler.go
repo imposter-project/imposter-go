@@ -12,6 +12,7 @@ import (
 	"github.com/imposter-project/imposter-go/internal/capture"
 	"github.com/imposter-project/imposter-go/internal/config"
 	commonInterceptor "github.com/imposter-project/imposter-go/internal/interceptor"
+	"github.com/imposter-project/imposter-go/internal/logger"
 	"github.com/imposter-project/imposter-go/internal/matcher"
 	"github.com/imposter-project/imposter-go/internal/response"
 	"github.com/imposter-project/imposter-go/internal/store"
@@ -324,7 +325,7 @@ func (h *Handler) HandleRequest(r *http.Request, requestStore store.Store, respo
 	for _, interceptorCfg := range h.config.Interceptors {
 		score, isWildcard := h.calculateScore(&interceptorCfg.RequestMatcher, r, body, op.Name, soapAction)
 		if score > 0 {
-			fmt.Printf("Matched interceptor - method:%s, path:%s, wildcard:%v\n",
+			logger.Infof("matched interceptor - method:%s, path:%s, wildcard:%v",
 				r.Method, r.URL.Path, isWildcard)
 
 			if !commonInterceptor.ProcessInterceptor(responseState, r, body, interceptorCfg, requestStore, h.imposterConfig, h.configDir, h) {
@@ -350,7 +351,7 @@ func (h *Handler) HandleRequest(r *http.Request, requestStore store.Store, respo
 	// Find the best match
 	best, tie := matcher.FindBestMatch(matches)
 	if tie {
-		fmt.Printf("Warning: multiple equally specific matches. Using the first.\n")
+		logger.Warnf("multiple equally specific matches, using the first")
 	}
 
 	// Capture request data

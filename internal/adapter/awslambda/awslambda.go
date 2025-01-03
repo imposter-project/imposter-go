@@ -2,7 +2,6 @@ package awslambda
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -11,14 +10,14 @@ import (
 	"github.com/imposter-project/imposter-go/internal/adapter"
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/handler"
-	"github.com/imposter-project/imposter-go/pkg/utils"
+	"github.com/imposter-project/imposter-go/internal/logger"
 )
 
 // HandleLambdaRequest handles incoming Lambda requests and routes them to the appropriate handler.
 func HandleLambdaRequest(req json.RawMessage) (interface{}, error) {
 	// For Lambda, default to /var/task/config if IMPOSTER_CONFIG_DIR is not set
 	if os.Getenv("IMPOSTER_CONFIG_DIR") == "" {
-		log.Println("IMPOSTER_CONFIG_DIR not set, defaulting to /var/task/config")
+		logger.Infoln("IMPOSTER_CONFIG_DIR not set, defaulting to /var/task/config")
 		os.Setenv("IMPOSTER_CONFIG_DIR", "/var/task/config")
 	}
 
@@ -118,18 +117,12 @@ func convertHTTPHeaderToMap(header http.Header) map[string]string {
 	return result
 }
 
-// logRequest logs the incoming HTTP request.
+// logRequest logs the incoming HTTP request at TRACE level
 func logRequest(req *http.Request) {
-	if utils.GetLogLevel() != utils.LEVEL_TRACE {
-		return
-	}
-	log.Printf("Request: %s %s", req.Method, req.URL.String())
+	logger.Tracef("request: %s %s", req.Method, req.URL.String())
 }
 
-// logResponse logs the outgoing HTTP response.
+// logResponse logs the outgoing HTTP response at TRACE level
 func logResponse(resp *responseRecorder) {
-	if utils.GetLogLevel() != utils.LEVEL_TRACE {
-		return
-	}
-	log.Printf("Response: %d %s", resp.StatusCode, &resp.Body)
+	logger.Tracef("response: %d %s", resp.StatusCode, &resp.Body)
 }
