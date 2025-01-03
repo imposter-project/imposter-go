@@ -220,7 +220,9 @@ func LoadConfig(configDir string) []Config {
 				if err != nil {
 					return err
 				}
-				fileConfig.BasePath = "/" + relDir
+				if relDir != "." {
+					fileConfig.BasePath = "/" + relDir
+				}
 			}
 
 			// Prefix 'File' properties if in a subdirectory
