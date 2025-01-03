@@ -92,7 +92,7 @@ type RequestBody struct {
 
 // Capture defines how to capture request data for later use in the response
 type Capture struct {
-	Enabled    bool       `yaml:"enabled,omitempty"`
+	Enabled    *bool      `yaml:"enabled,omitempty"`
 	Store      string     `yaml:"store"`
 	Key        CaptureKey `yaml:"key,omitempty"`
 	CaptureKey `yaml:",inline"`

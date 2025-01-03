@@ -23,6 +23,7 @@ func (m *mockProcessor) ProcessResponse(rs *response.ResponseState, r *http.Requ
 }
 
 func TestProcessInterceptor(t *testing.T) {
+	boolPtr := func(b bool) *bool { return &b }
 	tests := []struct {
 		name               string
 		interceptor        config.Interceptor
@@ -65,7 +66,7 @@ func TestProcessInterceptor(t *testing.T) {
 				RequestMatcher: config.RequestMatcher{
 					Capture: map[string]config.Capture{
 						"test": {
-							Enabled: true,
+							Enabled: boolPtr(true),
 							Store:   "request",
 							CaptureKey: config.CaptureKey{
 								RequestHeader: "X-Test",
@@ -85,7 +86,7 @@ func TestProcessInterceptor(t *testing.T) {
 				RequestMatcher: config.RequestMatcher{
 					Capture: map[string]config.Capture{
 						"test": {
-							Enabled: true,
+							Enabled: boolPtr(true),
 							Store:   "request",
 							CaptureKey: config.CaptureKey{
 								RequestHeader: "X-Test",

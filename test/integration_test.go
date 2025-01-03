@@ -161,6 +161,7 @@ func TestInterceptors_ShortCircuit(t *testing.T) {
 }
 
 func TestInterceptors_Passthrough(t *testing.T) {
+	boolPtr := func(b bool) *bool { return &b }
 	configs := []config.Config{
 		{
 			Plugin: "rest",
@@ -174,7 +175,7 @@ func TestInterceptors_Passthrough(t *testing.T) {
 			Interceptors: []config.Interceptor{
 				testutils.NewInterceptorWithCapture("GET", "/example", map[string]config.Capture{
 					"userAgent": {
-						Enabled: true,
+						Enabled: boolPtr(true),
 						Store:   "request",
 						CaptureKey: config.CaptureKey{
 							RequestHeader: "User-Agent",

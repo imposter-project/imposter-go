@@ -17,7 +17,7 @@ import (
 // CaptureRequestData captures elements of the request and stores them in the specified store.
 func CaptureRequestData(imposterConfig *config.ImposterConfig, resource config.Resource, r *http.Request, body []byte, requestStore store.Store) {
 	for key, capture := range resource.Capture {
-		if !capture.Enabled {
+		if capture.Enabled != nil && !*capture.Enabled {
 			continue
 		}
 

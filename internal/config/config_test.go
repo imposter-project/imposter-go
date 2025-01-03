@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 func TestMatchCondition_Match(t *testing.T) {
@@ -278,44 +279,51 @@ resources:
 
 	// Check path parameter capture
 	userIDCapture := resource.Capture["user_id"]
-	require.True(t, userIDCapture.Enabled)
+	require.NotNil(t, userIDCapture.Enabled)
+	require.True(t, *userIDCapture.Enabled)
 	require.Equal(t, "users", userIDCapture.Store)
 	require.Equal(t, "id", userIDCapture.PathParam)
 
 	// Check request body capture
 	requestDataCapture := resource.Capture["request_data"]
-	require.True(t, requestDataCapture.Enabled)
+	require.NotNil(t, requestDataCapture.Enabled)
+	require.True(t, *requestDataCapture.Enabled)
 	require.Equal(t, "requests", requestDataCapture.Store)
 	require.Equal(t, "$.data", requestDataCapture.RequestBody.JSONPath)
 	require.Equal(t, "http://example.com", requestDataCapture.RequestBody.XMLNamespaces["ns"])
 
 	// Check header capture
 	headerCapture := resource.Capture["header_value"]
-	require.True(t, headerCapture.Enabled)
+	require.NotNil(t, headerCapture.Enabled)
+	require.True(t, *headerCapture.Enabled)
 	require.Equal(t, "headers", headerCapture.Store)
 	require.Equal(t, "X-Custom-Header", headerCapture.RequestHeader)
 
 	// Check query parameter capture
 	queryCapture := resource.Capture["query_value"]
-	require.True(t, queryCapture.Enabled)
+	require.NotNil(t, queryCapture.Enabled)
+	require.True(t, *queryCapture.Enabled)
 	require.Equal(t, "queries", queryCapture.Store)
 	require.Equal(t, "filter", queryCapture.QueryParam)
 
 	// Check form parameter capture
 	formCapture := resource.Capture["form_value"]
-	require.True(t, formCapture.Enabled)
+	require.NotNil(t, formCapture.Enabled)
+	require.True(t, *formCapture.Enabled)
 	require.Equal(t, "forms", formCapture.Store)
 	require.Equal(t, "field", formCapture.FormParam)
 
 	// Check constant capture
 	constCapture := resource.Capture["const_value"]
-	require.True(t, constCapture.Enabled)
+	require.NotNil(t, constCapture.Enabled)
+	require.True(t, *constCapture.Enabled)
 	require.Equal(t, "constants", constCapture.Store)
 	require.Equal(t, "fixed_value", constCapture.Const)
 
 	// Check expression capture
 	exprCapture := resource.Capture["expr_value"]
-	require.True(t, exprCapture.Enabled)
+	require.NotNil(t, exprCapture.Enabled)
+	require.True(t, *exprCapture.Enabled)
 	require.Equal(t, "expressions", exprCapture.Store)
 	require.Equal(t, "request.method + \"_\" + request.path", exprCapture.Expression)
 }
@@ -558,4 +566,56 @@ func TestLoadImposterConfig(t *testing.T) {
 	os.Unsetenv("IMPOSTER_PORT")
 	cfg = LoadImposterConfig()
 	require.Equal(t, "8080", cfg.ServerPort)
+}
+
+func TestCapture_UnmarshalYAML(t *testing.T) {
+	boolPtr := func(b bool) *bool { return &b }
+	tests := []struct {
+		name    string
+		yaml    string
+		want    *bool
+		wantErr bool
+	}{
+		{
+			name: "enabled not specified",
+			yaml: `store: test
+key:
+  const: value`,
+			want: nil,
+		},
+		{
+			name: "enabled explicitly true",
+			yaml: `enabled: true
+store: test
+key:
+  const: value`,
+			want: boolPtr(true),
+		},
+		{
+			name: "enabled explicitly false",
+			yaml: `enabled: false
+store: test
+key:
+  const: value`,
+			want: boolPtr(false),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var c Capture
+			err := yaml.Unmarshal([]byte(tt.yaml), &c)
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			if tt.want == nil {
+				require.Nil(t, c.Enabled)
+			} else {
+				require.NotNil(t, c.Enabled)
+				require.Equal(t, *tt.want, *c.Enabled)
+			}
+		})
+	}
 }

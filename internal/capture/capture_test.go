@@ -12,6 +12,7 @@ import (
 )
 
 func TestCaptureRequestData(t *testing.T) {
+	boolPtr := func(b bool) *bool { return &b }
 	tests := []struct {
 		name           string
 		resource       config.Resource
@@ -25,7 +26,7 @@ func TestCaptureRequestData(t *testing.T) {
 				RequestMatcher: config.RequestMatcher{
 					Capture: map[string]config.Capture{
 						"test": {
-							Enabled: true,
+							Enabled: boolPtr(true),
 							Key: config.CaptureKey{
 								Const: "myKey",
 							},
@@ -52,7 +53,7 @@ func TestCaptureRequestData(t *testing.T) {
 				RequestMatcher: config.RequestMatcher{
 					Capture: map[string]config.Capture{
 						"test": {
-							Enabled: true,
+							Enabled: boolPtr(true),
 							Key: config.CaptureKey{
 								Const: "headerValue",
 							},
@@ -80,7 +81,7 @@ func TestCaptureRequestData(t *testing.T) {
 				RequestMatcher: config.RequestMatcher{
 					Capture: map[string]config.Capture{
 						"test": {
-							Enabled: true,
+							Enabled: boolPtr(true),
 							Key: config.CaptureKey{
 								Const: "formValue",
 							},
@@ -109,7 +110,7 @@ func TestCaptureRequestData(t *testing.T) {
 				RequestMatcher: config.RequestMatcher{
 					Capture: map[string]config.Capture{
 						"test": {
-							Enabled: true,
+							Enabled: boolPtr(true),
 							Key: config.CaptureKey{
 								Const: "jsonValue",
 							},
@@ -144,7 +145,7 @@ func TestCaptureRequestData(t *testing.T) {
 				RequestMatcher: config.RequestMatcher{
 					Capture: map[string]config.Capture{
 						"test": {
-							Enabled: true,
+							Enabled: boolPtr(true),
 							Key: config.CaptureKey{
 								Const: "xmlValue",
 							},
@@ -179,7 +180,7 @@ func TestCaptureRequestData(t *testing.T) {
 				RequestMatcher: config.RequestMatcher{
 					Capture: map[string]config.Capture{
 						"test": {
-							Enabled: false,
+							Enabled: boolPtr(false),
 							Key: config.CaptureKey{
 								Const: "disabled",
 							},
@@ -199,6 +200,32 @@ func TestCaptureRequestData(t *testing.T) {
 			validate: func(t *testing.T, requestStore store.Store) {
 				_, exists := requestStore["disabled"]
 				assert.False(t, exists)
+			},
+		},
+		{
+			name: "capture enabled not set",
+			resource: config.Resource{
+				RequestMatcher: config.RequestMatcher{
+					Capture: map[string]config.Capture{
+						"test": {
+							Key: config.CaptureKey{
+								Const: "enabled_not_set",
+							},
+							CaptureKey: config.CaptureKey{
+								QueryParam: "param",
+							},
+							Store: "request",
+						},
+					},
+				},
+			},
+			setupRequest: func() (*http.Request, []byte) {
+				req, _ := http.NewRequest("GET", "/?param=value", nil)
+				return req, nil
+			},
+			imposterConfig: &config.ImposterConfig{},
+			validate: func(t *testing.T, requestStore store.Store) {
+				assert.Equal(t, "value", requestStore["enabled_not_set"])
 			},
 		},
 	}
