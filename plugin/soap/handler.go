@@ -8,12 +8,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/imposter-project/imposter-go/internal/response"
-
 	"github.com/antchfx/xmlquery"
 	"github.com/imposter-project/imposter-go/internal/capture"
 	"github.com/imposter-project/imposter-go/internal/config"
+	commonInterceptor "github.com/imposter-project/imposter-go/internal/interceptor"
 	"github.com/imposter-project/imposter-go/internal/matcher"
+	"github.com/imposter-project/imposter-go/internal/response"
 	"github.com/imposter-project/imposter-go/internal/store"
 )
 
@@ -321,28 +321,15 @@ func (h *Handler) HandleRequest(r *http.Request, requestStore store.Store, respo
 	}
 
 	// Process interceptors first
-	for _, interceptor := range h.config.Interceptors {
-		score, isWildcard := h.calculateScore(&interceptor.RequestMatcher, r, body, op.Name, soapAction)
+	for _, interceptorCfg := range h.config.Interceptors {
+		score, isWildcard := h.calculateScore(&interceptorCfg.RequestMatcher, r, body, op.Name, soapAction)
 		if score > 0 {
 			fmt.Printf("Matched interceptor - method:%s, path:%s, wildcard:%v\n",
 				r.Method, r.URL.Path, isWildcard)
 
-			// Capture request data if specified
-			if interceptor.Capture != nil {
-				capture.CaptureRequestData(h.imposterConfig, config.Resource{
-					RequestMatcher: config.RequestMatcher{
-						Capture: interceptor.Capture,
-					},
-				}, r, body, requestStore)
-			}
-
-			// If the interceptor has a response and continue is false, send the response and stop processing
-			if interceptor.Response != nil {
-				h.processResponse(responseState, r, *interceptor.Response, requestStore)
-				if !interceptor.Continue {
-					responseState.Handled = true
-					return
-				}
+			if !commonInterceptor.ProcessInterceptor(responseState, r, body, interceptorCfg, requestStore, h.imposterConfig, h.configDir, h) {
+				responseState.Handled = true
+				return // Short-circuit if interceptor continue is false
 			}
 		}
 	}
@@ -370,7 +357,7 @@ func (h *Handler) HandleRequest(r *http.Request, requestStore store.Store, respo
 	capture.CaptureRequestData(h.imposterConfig, *best.Resource, r, body, requestStore)
 
 	// Process the response
-	h.processResponse(responseState, r, best.Resource.Response, requestStore)
+	h.ProcessResponse(responseState, r, best.Resource.Response, requestStore)
 	responseState.Handled = true
 }
 
@@ -409,11 +396,11 @@ func (h *Handler) sendSOAPFault(rs *response.ResponseState, message string, stat
 	rs.Body = []byte(faultXML)
 }
 
-// processResponse processes and sends the SOAP response
-func (h *Handler) processResponse(rs *response.ResponseState, r *http.Request, resp config.Response, requestStore store.Store) {
+// ProcessResponse processes and sends the SOAP response
+func (h *Handler) ProcessResponse(rs *response.ResponseState, r *http.Request, resp config.Response, requestStore store.Store) {
 	// Set content type for SOAP response
 	rs.Headers["Content-Type"] = "application/soap+xml"
 
 	// Process the response using common handler
-	response.ProcessResponse(rs, r, resp, h.configDir, requestStore, nil)
+	response.ProcessResponse(rs, r, resp, h.configDir, requestStore, h.imposterConfig)
 }

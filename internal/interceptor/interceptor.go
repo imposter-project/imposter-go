@@ -1,0 +1,28 @@
+package interceptor
+
+import (
+	"net/http"
+
+	"github.com/imposter-project/imposter-go/internal/capture"
+	"github.com/imposter-project/imposter-go/internal/config"
+	"github.com/imposter-project/imposter-go/internal/response"
+	"github.com/imposter-project/imposter-go/internal/store"
+)
+
+// ProcessInterceptor handles an interceptor and returns true if request processing should continue
+func ProcessInterceptor(rs *response.ResponseState, r *http.Request, body []byte, interceptor config.Interceptor, requestStore store.Store, imposterConfig *config.ImposterConfig, configDir string, processor response.Processor) bool {
+	// Capture request data if specified
+	if interceptor.Capture != nil {
+		capture.CaptureRequestData(imposterConfig, config.Resource{
+			RequestMatcher: config.RequestMatcher{
+				Capture: interceptor.Capture,
+			},
+		}, r, body, requestStore)
+	}
+
+	if interceptor.Response != nil {
+		processor.ProcessResponse(rs, r, *interceptor.Response, requestStore)
+	}
+
+	return interceptor.Continue
+}

@@ -2,12 +2,13 @@ package rest
 
 import (
 	"fmt"
-	"github.com/imposter-project/imposter-go/internal/response"
 	"net/http"
 
 	"github.com/imposter-project/imposter-go/internal/capture"
 	"github.com/imposter-project/imposter-go/internal/config"
+	commonInterceptor "github.com/imposter-project/imposter-go/internal/interceptor"
 	"github.com/imposter-project/imposter-go/internal/matcher"
+	"github.com/imposter-project/imposter-go/internal/response"
 	"github.com/imposter-project/imposter-go/internal/store"
 )
 
@@ -38,15 +39,15 @@ func (h *Handler) HandleRequest(r *http.Request, requestStore store.Store, respo
 	}
 
 	// Process interceptors first
-	for _, interceptor := range h.config.Interceptors {
-		score, isWildcard := matcher.CalculateMatchScore(&interceptor.RequestMatcher, r, body)
+	for _, interceptorCfg := range h.config.Interceptors {
+		score, isWildcard := matcher.CalculateMatchScore(&interceptorCfg.RequestMatcher, r, body)
 		if score > 0 {
 			fmt.Printf("Matched interceptor - method:%s, path:%s, wildcard:%v\n",
 				r.Method, r.URL.Path, isWildcard)
-			// Process the interceptor
-			if !h.processInterceptor(responseState, r, body, interceptor, requestStore) {
+
+			if !commonInterceptor.ProcessInterceptor(responseState, r, body, interceptorCfg, requestStore, h.imposterConfig, h.configDir, h) {
 				responseState.Handled = true
-				return // Short-circuit if interceptor responded and continue is false
+				return // Short-circuit if interceptor continue is false
 			}
 		}
 	}
@@ -73,30 +74,11 @@ func (h *Handler) HandleRequest(r *http.Request, requestStore store.Store, respo
 	capture.CaptureRequestData(h.imposterConfig, *best.Resource, r, body, requestStore)
 
 	// Process the response
-	h.processResponse(responseState, r, best.Resource.Response, requestStore)
+	h.ProcessResponse(responseState, r, best.Resource.Response, requestStore)
 	responseState.Handled = true
 }
 
-// processInterceptor handles an interceptor and returns true if request processing should continue
-func (h *Handler) processInterceptor(rs *response.ResponseState, r *http.Request, body []byte, interceptor config.Interceptor, requestStore store.Store) bool {
-	// Capture request data if specified
-	if interceptor.Capture != nil {
-		capture.CaptureRequestData(h.imposterConfig, config.Resource{
-			RequestMatcher: config.RequestMatcher{
-				Capture: interceptor.Capture,
-			},
-		}, r, body, requestStore)
-	}
-
-	// If the interceptor has a response and continue is false, send the response and stop processing
-	if interceptor.Response != nil {
-		h.processResponse(rs, r, *interceptor.Response, requestStore)
-	}
-
-	return interceptor.Continue
-}
-
-// processResponse handles preparing the response state
-func (h *Handler) processResponse(rs *response.ResponseState, r *http.Request, resp config.Response, requestStore store.Store) {
+// ProcessResponse handles preparing the response state
+func (h *Handler) ProcessResponse(rs *response.ResponseState, r *http.Request, resp config.Response, requestStore store.Store) {
 	response.ProcessResponse(rs, r, resp, h.configDir, requestStore, h.imposterConfig)
 }
