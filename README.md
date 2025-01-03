@@ -19,7 +19,43 @@ A Go implementation of the [Imposter Mock Engine](https://www.imposter.sh).
 - Go 1.23 or later (earlier versions may work but are not tested)
 - Make (for building)
 
-## Getting Started
+## Installation
+
+### Using Pre-built Binaries
+
+Download the latest release for your platform from GitHub:
+
+#### macOS
+
+```bash
+# For Intel Macs (x86_64)
+curl -L https://github.com/imposter-project/imposter-go/releases/latest/download/imposter_Darwin_x86_64.tar.gz | tar xz
+sudo mv imposter /usr/local/bin/
+
+# For Apple Silicon Macs (arm64)
+curl -L https://github.com/imposter-project/imposter-go/releases/latest/download/imposter_Darwin_arm64.tar.gz | tar xz
+sudo mv imposter /usr/local/bin/
+```
+
+#### Linux
+
+```bash
+# For x86_64 systems
+curl -L https://github.com/imposter-project/imposter-go/releases/latest/download/imposter_Linux_x86_64.tar.gz | tar xz
+sudo mv imposter /usr/local/bin/
+
+# For arm64 systems
+curl -L https://github.com/imposter-project/imposter-go/releases/latest/download/imposter_Linux_arm64.tar.gz | tar xz
+sudo mv imposter /usr/local/bin/
+```
+
+#### Windows
+
+1. Download the latest release from [GitHub Releases](https://github.com/imposter-project/imposter-go/releases/latest)
+2. Extract the `imposter_Windows_x86_64.zip` file
+3. Add the extracted `imposter.exe` to your PATH or move it to a directory in your PATH
+
+### Building from Source
 
 1. Clone the repository:
    ```bash
