@@ -20,6 +20,9 @@ import (
 
 // ProcessTemplate processes a template string, replacing placeholders with actual values.
 func ProcessTemplate(template string, r *http.Request, imposterConfig *config.ImposterConfig, requestStore store.Store) string {
+	// Replace request method
+	template = strings.ReplaceAll(template, "${context.request.method}", r.Method)
+
 	// Replace request path parameters
 	for key, value := range r.URL.Query() {
 		placeholder := fmt.Sprintf("${context.request.queryParams.%s}", key)

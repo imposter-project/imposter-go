@@ -21,6 +21,18 @@ func TestProcessTemplate(t *testing.T) {
 		want           string
 	}{
 		{
+			name:     "request method",
+			template: "Method: ${context.request.method}",
+			setupRequest: func() *http.Request {
+				req, _ := http.NewRequest("POST", "/", nil)
+				req.Body = io.NopCloser(strings.NewReader(""))
+				return req
+			},
+			imposterConfig: &config.ImposterConfig{ServerPort: "8080"},
+			requestStore:   store.Store{},
+			want:           "Method: POST",
+		},
+		{
 			name:     "query parameters",
 			template: "Hello ${context.request.queryParams.name}!",
 			setupRequest: func() *http.Request {
