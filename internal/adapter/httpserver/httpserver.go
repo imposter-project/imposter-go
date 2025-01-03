@@ -17,16 +17,16 @@ type httpServer struct {
 	Configs   []config.Config
 }
 
-// StartServer initializes and starts the HTTP server.
+// StartServer initialises and starts the HTTP server.
 func StartServer() {
 	var configDirArg string
 	if len(os.Args) >= 2 {
 		configDirArg = os.Args[1]
 	}
 
-	imposterConfig, configDir, configs := adapter.InitializeImposter(configDirArg)
+	imposterConfig, configDir, configs := adapter.InitialiseImposter(configDirArg)
 
-	// Initialize and start the server with multiple configs
+	// Initialise and start the server with multiple configs
 	srv := newServer(imposterConfig, configDir, configs)
 	srv.start(imposterConfig)
 }

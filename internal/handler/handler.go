@@ -19,7 +19,7 @@ type PluginHandler interface {
 
 // HandleRequest processes incoming HTTP requests and routes them to the appropriate handler
 func HandleRequest(w http.ResponseWriter, r *http.Request, configDir string, configs []config.Config, imposterConfig *config.ImposterConfig) {
-	// Initialize request-scoped store and response state
+	// Initialise request-scoped store and response state
 	requestStore := make(store.Store)
 	responseState := response.NewResponseState()
 
@@ -44,7 +44,7 @@ func HandleRequest(w http.ResponseWriter, r *http.Request, configDir string, con
 		}
 
 		if err != nil {
-			http.Error(w, "Failed to initialize handler", http.StatusInternalServerError)
+			http.Error(w, "Failed to initialise handler", http.StatusInternalServerError)
 			return
 		}
 

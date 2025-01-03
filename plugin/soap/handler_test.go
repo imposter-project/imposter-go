@@ -1,13 +1,14 @@
 package soap
 
 import (
-	"github.com/imposter-project/imposter-go/internal/response"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/imposter-project/imposter-go/internal/response"
 
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/store"
@@ -76,7 +77,7 @@ func TestSOAPHandler_HandleRequest(t *testing.T) {
 	req.Header.Set("Content-Type", "application/soap+xml")
 	req.Header.Set("SOAPAction", "getPetById")
 
-	// Initialize store and response state
+	// Initialise store and response state
 	requestStore := make(store.Store)
 	responseState := response.NewResponseState()
 
@@ -134,7 +135,7 @@ func TestSOAPHandler_HandleRequest_InvalidMethod(t *testing.T) {
 	// Create test request with GET method
 	req := httptest.NewRequest(http.MethodGet, "/pets/", nil)
 
-	// Initialize store and response state
+	// Initialise store and response state
 	requestStore := make(store.Store)
 	responseState := response.NewResponseState()
 
@@ -192,7 +193,7 @@ func TestSOAPHandler_HandleRequest_NoMatchingOperation(t *testing.T) {
 	req.Header.Set("Content-Type", "application/soap+xml")
 	req.Header.Set("SOAPAction", "unknownOperation")
 
-	// Initialize store and response state
+	// Initialise store and response state
 	requestStore := make(store.Store)
 	responseState := response.NewResponseState()
 
@@ -281,7 +282,7 @@ func TestSOAPHandler_HandleRequest_WithInterceptor(t *testing.T) {
 	req.Header.Set("SOAPAction", "getPetById")
 	req.Header.Set("X-Test-Header", "test-value")
 
-	// Initialize store and response state
+	// Initialise store and response state
 	requestStore := make(store.Store)
 	responseState := response.NewResponseState()
 
@@ -382,7 +383,7 @@ func TestSOAPHandler_HandleRequest_WithPassthroughInterceptor(t *testing.T) {
 	req.Header.Set("SOAPAction", "getPetById")
 	req.Header.Set("X-Test-Header", "test-value")
 
-	// Initialize store and response state
+	// Initialise store and response state
 	requestStore := make(store.Store)
 	responseState := response.NewResponseState()
 

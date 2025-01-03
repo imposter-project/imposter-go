@@ -2,12 +2,13 @@ package rest
 
 import (
 	"bytes"
-	"github.com/imposter-project/imposter-go/internal/response"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/imposter-project/imposter-go/internal/response"
 
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/store"
@@ -46,7 +47,7 @@ func TestHandler_HandleRequest_NoMatchingResource(t *testing.T) {
 	// Create test request
 	req := httptest.NewRequest("GET", "/nonexistent", nil)
 
-	// Initialize store and response state
+	// Initialise store and response state
 	requestStore := make(store.Store)
 	responseState := response.NewResponseState()
 
@@ -92,7 +93,7 @@ func TestHandler_HandleRequest_MatchingResource(t *testing.T) {
 	// Create test request
 	req := httptest.NewRequest("GET", "/test", nil)
 
-	// Initialize store and response state
+	// Initialise store and response state
 	requestStore := make(store.Store)
 	responseState := response.NewResponseState()
 
@@ -158,7 +159,7 @@ func TestHandler_HandleRequest_WithInterceptor(t *testing.T) {
 	// Create test request
 	req := httptest.NewRequest("GET", "/test", nil)
 
-	// Initialize store and response state
+	// Initialise store and response state
 	requestStore := make(store.Store)
 	responseState := response.NewResponseState()
 
@@ -220,7 +221,7 @@ func TestHandler_HandleRequest_WithPathParams(t *testing.T) {
 	// Create test request
 	req := httptest.NewRequest("GET", "/users/123", nil)
 
-	// Initialize store and response state
+	// Initialise store and response state
 	requestStore := make(store.Store)
 	responseState := response.NewResponseState()
 
@@ -281,7 +282,7 @@ func TestHandler_HandleRequest_WithResponseFile(t *testing.T) {
 	// Create test request
 	req := httptest.NewRequest("GET", "/test", nil)
 
-	// Initialize store and response state
+	// Initialise store and response state
 	requestStore := make(store.Store)
 	responseState := response.NewResponseState()
 
@@ -343,7 +344,7 @@ func TestHandler_HandleRequest_WithRequestBody(t *testing.T) {
 	// Create test request
 	req := httptest.NewRequest("POST", "/test", bytes.NewBufferString("test body"))
 
-	// Initialize store and response state
+	// Initialise store and response state
 	requestStore := make(store.Store)
 	responseState := response.NewResponseState()
 

@@ -22,7 +22,7 @@ func HandleLambdaRequest(req json.RawMessage) (interface{}, error) {
 		os.Setenv("IMPOSTER_CONFIG_DIR", "/var/task/config")
 	}
 
-	imposterConfig, configDir, configs := adapter.InitializeImposter("")
+	imposterConfig, configDir, configs := adapter.InitialiseImposter("")
 
 	var apiGatewayReq events.APIGatewayProxyRequest
 	var lambdaFunctionURLReq events.LambdaFunctionURLRequest

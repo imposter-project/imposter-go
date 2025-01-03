@@ -8,8 +8,8 @@ import (
 	"github.com/imposter-project/imposter-go/internal/store"
 )
 
-// InitializeImposter performs common initialization tasks for all adapters
-func InitializeImposter(configDirArg string) (*config.ImposterConfig, string, []config.Config) {
+// InitialiseImposter performs common initialisation tasks for all adapters
+func InitialiseImposter(configDirArg string) (*config.ImposterConfig, string, []config.Config) {
 	fmt.Println("Starting Imposter-Go...")
 
 	imposterConfig := config.LoadImposterConfig()

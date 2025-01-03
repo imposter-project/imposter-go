@@ -38,7 +38,7 @@ func TestPreloadStores(t *testing.T) {
 		},
 	}
 
-	// Initialize store provider
+	// Initialise store provider
 	storeProvider = &InMemoryStoreProvider{}
 	storeProvider.InitStores()
 
