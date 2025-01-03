@@ -217,5 +217,28 @@ func MatchJSONPath(body []byte, condition config.BodyMatchCondition) bool {
 		return false
 	}
 
-	return condition.Match(results.(string))
+	// Handle different result types
+	switch v := results.(type) {
+	case string:
+		return condition.Match(v)
+	case []interface{}:
+		// For array results, check if any element matches
+		for _, item := range v {
+			if str, ok := item.(string); ok {
+				if condition.Match(str) {
+					return true
+				}
+			}
+		}
+		return false
+	case float64:
+		return condition.Match(fmt.Sprintf("%v", v))
+	case bool:
+		return condition.Match(fmt.Sprintf("%v", v))
+	case nil:
+		return condition.Match("")
+	default:
+		// Try to convert to string as a last resort
+		return condition.Match(fmt.Sprintf("%v", v))
+	}
 }
