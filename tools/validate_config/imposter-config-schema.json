@@ -1,0 +1,201 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "required": ["plugin"],
+    "definitions": {
+        "matchConditionObject": {
+            "type": "object",
+            "properties": {
+                "value": { "type": ["string", "number"] },
+                "operator": {
+                    "type": "string",
+                    "enum": ["EqualTo", "NotEqualTo", "Exists", "NotExists", "Contains", "NotContains", "Matches", "NotMatches", ""]
+                }
+            }
+        },
+        "matchCondition": {
+            "oneOf": [
+                { "type": ["string", "number"] },
+                { "$ref": "#/definitions/matchConditionObject" }
+            ]
+        },
+        "bodyMatchCondition": {
+            "type": "object",
+            "allOf": [
+                { "$ref": "#/definitions/matchConditionObject" },
+                {
+                    "properties": {
+                        "jsonPath": { "type": "string" },
+                        "xPath": { "type": "string" },
+                        "xmlNamespaces": {
+                            "type": "object",
+                            "additionalProperties": { "type": "string" }
+                        }
+                    }
+                }
+            ]
+        },
+        "requestBody": {
+            "type": "object",
+            "allOf": [
+                { "$ref": "#/definitions/bodyMatchCondition" },
+                {
+                    "properties": {
+                        "allOf": {
+                            "type": "array",
+                            "items": { "$ref": "#/definitions/bodyMatchCondition" }
+                        },
+                        "anyOf": {
+                            "type": "array",
+                            "items": { "$ref": "#/definitions/bodyMatchCondition" }
+                        }
+                    }
+                }
+            ]
+        },
+        "response": {
+            "type": "object",
+            "properties": {
+                "content": { "type": "string" },
+                "statusCode": { "type": "integer" },
+                "file": { "type": "string" },
+                "fail": { "type": "string" },
+                "delay": {
+                    "type": "object",
+                    "properties": {
+                        "exact": { "type": "integer" },
+                        "min": { "type": "integer" },
+                        "max": { "type": "integer" }
+                    }
+                },
+                "headers": {
+                    "type": "object",
+                    "additionalProperties": { "type": "string" }
+                },
+                "template": { "type": "boolean" }
+            }
+        },
+        "requestMatcher": {
+            "type": "object",
+            "properties": {
+                "method": { "type": "string" },
+                "path": { "type": "string" },
+                "operation": { "type": "string" },
+                "soapAction": { "type": "string" },
+                "binding": { "type": "string" },
+                "queryParams": {
+                    "type": "object",
+                    "additionalProperties": { "$ref": "#/definitions/matchCondition" }
+                },
+                "headers": {
+                    "type": "object",
+                    "additionalProperties": { "$ref": "#/definitions/matchCondition" }
+                },
+                "requestBody": { "$ref": "#/definitions/requestBody" },
+                "formParams": {
+                    "type": "object",
+                    "additionalProperties": { "$ref": "#/definitions/matchCondition" }
+                },
+                "pathParams": {
+                    "type": "object",
+                    "additionalProperties": { "$ref": "#/definitions/matchCondition" }
+                },
+                "capture": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                            "enabled": { "type": "boolean" },
+                            "store": { "type": "string" },
+                            "key": {
+                                "type": "object",
+                                "properties": {
+                                    "pathParam": { "type": "string" },
+                                    "queryParam": { "type": "string" },
+                                    "formParam": { "type": "string" },
+                                    "requestHeader": { "type": "string" },
+                                    "expression": { "type": "string" },
+                                    "const": { "type": "string" },
+                                    "requestBody": {
+                                        "type": "object",
+                                        "properties": {
+                                            "jsonPath": { "type": "string" },
+                                            "xPath": { "type": "string" },
+                                            "xmlNamespaces": {
+                                                "type": "object",
+                                                "additionalProperties": { "type": "string" }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "properties": {
+        "plugin": {
+            "type": "string",
+            "enum": ["rest", "soap", "hbase", "openapi"]
+        },
+        "basePath": {
+            "type": "string"
+        },
+        "wsdlFile": {
+            "type": "string"
+        },
+        "resources": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "allOf": [
+                    { "$ref": "#/definitions/requestMatcher" },
+                    {
+                        "properties": {
+                            "response": { "$ref": "#/definitions/response" }
+                        }
+                    }
+                ]
+            }
+        },
+        "interceptors": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "allOf": [
+                    { "$ref": "#/definitions/requestMatcher" },
+                    {
+                        "properties": {
+                            "response": { "$ref": "#/definitions/response" },
+                            "continue": { "type": "boolean" }
+                        }
+                    }
+                ]
+            }
+        },
+        "system": {
+            "type": "object",
+            "properties": {
+                "stores": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "object",
+                        "properties": {
+                            "preloadFile": { "type": "string" },
+                            "preloadData": {
+                                "type": "object",
+                                "additionalProperties": true
+                            }
+                        }
+                    }
+                },
+                "xmlNamespaces": {
+                    "type": "object",
+                    "additionalProperties": { "type": "string" }
+                }
+            }
+        }
+    }
+} 

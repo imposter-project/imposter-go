@@ -13,6 +13,7 @@ bin/
 .vscode/
 *.iml
 __debug_bin*
+venv/
 
 # Outputs
 bootstrap
@@ -22,3 +23,6 @@ imposter.zip
 # Coverage files
 coverage.out
 coverage.html
+
+# Examples
+all-examples/
