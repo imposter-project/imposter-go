@@ -55,9 +55,10 @@ release:
   prerelease: auto
   mode: replace
   header: |
-    ## Imposter {{ .Tag }} ({{ .Date }})
+    ## imposter-go {{ .Tag }} ({{ .Date }})
     
     For installation instructions, please visit https://github.com/imposter-project/imposter-go#installation
+    For user documentation, please visit https://docs.imposter.sh
   
   footer: |
     **Full Changelog**: https://github.com/imposter-project/imposter-go/compare/{{ .PreviousTag }}...{{ .Tag }} 
