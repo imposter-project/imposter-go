@@ -245,7 +245,11 @@ func splitQName(qname string) (namespace, localPart string) {
 // calculateScore calculates a unified match score for SOAP requests
 func (h *Handler) calculateScore(reqMatcher *config.RequestMatcher, r *http.Request, body []byte, operation string, soapAction string) (score int, isWildcard bool) {
 	// Get base score from matcher
-	baseScore, baseWildcard := matcher.CalculateMatchScore(reqMatcher, r, body)
+	var systemNamespaces map[string]string
+	if h.config.System != nil {
+		systemNamespaces = h.config.System.XMLNamespaces
+	}
+	baseScore, baseWildcard := matcher.CalculateMatchScore(reqMatcher, r, body, systemNamespaces)
 	score = baseScore
 	isWildcard = baseWildcard
 

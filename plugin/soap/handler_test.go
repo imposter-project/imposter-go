@@ -31,13 +31,26 @@ func TestSOAPHandler_HandleRequest(t *testing.T) {
 	// Create test configuration
 	cfg := &config.Config{
 		Plugin:   "soap",
-		WSDLFile: "petstore.wsdl",
+		WSDLFile: filepath.Join(tempDir, "petstore.wsdl"),
+		System: &config.System{
+			XMLNamespaces: map[string]string{
+				"pet": "urn:com:example:petstore",
+			},
+		},
 		Resources: []config.Resource{
 			{
 				RequestMatcher: config.RequestMatcher{
 					Path:       "/pets/",
 					Operation:  "getPetById",
 					SOAPAction: "getPetById",
+					RequestBody: config.RequestBody{
+						BodyMatchCondition: config.BodyMatchCondition{
+							MatchCondition: config.MatchCondition{
+								Value: "3",
+							},
+							XPath: "//pet:id",
+						},
+					},
 				},
 				Response: config.Response{
 					Content: `<?xml version="1.0" encoding="UTF-8"?>
@@ -64,12 +77,12 @@ func TestSOAPHandler_HandleRequest(t *testing.T) {
 
 	// Create test request
 	soapRequest := `<?xml version="1.0" encoding="UTF-8"?>
-<env:Envelope xmlns:env="http://www.w3.org/2001/12/soap-envelope">
+<env:Envelope xmlns:env="http://www.w3.org/2001/12/soap-envelope" xmlns:pet="urn:com:example:petstore">
     <env:Header/>
     <env:Body>
-        <getPetByIdRequest xmlns="urn:com:example:petstore">
-            <id>3</id>
-        </getPetByIdRequest>
+        <pet:getPetByIdRequest>
+            <pet:id>3</pet:id>
+        </pet:getPetByIdRequest>
     </env:Body>
 </env:Envelope>`
 

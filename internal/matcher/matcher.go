@@ -23,7 +23,7 @@ type MatchResult struct {
 }
 
 // CalculateMatchScore calculates how well a request matches a resource or interceptor
-func CalculateMatchScore(matcher *config.RequestMatcher, r *http.Request, body []byte) (score int, isWildcard bool) {
+func CalculateMatchScore(matcher *config.RequestMatcher, r *http.Request, body []byte, systemNamespaces map[string]string) (score int, isWildcard bool) {
 	// Method match
 	if matcher.Method != "" {
 		if matcher.Method != r.Method {
@@ -104,13 +104,13 @@ func CalculateMatchScore(matcher *config.RequestMatcher, r *http.Request, body [
 
 	// Request body match
 	if matcher.RequestBody.Value != "" || matcher.RequestBody.JSONPath != "" || matcher.RequestBody.XPath != "" {
-		if !matchBodyCondition(body, matcher.RequestBody.BodyMatchCondition) {
+		if !matchBodyCondition(body, matcher.RequestBody.BodyMatchCondition, systemNamespaces) {
 			return 0, false
 		}
 		score++
 	} else if len(matcher.RequestBody.AllOf) > 0 {
 		for _, condition := range matcher.RequestBody.AllOf {
-			if !matchBodyCondition(body, condition) {
+			if !matchBodyCondition(body, condition, systemNamespaces) {
 				return 0, false
 			}
 		}
@@ -118,7 +118,7 @@ func CalculateMatchScore(matcher *config.RequestMatcher, r *http.Request, body [
 	} else if len(matcher.RequestBody.AnyOf) > 0 {
 		matched := false
 		for _, condition := range matcher.RequestBody.AnyOf {
-			if matchBodyCondition(body, condition) {
+			if matchBodyCondition(body, condition, systemNamespaces) {
 				matched = true
 				break
 			}
@@ -133,11 +133,11 @@ func CalculateMatchScore(matcher *config.RequestMatcher, r *http.Request, body [
 }
 
 // matchBodyCondition checks if a body condition matches the request body
-func matchBodyCondition(body []byte, condition config.BodyMatchCondition) bool {
+func matchBodyCondition(body []byte, condition config.BodyMatchCondition, systemNamespaces map[string]string) bool {
 	if condition.JSONPath != "" {
 		return MatchJSONPath(body, condition)
 	} else if condition.XPath != "" {
-		return MatchXPath(body, condition)
+		return MatchXPath(body, condition, systemNamespaces)
 	}
 	return condition.Match(string(body))
 }
@@ -180,17 +180,26 @@ func GetRequestBody(r *http.Request) ([]byte, error) {
 }
 
 // MatchXPath matches XML body content using XPath query
-func MatchXPath(body []byte, condition config.BodyMatchCondition) bool {
+func MatchXPath(body []byte, condition config.BodyMatchCondition, systemNamespaces map[string]string) bool {
 	doc, err := xmlquery.Parse(bytes.NewReader(body))
 	if err != nil {
 		return false
+	}
+
+	// Merge system namespaces with condition namespaces, giving precedence to condition namespaces
+	namespaces := make(map[string]string)
+	for k, v := range systemNamespaces {
+		namespaces[k] = v
+	}
+	for k, v := range condition.XMLNamespaces {
+		namespaces[k] = v
 	}
 
 	// Compile an XPath expression with namespace bindings.
 	// The map keys are the prefixes (e.g. "ns1"), and the values are the namespace URIs.
 	expr, err := xpath.CompileWithNS(
 		condition.XPath,
-		condition.XMLNamespaces,
+		namespaces,
 	)
 	if err != nil {
 		panic(err)

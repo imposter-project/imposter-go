@@ -144,7 +144,8 @@ type Interceptor struct {
 }
 
 type System struct {
-	Stores map[string]StoreDefinition `yaml:"stores"`
+	Stores        map[string]StoreDefinition `yaml:"stores"`
+	XMLNamespaces map[string]string          `yaml:"xmlNamespaces,omitempty"`
 }
 
 type StoreDefinition struct {

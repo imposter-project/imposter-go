@@ -13,10 +13,11 @@ import (
 
 func TestMatchXPath(t *testing.T) {
 	tests := []struct {
-		name      string
-		body      []byte
-		condition config.BodyMatchCondition
-		want      bool
+		name             string
+		body             []byte
+		condition        config.BodyMatchCondition
+		systemNamespaces map[string]string
+		want             bool
 	}{
 		{
 			name: "simple element match",
@@ -83,6 +84,43 @@ func TestMatchXPath(t *testing.T) {
 			want: true,
 		},
 		{
+			name: "with system namespace",
+			body: []byte(`<?xml version="1.0" encoding="UTF-8"?>
+<root xmlns:sys="http://example.com/system">
+    <sys:user>Grace</sys:user>
+</root>`),
+			condition: config.BodyMatchCondition{
+				MatchCondition: config.MatchCondition{
+					Value: "Grace",
+				},
+				XPath: "//sys:user",
+			},
+			systemNamespaces: map[string]string{
+				"sys": "http://example.com/system",
+			},
+			want: true,
+		},
+		{
+			name: "system namespace overridden by condition namespace",
+			body: []byte(`<?xml version="1.0" encoding="UTF-8"?>
+<root xmlns:ns="http://example.com">
+    <ns:user>Grace</ns:user>
+</root>`),
+			condition: config.BodyMatchCondition{
+				MatchCondition: config.MatchCondition{
+					Value: "Grace",
+				},
+				XPath: "//ns:user",
+				XMLNamespaces: map[string]string{
+					"ns": "http://example.com",
+				},
+			},
+			systemNamespaces: map[string]string{
+				"ns": "http://example.com/wrong",
+			},
+			want: true,
+		},
+		{
 			name: "no match",
 			body: []byte(`<?xml version="1.0" encoding="UTF-8"?>
 <root>
@@ -137,7 +175,7 @@ func TestMatchXPath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := MatchXPath(tt.body, tt.condition)
+			got := MatchXPath(tt.body, tt.condition, tt.systemNamespaces)
 			assert.Equal(t, tt.want, got)
 		})
 	}
@@ -356,12 +394,13 @@ func TestFindBestMatch(t *testing.T) {
 
 func TestCalculateMatchScore(t *testing.T) {
 	tests := []struct {
-		name         string
-		matcher      *config.RequestMatcher
-		request      *http.Request
-		body         []byte
-		wantScore    int
-		wantWildcard bool
+		name             string
+		matcher          *config.RequestMatcher
+		request          *http.Request
+		body             []byte
+		systemNamespaces map[string]string
+		wantScore        int
+		wantWildcard     bool
 	}{
 		{
 			name: "method match only",
@@ -511,6 +550,24 @@ func TestCalculateMatchScore(t *testing.T) {
 			wantWildcard: false,
 		},
 		{
+			name: "body XPath match with system namespaces",
+			matcher: &config.RequestMatcher{
+				RequestBody: config.RequestBody{
+					BodyMatchCondition: config.BodyMatchCondition{
+						MatchCondition: config.MatchCondition{Value: "Grace"},
+						XPath:          "//ns:name",
+					},
+				},
+			},
+			request: httptest.NewRequest("POST", "/test", strings.NewReader(`<user xmlns:ns="http://example.com"><ns:name>Grace</ns:name></user>`)),
+			body:    []byte(`<user xmlns:ns="http://example.com"><ns:name>Grace</ns:name></user>`),
+			systemNamespaces: map[string]string{
+				"ns": "http://example.com",
+			},
+			wantScore:    1,
+			wantWildcard: false,
+		},
+		{
 			name: "body AllOf match",
 			matcher: &config.RequestMatcher{
 				RequestBody: config.RequestBody{
@@ -580,7 +637,7 @@ func TestCalculateMatchScore(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotScore, gotWildcard := CalculateMatchScore(tt.matcher, tt.request, tt.body)
+			gotScore, gotWildcard := CalculateMatchScore(tt.matcher, tt.request, tt.body, tt.systemNamespaces)
 			assert.Equal(t, tt.wantScore, gotScore)
 			assert.Equal(t, tt.wantWildcard, gotWildcard)
 		})

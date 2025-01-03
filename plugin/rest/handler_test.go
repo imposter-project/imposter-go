@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/imposter-project/imposter-go/internal/response"
@@ -354,6 +355,78 @@ func TestHandler_HandleRequest_WithRequestBody(t *testing.T) {
 	// Check response
 	if !responseState.Handled {
 		t.Error("Expected response to be handled for request body")
+	}
+
+	if responseState.StatusCode != http.StatusOK {
+		t.Errorf("Expected status code %d, got %d", http.StatusOK, responseState.StatusCode)
+	}
+
+	if string(responseState.Body) != "test response" {
+		t.Errorf("Expected response body %q, got %q", "test response", string(responseState.Body))
+	}
+}
+
+func TestHandler_HandleRequest_WithXMLNamespaces(t *testing.T) {
+	// Create a temporary directory for test files
+	tempDir, err := os.MkdirTemp("", "imposter-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	// Create test configuration
+	cfg := &config.Config{
+		Plugin: "rest",
+		System: &config.System{
+			XMLNamespaces: map[string]string{
+				"ns": "http://example.com",
+			},
+		},
+		Resources: []config.Resource{
+			{
+				RequestMatcher: config.RequestMatcher{
+					Method: "POST",
+					Path:   "/test",
+					RequestBody: config.RequestBody{
+						BodyMatchCondition: config.BodyMatchCondition{
+							MatchCondition: config.MatchCondition{
+								Value: "Grace",
+							},
+							XPath: "//ns:user",
+						},
+					},
+				},
+				Response: config.Response{
+					Content: "test response",
+				},
+			},
+		},
+	}
+
+	// Create handler
+	handler, err := NewHandler(cfg, tempDir, &config.ImposterConfig{})
+	if err != nil {
+		t.Fatalf("Failed to create handler: %v", err)
+	}
+
+	// Create test request
+	xmlBody := `<?xml version="1.0" encoding="UTF-8"?>
+<root xmlns:ns="http://example.com">
+    <ns:user>Grace</ns:user>
+</root>`
+	req := httptest.NewRequest("POST", "/test", strings.NewReader(xmlBody))
+	req.Header.Set("Content-Type", "application/xml")
+
+	// Initialise store and response state
+	requestStore := make(store.Store)
+	responseState := response.NewResponseState()
+
+	// Handle request
+	handler.HandleRequest(req, requestStore, responseState)
+
+	// Check response
+	if !responseState.Handled {
+		t.Error("Expected response to be handled for XML namespace match")
 	}
 
 	if responseState.StatusCode != http.StatusOK {

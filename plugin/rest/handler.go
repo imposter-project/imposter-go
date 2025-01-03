@@ -38,9 +38,15 @@ func (h *Handler) HandleRequest(r *http.Request, requestStore store.Store, respo
 		return
 	}
 
+	// Get system XML namespaces
+	var systemNamespaces map[string]string
+	if h.config.System != nil {
+		systemNamespaces = h.config.System.XMLNamespaces
+	}
+
 	// Process interceptors first
 	for _, interceptorCfg := range h.config.Interceptors {
-		score, isWildcard := matcher.CalculateMatchScore(&interceptorCfg.RequestMatcher, r, body)
+		score, isWildcard := matcher.CalculateMatchScore(&interceptorCfg.RequestMatcher, r, body, systemNamespaces)
 		if score > 0 {
 			logger.Infof("matched interceptor - method:%s, path:%s, wildcard:%v",
 				r.Method, r.URL.Path, isWildcard)
@@ -54,7 +60,7 @@ func (h *Handler) HandleRequest(r *http.Request, requestStore store.Store, respo
 
 	var matches []matcher.MatchResult
 	for _, res := range h.config.Resources {
-		score, isWildcard := matcher.CalculateMatchScore(&res.RequestMatcher, r, body)
+		score, isWildcard := matcher.CalculateMatchScore(&res.RequestMatcher, r, body, systemNamespaces)
 		if score > 0 {
 			matches = append(matches, matcher.MatchResult{Resource: &res, Score: score, Wildcard: isWildcard})
 		}
