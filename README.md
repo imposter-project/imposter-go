@@ -16,7 +16,7 @@ A Go implementation of the [Imposter Mock Engine](https://www.imposter.sh).
 
 ## Requirements
 
-- Go 1.21 or later
+- Go 1.23 or later (earlier versions may work but are not tested)
 - Make (for building)
 
 ## Getting Started
