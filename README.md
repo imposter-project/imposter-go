@@ -126,7 +126,7 @@ The version information is automatically derived from git tags. When building fr
 
 The repository includes several examples demonstrating different features:
 
-- [Simple REST API](examples/simple) - Basic REST API mocking
+- [Simple REST API](examples/rest/simple) - Basic REST API mocking
 - [SOAP Web Service](examples/soap/simple) - SOAP/WSDL-based service mocking
 - [AWS Lambda](examples/lambda) - Running Imposter in AWS Lambda
 
