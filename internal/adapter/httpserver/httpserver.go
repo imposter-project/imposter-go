@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/imposter-project/imposter-go/internal/adapter"
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/handler"
-	"github.com/imposter-project/imposter-go/internal/store"
 )
 
 // httpServer represents the HTTP server configuration.
@@ -19,23 +19,12 @@ type httpServer struct {
 
 // StartServer initializes and starts the HTTP server.
 func StartServer() {
-	fmt.Println("Starting Imposter-Go...")
-
-	imposterConfig := config.LoadImposterConfig()
-
-	if len(os.Args) < 2 {
-		panic("Config directory path must be provided as the first argument")
+	var configDirArg string
+	if len(os.Args) >= 2 {
+		configDirArg = os.Args[1]
 	}
 
-	configDir := os.Args[1]
-	if info, err := os.Stat(configDir); os.IsNotExist(err) || !info.IsDir() {
-		panic("Specified path is not a valid directory")
-	}
-
-	configs := config.LoadConfig(configDir)
-
-	store.InitStoreProvider()
-	store.PreloadStores(configDir, configs)
+	imposterConfig, configDir, configs := adapter.InitializeImposter(configDirArg)
 
 	// Initialize and start the server with multiple configs
 	srv := newServer(imposterConfig, configDir, configs)

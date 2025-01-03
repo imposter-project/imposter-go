@@ -8,26 +8,21 @@ import (
 	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
+	"github.com/imposter-project/imposter-go/internal/adapter"
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/handler"
-	"github.com/imposter-project/imposter-go/internal/store"
 	"github.com/imposter-project/imposter-go/pkg/utils"
 )
 
 // HandleLambdaRequest handles incoming Lambda requests and routes them to the appropriate handler.
 func HandleLambdaRequest(req json.RawMessage) (interface{}, error) {
-	imposterConfig := config.LoadImposterConfig()
-
-	configDir := os.Getenv("IMPOSTER_CONFIG_DIR")
-	if configDir == "" {
+	// For Lambda, default to /var/task/config if IMPOSTER_CONFIG_DIR is not set
+	if os.Getenv("IMPOSTER_CONFIG_DIR") == "" {
 		log.Println("IMPOSTER_CONFIG_DIR not set, defaulting to /var/task/config")
-		configDir = "/var/task/config"
+		os.Setenv("IMPOSTER_CONFIG_DIR", "/var/task/config")
 	}
 
-	configs := config.LoadConfig(configDir)
-
-	store.InitStoreProvider()
-	store.PreloadStores(configDir, configs)
+	imposterConfig, configDir, configs := adapter.InitializeImposter("")
 
 	var apiGatewayReq events.APIGatewayProxyRequest
 	var lambdaFunctionURLReq events.LambdaFunctionURLRequest
