@@ -1,11 +1,12 @@
 package handler
 
 import (
+	"net/http"
+	"strings"
+
 	"github.com/imposter-project/imposter-go/internal/response"
 	"github.com/imposter-project/imposter-go/plugin/rest"
 	"github.com/imposter-project/imposter-go/plugin/soap"
-	"net/http"
-	"strings"
 
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/store"
@@ -66,10 +67,14 @@ func HandleRequest(w http.ResponseWriter, r *http.Request, configDir string, con
 	responseState.WriteToResponseWriter(w)
 }
 
-// handleSystemEndpoint handles system-level endpoints like /system/store
+// handleSystemEndpoint handles system-level endpoints like /system/store and /system/status
 func handleSystemEndpoint(w http.ResponseWriter, r *http.Request) bool {
-	if strings.HasPrefix(r.URL.Path, "/system/store") {
+	switch {
+	case strings.HasPrefix(r.URL.Path, "/system/store"):
 		HandleStoreRequest(w, r)
+		return true
+	case r.URL.Path == "/system/status":
+		handleStatusRequest(w, r)
 		return true
 	}
 	return false
