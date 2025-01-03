@@ -3,6 +3,7 @@ package response
 import (
 	"fmt"
 	"math/rand"
+	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -126,6 +127,24 @@ func ProcessResponse(rs *ResponseState, req *http.Request, resp config.Response,
 	// Process template if enabled
 	if resp.Template {
 		responseContent = template.ProcessTemplate(responseContent, req, imposterConfig, requestStore)
+	}
+
+	// Set Content-Type header if not already set
+	if _, exists := rs.Headers["Content-Type"]; !exists {
+		// If response is from file, try to determine content type from extension
+		if resp.File != "" {
+			ext := filepath.Ext(resp.File)
+			contentType := mime.TypeByExtension(ext)
+			if contentType == "" {
+				contentType = "application/octet-stream"
+			}
+			rs.Headers["Content-Type"] = contentType
+			fmt.Printf("Inferred Content-Type %s from file extension %s\n", contentType, ext)
+		} else {
+			// If no file specified, assume JSON
+			fmt.Println("No file extension available - assuming JSON content type")
+			rs.Headers["Content-Type"] = "application/json"
+		}
 	}
 
 	rs.Body = []byte(responseContent)
