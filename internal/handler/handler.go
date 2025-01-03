@@ -59,8 +59,7 @@ func HandleRequest(w http.ResponseWriter, r *http.Request, configDir string, con
 
 	// If no handler handled the response, return 404
 	if !responseState.Handled {
-		responseState.StatusCode = http.StatusNotFound
-		responseState.Body = []byte("Resource not found")
+		handleNotFound(r, responseState, configs)
 	}
 
 	// Write response to client

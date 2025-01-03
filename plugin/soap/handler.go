@@ -292,10 +292,7 @@ func (h *Handler) calculateScore(reqMatcher *config.RequestMatcher, r *http.Requ
 func (h *Handler) HandleRequest(r *http.Request, requestStore store.Store, responseState *response.ResponseState) {
 	// Only handle POST requests for SOAP
 	if r.Method != http.MethodPost {
-		responseState.StatusCode = http.StatusMethodNotAllowed
-		responseState.Body = []byte("Method not allowed")
-		responseState.Handled = true
-		return
+		return // Short circuit if not a POST request
 	}
 
 	// Read and parse the SOAP request
