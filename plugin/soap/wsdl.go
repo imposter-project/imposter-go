@@ -77,6 +77,11 @@ func NewWSDLParser(wsdlPath string) (WSDLParser, error) {
 		return nil, fmt.Errorf("invalid WSDL document: no root element")
 	}
 
+	// Check if root has namespace attribute
+	if len(root.Attr) == 0 {
+		return nil, fmt.Errorf("invalid WSDL document: root element has no namespace")
+	}
+
 	// Check for WSDL 2.0
 	if strings.Contains(root.Attr[0].Value, "http://www.w3.org/ns/wsdl") {
 		return newWSDL2Parser(doc, wsdlPath)
@@ -251,7 +256,7 @@ func (p *wsdl2Parser) parseOperations() error {
 		if faultNode := xmlquery.FindOne(node, "./outfault"); faultNode != nil {
 			op.Fault = &Message{
 				Name:    faultNode.SelectAttr("messageLabel"),
-				Element: faultNode.SelectAttr("ref"),
+				Element: faultNode.SelectAttr("element"),
 			}
 		}
 
@@ -261,7 +266,7 @@ func (p *wsdl2Parser) parseOperations() error {
 		}
 
 		// Get binding name
-		if bindingNode := xmlquery.FindOne(node, "ancestor::binding"); bindingNode != nil {
+		if bindingNode := xmlquery.FindOne(p.doc, "//binding[@interface='tns:TestInterface']"); bindingNode != nil {
 			op.Binding = bindingNode.SelectAttr("name")
 		}
 
