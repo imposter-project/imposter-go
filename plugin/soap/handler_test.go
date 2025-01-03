@@ -142,13 +142,9 @@ func TestSOAPHandler_HandleRequest_InvalidMethod(t *testing.T) {
 	// Handle request
 	handler.HandleRequest(req, requestStore, responseState)
 
-	// Check response
-	if !responseState.Handled {
-		t.Error("Expected response to be handled for invalid method")
-	}
-
-	if responseState.StatusCode != http.StatusMethodNotAllowed {
-		t.Errorf("Expected status code %d, got %d", http.StatusMethodNotAllowed, responseState.StatusCode)
+	// Check response - should not be handled by SOAP handler
+	if responseState.Handled {
+		t.Error("Expected response to not be handled for invalid method")
 	}
 }
 

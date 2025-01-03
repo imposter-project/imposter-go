@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"encoding/xml"
 	"fmt"
-	"github.com/imposter-project/imposter-go/internal/response"
 	"net/http"
 	"path/filepath"
 	"strings"
+
+	"github.com/imposter-project/imposter-go/internal/response"
 
 	"github.com/antchfx/xmlquery"
 	"github.com/imposter-project/imposter-go/internal/capture"
@@ -292,7 +293,7 @@ func (h *Handler) calculateScore(reqMatcher *config.RequestMatcher, r *http.Requ
 func (h *Handler) HandleRequest(r *http.Request, requestStore store.Store, responseState *response.ResponseState) {
 	// Only handle POST requests for SOAP
 	if r.Method != http.MethodPost {
-		return // Short circuit if not a POST request
+		return // Let the main handler deal with non-POST requests
 	}
 
 	// Read and parse the SOAP request
