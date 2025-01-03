@@ -48,8 +48,6 @@ func (s *httpServer) start(imposterConfig *config.ImposterConfig) {
 		handler.HandleRequest(w, r, s.ConfigDir, s.Configs, imposterConfig)
 	})
 
-	http.HandleFunc("/system/store/", handler.HandleStoreRequest)
-
 	if err := http.ListenAndServe(s.Addr, nil); err != nil {
 		fmt.Printf("Error starting server: %v\n", err)
 	}
