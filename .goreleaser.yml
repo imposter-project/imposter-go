@@ -1,4 +1,4 @@
-project_name: imposter
+project_name: imposter-go
 
 before:
   hooks:
@@ -20,6 +20,8 @@ builds:
     ldflags:
       - -s -w -X github.com/imposter-project/imposter-go/internal/version.Version={{.Version}}
     main: ./cmd/imposter
+    tags:
+      - lambda.norpc
 
 archives:
   - format: tar.gz

@@ -29,31 +29,31 @@ Download the latest release for your platform from GitHub:
 
 ```bash
 # For Intel Macs (x86_64)
-curl -L https://github.com/imposter-project/imposter-go/releases/latest/download/imposter_Darwin_x86_64.tar.gz | tar xz
-sudo mv imposter /usr/local/bin/
+curl -L https://github.com/imposter-project/imposter-go/releases/latest/download/imposter-go_Darwin_x86_64.tar.gz | tar xz
+sudo mv imposter-go /usr/local/bin/
 
 # For Apple Silicon Macs (arm64)
-curl -L https://github.com/imposter-project/imposter-go/releases/latest/download/imposter_Darwin_arm64.tar.gz | tar xz
-sudo mv imposter /usr/local/bin/
+curl -L https://github.com/imposter-project/imposter-go/releases/latest/download/imposter-go_Darwin_arm64.tar.gz | tar xz
+sudo mv imposter-go /usr/local/bin/
 ```
 
 #### Linux
 
 ```bash
 # For x86_64 systems
-curl -L https://github.com/imposter-project/imposter-go/releases/latest/download/imposter_Linux_x86_64.tar.gz | tar xz
-sudo mv imposter /usr/local/bin/
+curl -L https://github.com/imposter-project/imposter-go/releases/latest/download/imposter-go_Linux_x86_64.tar.gz | tar xz
+sudo mv imposter-go /usr/local/bin/
 
 # For arm64 systems
-curl -L https://github.com/imposter-project/imposter-go/releases/latest/download/imposter_Linux_arm64.tar.gz | tar xz
-sudo mv imposter /usr/local/bin/
+curl -L https://github.com/imposter-project/imposter-go/releases/latest/download/imposter-go_Linux_arm64.tar.gz | tar xz
+sudo mv imposter-go /usr/local/bin/
 ```
 
 #### Windows
 
 1. Download the latest release from [GitHub Releases](https://github.com/imposter-project/imposter-go/releases/latest)
-2. Extract the `imposter_Windows_x86_64.zip` file
-3. Add the extracted `imposter.exe` to your PATH or move it to a directory in your PATH
+2. Extract the `imposter-go_Windows_x86_64.zip` file
+3. Add the extracted `imposter-go.exe` to your PATH or move it to a directory in your PATH
 
 ### Building from Source
 

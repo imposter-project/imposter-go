@@ -3,15 +3,15 @@ LDFLAGS := -X github.com/imposter-project/imposter-go/internal/version.Version=$
 
 .PHONY: build
 build:
-	go build -ldflags "$(LDFLAGS)" ./...
+	go build -tags lambda.norpc -ldflags "$(LDFLAGS)" -o imposter-go ./cmd/imposter
 
 .PHONY: install
 install:
-	go install -ldflags "$(LDFLAGS)" ./...
+	go install -tags lambda.norpc -ldflags "$(LDFLAGS)" -o "${GOPATH}/bin/imposter-go" ./cmd/imposter
 
 .PHONY: run
 run:
-	go run -ldflags "$(LDFLAGS)" ./cmd/imposter/main.go $(filter-out $@,$(MAKECMDGOALS))
+	go run -tags lambda.norpc -ldflags "$(LDFLAGS)" ./cmd/imposter/main.go $(filter-out $@,$(MAKECMDGOALS))
 
 .PHONY: test
 test:

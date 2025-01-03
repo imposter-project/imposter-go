@@ -16,7 +16,7 @@ __debug_bin*
 
 # Outputs
 bootstrap
-imposter
+imposter-go
 imposter.zip
 
 # Coverage files
