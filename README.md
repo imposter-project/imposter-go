@@ -17,6 +17,7 @@ A Go implementation of the [Imposter Mock Engine](https://www.imposter.sh).
 ## Requirements
 
 - Go 1.21 or later
+- Make (for building)
 
 ## Getting Started
 
@@ -26,14 +27,19 @@ A Go implementation of the [Imposter Mock Engine](https://www.imposter.sh).
    cd imposter-go
    ```
 
-2. Build and run the server:
+2. Run the server with an example configuration:
    ```bash
-   go run ./cmd/imposter/main.go ./examples/rest/simple
+   make run ./examples/rest/simple
    ```
 
 3. Visit `http://localhost:8080/hello` in your browser or use `curl`:
    ```bash
    curl http://localhost:8080/hello
+   ```
+
+4. Check the server version:
+   ```bash
+   curl http://localhost:8080/system/status
    ```
 
 ## Configuration
@@ -42,6 +48,30 @@ Set the `IMPOSTER_PORT` environment variable to change the default port:
 ```bash
 export IMPOSTER_PORT=9090
 ```
+
+## Development
+
+The project uses Make for building and development. The following targets are available:
+
+- `make run <path>` - Run the server directly (useful during development)
+- `make build` - Build the project with version information
+- `make install` - Install the binary to your Go bin directory
+
+For development, use `make run` which will compile and run the server in one step:
+```bash
+# Run with a specific configuration
+make run ./examples/rest/simple
+
+# Run with multiple arguments
+make run --debug ./examples/soap/simple
+```
+
+For production or installation, use `make build` or `make install`.
+
+The version information is automatically derived from git tags. When building from source:
+- Released versions will show the git tag (e.g. "v1.0.0")
+- Development builds will show the git commit hash
+- If no git information is available, it will show "dev"
 
 ## Examples
 

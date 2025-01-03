@@ -6,6 +6,7 @@ name: CI
 on:
   push:
     branches: [ "main" ]
+    tags: [ "v*" ]
   pull_request:
 
 jobs:
@@ -14,6 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Fetch all history for git describe
 
     - name: Set up Go
       uses: actions/setup-go@v4
@@ -21,7 +24,7 @@ jobs:
         go-version: '1.21'
 
     - name: Build
-      run: go build -v ./...
+      run: make build
 
     - name: Test
       run: go test -v ./...
