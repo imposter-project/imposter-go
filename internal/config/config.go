@@ -114,6 +114,12 @@ type CaptureKey struct {
 	} `yaml:"requestBody,omitempty"`
 }
 
+// EvalMatchCondition represents a condition for evaluating expressions
+type EvalMatchCondition struct {
+	MatchCondition
+	Expression string `yaml:"expression"`
+}
+
 // RequestMatcher contains the common fields for matching requests
 type RequestMatcher struct {
 	Method      string                        `yaml:"method"`
@@ -123,6 +129,7 @@ type RequestMatcher struct {
 	RequestBody RequestBody                   `yaml:"requestBody"`
 	FormParams  map[string]MatcherUnmarshaler `yaml:"formParams"`
 	PathParams  map[string]MatcherUnmarshaler `yaml:"pathParams"`
+	Evals       []EvalMatchCondition          `yaml:"evals,omitempty"`
 	Capture     map[string]Capture            `yaml:"capture,omitempty"`
 	// SOAP-specific fields
 	Operation  string `yaml:"operation,omitempty"`

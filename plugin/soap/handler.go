@@ -242,14 +242,16 @@ func splitQName(qname string) (namespace, localPart string) {
 	return "", qname
 }
 
-// calculateScore calculates a unified match score for SOAP requests
-func (h *Handler) calculateScore(reqMatcher *config.RequestMatcher, r *http.Request, body []byte, operation string, soapAction string) (score int, isWildcard bool) {
-	// Get base score from matcher
+// calculateScore calculates how well a request matches a resource or interceptor
+func (h *Handler) calculateScore(reqMatcher *config.RequestMatcher, r *http.Request, body []byte, operation string, soapAction string, requestStore store.Store) (score int, isWildcard bool) {
+	// Get system XML namespaces
 	var systemNamespaces map[string]string
 	if h.config.System != nil {
 		systemNamespaces = h.config.System.XMLNamespaces
 	}
-	baseScore, baseWildcard := matcher.CalculateMatchScore(reqMatcher, r, body, systemNamespaces)
+
+	// Calculate base score using common request matcher fields
+	baseScore, baseWildcard := matcher.CalculateMatchScore(reqMatcher, r, body, systemNamespaces, h.imposterConfig, requestStore)
 	score = baseScore
 	isWildcard = baseWildcard
 
@@ -327,7 +329,7 @@ func (h *Handler) HandleRequest(r *http.Request, requestStore store.Store, respo
 
 	// Process interceptors first
 	for _, interceptorCfg := range h.config.Interceptors {
-		score, isWildcard := h.calculateScore(&interceptorCfg.RequestMatcher, r, body, op.Name, soapAction)
+		score, isWildcard := h.calculateScore(&interceptorCfg.RequestMatcher, r, body, op.Name, soapAction, requestStore)
 		if score > 0 {
 			logger.Infof("matched interceptor - method:%s, path:%s, wildcard:%v",
 				r.Method, r.URL.Path, isWildcard)
@@ -342,7 +344,7 @@ func (h *Handler) HandleRequest(r *http.Request, requestStore store.Store, respo
 	// Find matching resources
 	var matches []matcher.MatchResult
 	for _, resource := range h.config.Resources {
-		score, isWildcard := h.calculateScore(&resource.RequestMatcher, r, body, op.Name, soapAction)
+		score, isWildcard := h.calculateScore(&resource.RequestMatcher, r, body, op.Name, soapAction, requestStore)
 		if score > 0 {
 			matches = append(matches, matcher.MatchResult{Resource: &resource, Score: score, Wildcard: isWildcard})
 		}

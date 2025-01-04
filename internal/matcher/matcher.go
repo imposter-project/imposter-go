@@ -12,6 +12,8 @@ import (
 	"github.com/antchfx/xmlquery"
 	"github.com/antchfx/xpath"
 	"github.com/imposter-project/imposter-go/internal/config"
+	"github.com/imposter-project/imposter-go/internal/store"
+	"github.com/imposter-project/imposter-go/internal/template"
 )
 
 // MatchResult represents a match between a request and a resource or interceptor
@@ -23,7 +25,7 @@ type MatchResult struct {
 }
 
 // CalculateMatchScore calculates how well a request matches a resource or interceptor
-func CalculateMatchScore(matcher *config.RequestMatcher, r *http.Request, body []byte, systemNamespaces map[string]string) (score int, isWildcard bool) {
+func CalculateMatchScore(matcher *config.RequestMatcher, r *http.Request, body []byte, systemNamespaces map[string]string, imposterConfig *config.ImposterConfig, requestStore store.Store) (score int, isWildcard bool) {
 	// Method match
 	if matcher.Method != "" {
 		if matcher.Method != r.Method {
@@ -129,7 +131,28 @@ func CalculateMatchScore(matcher *config.RequestMatcher, r *http.Request, body [
 		score++
 	}
 
+	// Evals match
+	if len(matcher.Evals) > 0 {
+		for _, eval := range matcher.Evals {
+			// Evaluate the expression using the template engine
+			result, err := evaluateExpression(eval.Expression, r, imposterConfig, requestStore)
+			if err != nil {
+				return 0, false
+			}
+			if !eval.Match(result) {
+				return 0, false
+			}
+			score++
+		}
+	}
+
 	return score, isWildcard
+}
+
+// evaluateExpression evaluates a template expression in the context of the request
+func evaluateExpression(expression string, r *http.Request, imposterConfig *config.ImposterConfig, requestStore store.Store) (string, error) {
+	// Simply evaluate the expression and return its value
+	return template.ProcessTemplate(expression, r, imposterConfig, requestStore), nil
 }
 
 // matchBodyCondition checks if a body condition matches the request body

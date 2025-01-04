@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/imposter-project/imposter-go/internal/config"
+	"github.com/imposter-project/imposter-go/internal/store"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -399,6 +400,8 @@ func TestCalculateMatchScore(t *testing.T) {
 		request          *http.Request
 		body             []byte
 		systemNamespaces map[string]string
+		imposterConfig   *config.ImposterConfig
+		requestStore     store.Store
 		wantScore        int
 		wantWildcard     bool
 	}{
@@ -637,9 +640,98 @@ func TestCalculateMatchScore(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotScore, gotWildcard := CalculateMatchScore(tt.matcher, tt.request, tt.body, tt.systemNamespaces)
-			assert.Equal(t, tt.wantScore, gotScore)
-			assert.Equal(t, tt.wantWildcard, gotWildcard)
+			gotScore, gotWildcard := CalculateMatchScore(tt.matcher, tt.request, tt.body, tt.systemNamespaces, tt.imposterConfig, tt.requestStore)
+			if gotScore != tt.wantScore {
+				t.Errorf("expected score %d, got %d", tt.wantScore, gotScore)
+			}
+			if gotWildcard != tt.wantWildcard {
+				t.Errorf("expected wildcard %v, got %v", tt.wantWildcard, gotWildcard)
+			}
+		})
+	}
+}
+
+func TestCalculateMatchScore_Evals(t *testing.T) {
+	tests := []struct {
+		name             string
+		matcher          config.RequestMatcher
+		request          *http.Request
+		body             []byte
+		systemNamespaces map[string]string
+		imposterConfig   *config.ImposterConfig
+		requestStore     store.Store
+		expectedScore    int
+		expectedWildcard bool
+	}{
+		{
+			name: "single eval matches",
+			matcher: config.RequestMatcher{
+				Evals: []config.EvalMatchCondition{
+					{
+						Expression: "${stores.request.foo}",
+						MatchCondition: config.MatchCondition{
+							Value: "bar",
+						},
+					},
+				},
+			},
+			request:        httptest.NewRequest(http.MethodGet, "/test", nil),
+			imposterConfig: &config.ImposterConfig{ServerPort: "8080"},
+			requestStore:   store.Store{"foo": "bar"},
+			expectedScore:  1,
+		},
+		{
+			name: "single eval does not match",
+			matcher: config.RequestMatcher{
+				Evals: []config.EvalMatchCondition{
+					{
+						Expression: "${stores.request.foo}",
+						MatchCondition: config.MatchCondition{
+							Value: "bar",
+						},
+					},
+				},
+			},
+			request:        httptest.NewRequest(http.MethodGet, "/test", nil),
+			imposterConfig: &config.ImposterConfig{ServerPort: "8080"},
+			requestStore:   store.Store{"foo": "not-bar"},
+			expectedScore:  0,
+		},
+		{
+			name: "multiple evals all match",
+			matcher: config.RequestMatcher{
+				Evals: []config.EvalMatchCondition{
+					{
+						Expression: "${stores.request.foo}",
+						MatchCondition: config.MatchCondition{
+							Value: "bar",
+						},
+					},
+					{
+						Expression: "${stores.request.baz}",
+						MatchCondition: config.MatchCondition{
+							Value:    "qux",
+							Operator: "NotEqualTo",
+						},
+					},
+				},
+			},
+			request:        httptest.NewRequest(http.MethodGet, "/test", nil),
+			imposterConfig: &config.ImposterConfig{ServerPort: "8080"},
+			requestStore:   store.Store{"foo": "bar", "baz": "not-qux"},
+			expectedScore:  2,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			score, wildcard := CalculateMatchScore(&tt.matcher, tt.request, tt.body, tt.systemNamespaces, tt.imposterConfig, tt.requestStore)
+			if score != tt.expectedScore {
+				t.Errorf("expected score %d, got %d", tt.expectedScore, score)
+			}
+			if wildcard != tt.expectedWildcard {
+				t.Errorf("expected wildcard %v, got %v", tt.expectedWildcard, wildcard)
+			}
 		})
 	}
 }

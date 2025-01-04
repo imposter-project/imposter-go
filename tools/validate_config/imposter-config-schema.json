@@ -104,6 +104,21 @@
                     "type": "object",
                     "additionalProperties": { "$ref": "#/definitions/matchCondition" }
                 },
+                "evals": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "required": ["expression"],
+                        "allOf": [
+                            { "$ref": "#/definitions/matchConditionObject" },
+                            {
+                                "properties": {
+                                    "expression": { "type": "string" }
+                                }
+                            }
+                        ]
+                    }
+                },
                 "capture": {
                     "type": "object",
                     "additionalProperties": {

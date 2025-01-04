@@ -1,0 +1,38 @@
+plugin: rest
+
+resources:
+  - path: /example
+    evals:
+      - expression: "${stores.example.foo}"
+        value: "bar"
+    response:
+      content: "Matched when foo equals bar"
+      statusCode: 200
+
+  - path: /example
+    evals:
+      - expression: "${stores.example.baz}"
+        operator: NotEqualTo
+        value: "qux"
+    response:
+      content: "Matched when baz is not equal to qux"
+      statusCode: 200
+
+  - path: /example
+    evals:
+      - expression: "${stores.example.exists}"
+        operator: Exists
+    response:
+      content: "Matched when exists is present"
+      statusCode: 200
+
+  - path: /example
+    evals:
+      - expression: "${context.request.queryParams.foo}"
+        value: "bar"
+      - expression: "${context.request.queryParams.baz}"
+        operator: Contains
+        value: "qux"
+    response:
+      content: "Matched when foo equals bar AND baz contains qux"
+      statusCode: 200 
