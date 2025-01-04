@@ -331,6 +331,15 @@ func parseConfig(path string) (*Config, error) {
 	// Substitute environment variables
 	data = []byte(substituteEnvVars(string(data)))
 
+	// Check if it's a legacy config and transform if needed
+	if isLegacyConfig(data) {
+		logger.Infof("detected legacy config format in %s, transforming...", path)
+		data, err = transformLegacyConfig(data)
+		if err != nil {
+			return nil, fmt.Errorf("failed to transform legacy config: %w", err)
+		}
+	}
+
 	var cfg Config
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal YAML: %w", err)

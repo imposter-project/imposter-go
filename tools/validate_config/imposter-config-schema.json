@@ -59,6 +59,10 @@
                 "content": { "type": "string" },
                 "statusCode": { "type": "integer" },
                 "file": { "type": "string" },
+                "staticFile": { 
+                    "type": "string",
+                    "description": "[DEPRECATED] Please use 'file' instead. This property will be removed in a future version."
+                },
                 "fail": { "type": "string" },
                 "delay": {
                     "type": "object",
@@ -133,69 +137,87 @@
                     }
                 }
             }
-        }
-    },
-    "properties": {
-        "plugin": {
-            "type": "string",
-            "enum": ["rest", "soap", "hbase", "openapi"]
         },
-        "basePath": {
-            "type": "string"
-        },
-        "wsdlFile": {
-            "type": "string"
-        },
-        "resources": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "allOf": [
-                    { "$ref": "#/definitions/requestMatcher" },
-                    {
-                        "properties": {
-                            "response": { "$ref": "#/definitions/response" }
-                        }
-                    }
-                ]
-            }
-        },
-        "interceptors": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "allOf": [
-                    { "$ref": "#/definitions/requestMatcher" },
-                    {
-                        "properties": {
-                            "response": { "$ref": "#/definitions/response" },
-                            "continue": { "type": "boolean" }
-                        }
-                    }
-                ]
-            }
-        },
-        "system": {
+        "currentFormat": {
             "type": "object",
             "properties": {
-                "stores": {
-                    "type": "object",
-                    "additionalProperties": {
+                "plugin": {
+                    "type": "string",
+                    "enum": ["rest", "soap", "hbase", "openapi"]
+                },
+                "basePath": {
+                    "type": "string"
+                },
+                "wsdlFile": {
+                    "type": "string"
+                },
+                "resources": {
+                    "type": "array",
+                    "items": {
                         "type": "object",
-                        "properties": {
-                            "preloadFile": { "type": "string" },
-                            "preloadData": {
-                                "type": "object",
-                                "additionalProperties": true
+                        "allOf": [
+                            { "$ref": "#/definitions/requestMatcher" },
+                            {
+                                "properties": {
+                                    "response": { "$ref": "#/definitions/response" }
+                                }
                             }
-                        }
+                        ]
                     }
                 },
-                "xmlNamespaces": {
+                "interceptors": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "allOf": [
+                            { "$ref": "#/definitions/requestMatcher" },
+                            {
+                                "properties": {
+                                    "response": { "$ref": "#/definitions/response" },
+                                    "continue": { "type": "boolean" }
+                                }
+                            }
+                        ]
+                    }
+                },
+                "system": {
                     "type": "object",
-                    "additionalProperties": { "type": "string" }
+                    "properties": {
+                        "stores": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "object",
+                                "properties": {
+                                    "preloadFile": { "type": "string" },
+                                    "preloadData": {
+                                        "type": "object",
+                                        "additionalProperties": true
+                                    }
+                                }
+                            }
+                        },
+                        "xmlNamespaces": {
+                            "type": "object",
+                            "additionalProperties": { "type": "string" }
+                        }
+                    }
                 }
             }
+        },
+        "legacyFormat": {
+            "type": "object",
+            "required": ["plugin", "response"],
+            "properties": {
+                "plugin": {
+                    "type": "string",
+                    "enum": ["rest", "soap", "hbase", "openapi"]
+                },
+                "response": { "$ref": "#/definitions/response" }
+            }
         }
-    }
+    },
+    "oneOf": [
+        { "$ref": "#/definitions/currentFormat" },
+        { "$ref": "#/definitions/legacyFormat" }
+    ]
 } 
