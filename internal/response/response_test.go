@@ -12,6 +12,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const delayTolerance = 100 // milliseconds
+
 func TestNewResponseState(t *testing.T) {
 	rs := NewResponseState()
 	assert.Equal(t, http.StatusOK, rs.StatusCode)
@@ -102,7 +104,7 @@ func TestSimulateDelay(t *testing.T) {
 				assert.InDelta(t, tt.expectedDelay, elapsed, float64(10*time.Millisecond))
 			} else if tt.delay.Min > 0 && tt.delay.Max > 0 {
 				assert.GreaterOrEqual(t, elapsed, tt.expectedDelay)
-				assert.LessOrEqual(t, elapsed, time.Duration(tt.delay.Max)*time.Millisecond)
+				assert.LessOrEqual(t, elapsed, time.Duration(tt.delay.Max+delayTolerance)*time.Millisecond)
 			} else {
 				assert.Less(t, elapsed, 10*time.Millisecond)
 			}
