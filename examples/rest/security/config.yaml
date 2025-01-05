@@ -1,0 +1,126 @@
+plugin: rest
+
+# Global security configuration - applies to all resources unless overridden
+security:
+  default: Deny  # Default deny if no conditions match
+  conditions:
+    - effect: Permit
+      requestHeaders:
+        Authorization: "Bearer token123"  # Simple exact match
+        X-API-Key:  # Advanced matcher with regex
+          matcher:
+            operator: Matches
+            value: "^key-[0-9a-f]{8}$"
+      queryParams:
+        version: "v1"  # Simple exact match for query param
+      formParams:
+        token: "valid-token"  # Simple exact match for form param
+
+# Resources with different security configurations
+resources:
+  # Public endpoint - no additional security
+  - path: /public
+    response:
+      content: "This is a public endpoint"
+      statusCode: 200
+
+  # Protected endpoint - uses global security
+  - path: /api
+    response:
+      content: "API endpoint - requires global auth"
+      statusCode: 200
+
+  # Extra protected endpoint - has its own security rules
+  - path: /protected
+    security:  # Resource-level security overrides global
+      default: Deny
+      conditions:
+        - effect: Permit
+          requestHeaders:
+            X-Resource-Key: "secret"  # Simple exact match
+    response:
+      content: "Protected endpoint - requires specific key"
+      statusCode: 200
+
+  # Endpoint with complex security rules
+  - path: /admin
+    security:
+      default: Deny
+      conditions:
+        - effect: Permit  # Admin access with role header
+          requestHeaders:
+            X-Role:
+              matcher:
+                operator: EqualTo
+                value: "admin"
+            X-Admin-Key:
+              matcher:
+                operator: Exists  # Just check if header exists
+
+        - effect: Permit  # Alternative access with special token
+          requestHeaders:
+            Authorization:
+              matcher:
+                operator: Matches
+                value: "^AdminToken-[A-Z]{10}$"
+          queryParams:
+            admin:
+              matcher:
+                operator: EqualTo
+                value: "true"
+    response:
+      content: "Admin endpoint - requires admin authentication"
+      statusCode: 200
+
+  # Endpoint demonstrating all matcher types
+  - path: /test-matchers
+    security:
+      default: Deny
+      conditions:
+        - effect: Permit
+          requestHeaders:
+            # Exact match (implicit EqualTo)
+            Header1: "exact-value"
+            
+            # Not equal
+            Header2:
+              matcher:
+                operator: NotEqualTo
+                value: "wrong-value"
+            
+            # Contains
+            Header3:
+              matcher:
+                operator: Contains
+                value: "partial"
+            
+            # Not contains
+            Header4:
+              matcher:
+                operator: NotContains
+                value: "forbidden"
+            
+            # Regex match
+            Header5:
+              matcher:
+                operator: Matches
+                value: "^prefix-.*$"
+            
+            # Regex not match
+            Header6:
+              matcher:
+                operator: NotMatches
+                value: "^invalid-.*$"
+            
+            # Exists check
+            Header7:
+              matcher:
+                operator: Exists
+            
+            # Not exists check
+            Header8:
+              matcher:
+                operator: NotExists
+    response:
+      content: "Matcher test endpoint"
+      statusCode: 200 
