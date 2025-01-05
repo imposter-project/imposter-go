@@ -140,7 +140,8 @@ type RequestMatcher struct {
 // Resource represents an HTTP resource
 type Resource struct {
 	RequestMatcher `yaml:",inline"`
-	Response       Response `yaml:"response"`
+	Response       Response        `yaml:"response"`
+	Security       *SecurityConfig `yaml:"security,omitempty"`
 }
 
 // Interceptor represents an HTTP interceptor that can be executed before resources
@@ -162,11 +163,13 @@ type StoreDefinition struct {
 
 // Config represents the configuration for a mock service
 type Config struct {
-	Plugin       string        `yaml:"plugin"`
-	BasePath     string        `yaml:"basePath"`
-	Resources    []Resource    `yaml:"resources,omitempty"`
-	Interceptors []Interceptor `yaml:"interceptors,omitempty"`
-	System       *System       `yaml:"system,omitempty"`
+	Plugin       string          `yaml:"plugin"`
+	BasePath     string          `yaml:"basePath"`
+	Resources    []Resource      `yaml:"resources"`
+	Interceptors []Interceptor   `yaml:"interceptors"`
+	System       *System         `yaml:"system"`
+	Security     *SecurityConfig `yaml:"security"`
+
 	// SOAP-specific fields
 	WSDLFile string `yaml:"wsdlFile,omitempty"`
 }
@@ -351,6 +354,9 @@ func parseConfig(path string) (*Config, error) {
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal YAML: %w", err)
 	}
+
+	// Transform security config into interceptors if present
+	transformSecurityConfig(&cfg)
 
 	return &cfg, nil
 }
