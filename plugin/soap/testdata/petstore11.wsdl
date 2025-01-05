@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://schemas.xmlsoap.org/wsdl/"
+             xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+             xmlns:tns="urn:com:example:petstore"
+             xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+             targetNamespace="urn:com:example:petstore">
+
+    <types>
+        <xsd:schema targetNamespace="urn:com:example:petstore">
+            <xsd:element name="getPetByIdRequest">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="id" type="xsd:int"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+
+            <xsd:element name="getPetByIdResponse">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="id" type="xsd:int"/>
+                        <xsd:element name="name" type="xsd:string"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+
+            <xsd:element name="fault">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="code" type="xsd:string"/>
+                        <xsd:element name="message" type="xsd:string"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+        </xsd:schema>
+    </types>
+
+    <message name="getPetByIdRequest">
+        <part name="parameters" element="tns:getPetByIdRequest"/>
+    </message>
+
+    <message name="getPetByIdResponse">
+        <part name="parameters" element="tns:getPetByIdResponse"/>
+    </message>
+
+    <message name="faultMessage">
+        <part name="parameters" element="tns:fault"/>
+    </message>
+
+    <portType name="PetPortType">
+        <operation name="getPetById">
+            <input message="tns:getPetByIdRequest"/>
+            <output message="tns:getPetByIdResponse"/>
+            <fault name="fault" message="tns:faultMessage"/>
+        </operation>
+    </portType>
+
+    <binding name="PetBinding" type="tns:PetPortType">
+        <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+        <operation name="getPetById">
+            <soap:operation soapAction="getPetById"/>
+            <input>
+                <soap:body use="literal"/>
+            </input>
+            <output>
+                <soap:body use="literal"/>
+            </output>
+            <fault name="fault">
+                <soap:fault name="fault" use="literal"/>
+            </fault>
+        </operation>
+    </binding>
+
+    <service name="PetService">
+        <port name="PetPort" binding="tns:PetBinding">
+            <soap:address location="http://www.example.com/pets/"/>
+        </port>
+    </service>
+</definitions> 

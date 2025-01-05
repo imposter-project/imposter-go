@@ -153,26 +153,72 @@ func (h *Handler) parseBody(body []byte) (*MessageBodyHolder, error) {
 		return nil, fmt.Errorf("failed to parse XML: %w", err)
 	}
 
-	// For SOAP messages, extract the body element
-	if h.wsdlParser.GetSOAPVersion() == SOAP12 {
-		bodyNode := xmlquery.FindOne(doc, "//*[local-name()='Body']/*[1]")
-		if bodyNode == nil {
-			return nil, fmt.Errorf("no SOAP body element found")
-		}
-		return &MessageBodyHolder{
-			BodyRootElement: bodyNode,
-			EnvNamespace:    "http://www.w3.org/2003/05/soap-envelope",
-		}, nil
+	// Get the envelope element and its namespace
+	envNode := xmlquery.FindOne(doc, "//*[local-name()='Envelope']")
+	if envNode == nil {
+		return nil, fmt.Errorf("no SOAP envelope found")
 	}
 
-	// SOAP 1.1
+	// Get the envelope namespace - check both xmlns and xmlns:prefix attributes
+	var envNamespace string
+	for _, attr := range envNode.Attr {
+		if attr.Name.Space == "xmlns" || (attr.Name.Space == "" && attr.Name.Local == "xmlns") {
+			envNamespace = attr.Value
+			break
+		}
+	}
+
+	// If no default namespace, check for prefixed namespace
+	if envNamespace == "" {
+		prefix := strings.Split(envNode.Data, ":")[0]
+		for _, attr := range envNode.Attr {
+			if attr.Name.Space == "xmlns" && attr.Name.Local == prefix {
+				envNamespace = attr.Value
+				break
+			}
+		}
+	}
+
+	// If still no namespace found, check parent elements
+	if envNamespace == "" {
+		parent := envNode.Parent
+		for parent != nil {
+			for _, attr := range parent.Attr {
+				if attr.Name.Space == "xmlns" || (attr.Name.Space == "" && attr.Name.Local == "xmlns") {
+					envNamespace = attr.Value
+					break
+				}
+			}
+			if envNamespace != "" {
+				break
+			}
+			parent = parent.Parent
+		}
+	}
+
+	// Extract the body element
 	bodyNode := xmlquery.FindOne(doc, "//*[local-name()='Body']/*[1]")
 	if bodyNode == nil {
 		return nil, fmt.Errorf("no SOAP body element found")
 	}
+
+	// Validate SOAP version if namespace is found
+	if envNamespace != "" {
+		expectedNamespace := ""
+		if h.wsdlParser.GetSOAPVersion() == SOAP12 {
+			expectedNamespace = "http://www.w3.org/2003/05/soap-envelope"
+		} else {
+			expectedNamespace = "http://schemas.xmlsoap.org/soap/envelope/"
+		}
+
+		if envNamespace != expectedNamespace {
+			return nil, fmt.Errorf("invalid SOAP version namespace: expected %s, got %s", expectedNamespace, envNamespace)
+		}
+	}
+
 	return &MessageBodyHolder{
 		BodyRootElement: bodyNode,
-		EnvNamespace:    "http://schemas.xmlsoap.org/soap/envelope/",
+		EnvNamespace:    envNamespace,
 	}, nil
 }
 
