@@ -101,12 +101,12 @@ func TestSimulateDelay(t *testing.T) {
 			elapsed := time.Since(start)
 
 			if tt.delay.Exact > 0 {
-				assert.InDelta(t, tt.expectedDelay, elapsed, float64(10*time.Millisecond))
+				assert.InDelta(t, tt.expectedDelay, elapsed, float64(delayTolerance*time.Millisecond))
 			} else if tt.delay.Min > 0 && tt.delay.Max > 0 {
 				assert.GreaterOrEqual(t, elapsed, tt.expectedDelay)
 				assert.LessOrEqual(t, elapsed, time.Duration(tt.delay.Max+delayTolerance)*time.Millisecond)
 			} else {
-				assert.Less(t, elapsed, 10*time.Millisecond)
+				assert.Less(t, elapsed, delayTolerance*time.Millisecond)
 			}
 		})
 	}
