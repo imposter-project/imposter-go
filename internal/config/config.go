@@ -130,6 +130,7 @@ type RequestMatcher struct {
 	FormParams  map[string]MatcherUnmarshaler `yaml:"formParams"`
 	PathParams  map[string]MatcherUnmarshaler `yaml:"pathParams"`
 	AllOf       []ExpressionMatchCondition    `yaml:"allOf,omitempty"`
+	AnyOf       []ExpressionMatchCondition    `yaml:"anyOf,omitempty"`
 	Capture     map[string]Capture            `yaml:"capture,omitempty"`
 	// SOAP-specific fields
 	Operation  string `yaml:"operation,omitempty"`

@@ -1,75 +1,65 @@
 # Expression Matching Example
 
-This example demonstrates the use of the `allOf` matcher, which allows you to evaluate expressions and match their values against expected results.
+This example demonstrates how to use expression matching with `allOf` and `anyOf` conditions in Imposter.
 
-## Overview
+## Configuration
 
-The `allOf` matcher evaluates expressions using Imposter's template syntax and compares the results using standard matching operators. This is useful for:
-- Matching against store values
-- Complex request matching using multiple conditions
-- Combining different sources of data (query params, headers, store values, etc.)
+The example includes two endpoints:
 
-## Example Configuration
+1. `/api/users/{id}` - Demonstrates `anyOf` matching:
+   - Matches if either:
+     - The `Authorization` header equals "Bearer admin-token" OR
+     - The `apiKey` query parameter equals "secret-key"
 
-The configuration shows several ways to use expression matching:
+2. `/api/orders` - Demonstrates `allOf` matching:
+   - Matches only if both:
+     - The `X-User-Role` header equals "admin" AND
+     - The `region` query parameter equals "EU"
 
-1. Simple store value matching:
-```yaml
-allOf:
-  - expression: "${stores.example.foo}"
-    value: "bar"
+## Testing
+
+You can test the endpoints using curl:
+
+### Testing anyOf matching
+
+The `/api/users/{id}` endpoint will match if either condition is met:
+
+Using the Authorization header:
+```bash
+curl -H "Authorization: Bearer admin-token" http://localhost:8080/api/users/123
 ```
-Matches when the value of `foo` in the `example` store equals "bar".
 
-2. Using different operators:
-```yaml
-allOf:
-  - expression: "${stores.example.baz}"
-    operator: NotEqualTo
-    value: "qux"
+Using the API key:
+```bash
+curl "http://localhost:8080/api/users/123?apiKey=secret-key"
 ```
-Matches when the value of `baz` in the `example` store is not equal to "qux".
 
-3. Checking for existence:
-```yaml
-allOf:
-  - expression: "${stores.example.exists}"
-    operator: Exists
-```
-Matches when the `exists` key is present in the `example` store (value doesn't matter).
+### Testing allOf matching
 
-4. Multiple conditions:
-```yaml
-allOf:
-  - expression: "${context.request.queryParams.foo}"
-    value: "bar"
-  - expression: "${context.request.queryParams.baz}"
-    operator: Contains
-    value: "qux"
-```
-Matches when:
-- The query parameter `foo` equals "bar" AND
-- The query parameter `baz` contains the string "qux"
-
-## Available Operators
-
-- `EqualTo` (default if not specified): Exact match
-- `NotEqualTo`: Value must not match
-- `Exists`: Value must be present
-- `NotExists`: Value must not be present
-- `Contains`: Value must contain the specified string
-- `NotContains`: Value must not contain the specified string
-- `Matches`: Value must match the specified regex pattern
-- `NotMatches`: Value must not match the specified regex pattern
-
-## Testing the Example
-
-You can test these examples with curl:
+The `/api/orders` endpoint requires both conditions to be met:
 
 ```bash
-# Test store value matching (assuming foo=bar in example store)
-curl http://localhost:8080/example
+curl -H "X-User-Role: admin" "http://localhost:8080/api/orders?region=EU"
+```
 
-# Test query parameter matching
-curl "http://localhost:8080/example?foo=bar&baz=contains-qux-somewhere"
-``` 
+## Expression Operators
+
+The following operators are available for expression matching:
+
+- `EqualTo` (default) - Exact string match
+- `NotEqualTo` - String does not match
+- `Contains` - String contains the value
+- `NotContains` - String does not contain the value
+- `Matches` - Regular expression match
+- `NotMatches` - Regular expression does not match
+- `Exists` - Value is not empty
+- `NotExists` - Value is empty
+
+## Expression Context
+
+Expressions can access various parts of the request context:
+
+- `${context.request.headers.HEADER_NAME}` - Request headers
+- `${context.request.queryParams.PARAM_NAME}` - Query parameters
+- `${context.request.pathParams.PARAM_NAME}` - Path parameters
+- `${stores.STORE_NAME.KEY}` - Store values 

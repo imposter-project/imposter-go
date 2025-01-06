@@ -1,38 +1,44 @@
 plugin: rest
 
 resources:
-  - path: /example
-    allOf:
-      - expression: "${stores.example.foo}"
-        value: "bar"
+  - path: /api/users/{id}
+    anyOf:
+      - expression: "${context.request.headers.Authorization}"
+        value: "Bearer admin-token"
+        operator: "EqualTo"
+      - expression: "${context.request.queryParams.apiKey}"
+        value: "secret-key"
+        operator: "EqualTo"
     response:
-      content: "Matched when foo equals bar"
+      template: true
+      content: |
+        {
+          "id": "${context.request.pathParams.id}",
+          "name": "John Doe",
+          "role": "admin"
+        }
       statusCode: 200
+      headers:
+        Content-Type: application/json
 
-  - path: /example
+  - path: /api/orders
     allOf:
-      - expression: "${stores.example.baz}"
-        operator: NotEqualTo
-        value: "qux"
+      - expression: "${context.request.headers.X-User-Role}"
+        value: "admin"
+        operator: "EqualTo"
+      - expression: "${context.request.queryParams.region}"
+        value: "EU"
+        operator: "EqualTo"
     response:
-      content: "Matched when baz is not equal to qux"
+      content: |
+        {
+          "orders": [
+            {
+              "id": "123",
+              "status": "shipped"
+            }
+          ]
+        }
       statusCode: 200
-
-  - path: /example
-    allOf:
-      - expression: "${stores.example.exists}"
-        operator: Exists
-    response:
-      content: "Matched when exists is present"
-      statusCode: 200
-
-  - path: /example
-    allOf:
-      - expression: "${context.request.queryParams.foo}"
-        value: "bar"
-      - expression: "${context.request.queryParams.baz}"
-        operator: Contains
-        value: "qux"
-    response:
-      content: "Matched when foo equals bar AND baz contains qux"
-      statusCode: 200 
+      headers:
+        Content-Type: application/json

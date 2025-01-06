@@ -116,7 +116,7 @@ func CalculateMatchScore(matcher *config.RequestMatcher, r *http.Request, body [
 				return 0, false
 			}
 		}
-		score++
+		score += len(matcher.RequestBody.AllOf)
 	} else if len(matcher.RequestBody.AnyOf) > 0 {
 		matched := false
 		for _, condition := range matcher.RequestBody.AnyOf {
@@ -131,7 +131,7 @@ func CalculateMatchScore(matcher *config.RequestMatcher, r *http.Request, body [
 		score++
 	}
 
-	// Expression match
+	// All expressions must match
 	if len(matcher.AllOf) > 0 {
 		for _, expr := range matcher.AllOf {
 			// Evaluate the expression using the template engine
@@ -139,13 +139,33 @@ func CalculateMatchScore(matcher *config.RequestMatcher, r *http.Request, body [
 			if err != nil {
 				return 0, false
 			}
-			if !expr.Match(result) {
+			if !expr.MatchCondition.Match(result) {
 				return 0, false
 			}
-			score++
 		}
+		score += len(matcher.AllOf)
+
+	// At least one expression must match
+	} else if len(matcher.AnyOf) > 0 {
+		matched := false
+		for _, expr := range matcher.AnyOf {
+			// Evaluate the expression using the template engine
+			result, err := evaluateExpression(expr.Expression, r, imposterConfig, requestStore)
+			if err != nil {
+				continue
+			}
+			if expr.MatchCondition.Match(result) {
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			return 0, false
+		}
+		score++
 	}
 
+	// Return the score and wildcard status for path-based matches
 	return score, isWildcard
 }
 

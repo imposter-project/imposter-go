@@ -2,94 +2,145 @@ package matcher
 
 import (
 	"net/http"
-	"net/http/httptest"
 	"testing"
 
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/store"
+	"github.com/stretchr/testify/require"
 )
 
-func TestCalculateMatchScore_AllOf(t *testing.T) {
+func TestCalculateMatchScore_AllOfConditions(t *testing.T) {
 	tests := []struct {
-		name             string
-		matcher          config.RequestMatcher
-		request          *http.Request
-		body             []byte
-		systemNamespaces map[string]string
-		imposterConfig   *config.ImposterConfig
-		requestStore     store.Store
-		expectedScore    int
-		expectedWildcard bool
+		name               string
+		allOf              []config.ExpressionMatchCondition
+		request            *http.Request
+		requestStore       store.Store
+		imposterConfig     *config.ImposterConfig
+		expectedScore      int
+		expectedIsWildcard bool
 	}{
 		{
-			name: "single expression matches",
-			matcher: config.RequestMatcher{
-				AllOf: []config.ExpressionMatchCondition{
-					{
-						Expression: "${stores.request.foo}",
-						MatchCondition: config.MatchCondition{
-							Value: "bar",
-						},
+			name: "matches all conditions",
+			allOf: []config.ExpressionMatchCondition{
+				{
+					Expression: "${context.request.headers.X-User-Role}",
+					MatchCondition: config.MatchCondition{
+						Value:    "admin",
+						Operator: "EqualTo",
+					},
+				},
+				{
+					Expression: "${context.request.queryParams.region}",
+					MatchCondition: config.MatchCondition{
+						Value:    "EU",
+						Operator: "EqualTo",
 					},
 				},
 			},
-			request:        httptest.NewRequest(http.MethodGet, "/test", nil),
-			imposterConfig: &config.ImposterConfig{ServerPort: "8080"},
-			requestStore:   store.Store{"foo": "bar"},
-			expectedScore:  1,
+			request: createTestRequest("GET", "/test?region=EU", nil, map[string]string{
+				"X-User-Role": "admin",
+			}),
+			requestStore:       store.Store{},
+			imposterConfig:     &config.ImposterConfig{},
+			expectedScore:      2,
+			expectedIsWildcard: false,
 		},
 		{
-			name: "single expression does not match",
-			matcher: config.RequestMatcher{
-				AllOf: []config.ExpressionMatchCondition{
-					{
-						Expression: "${stores.request.foo}",
-						MatchCondition: config.MatchCondition{
-							Value: "bar",
-						},
+			name: "fails when one condition fails",
+			allOf: []config.ExpressionMatchCondition{
+				{
+					Expression: "${context.request.headers.X-User-Role}",
+					MatchCondition: config.MatchCondition{
+						Value:    "admin",
+						Operator: "EqualTo",
+					},
+				},
+				{
+					Expression: "${context.request.queryParams.region}",
+					MatchCondition: config.MatchCondition{
+						Value:    "EU",
+						Operator: "EqualTo",
 					},
 				},
 			},
-			request:        httptest.NewRequest(http.MethodGet, "/test", nil),
-			imposterConfig: &config.ImposterConfig{ServerPort: "8080"},
-			requestStore:   store.Store{"foo": "not-bar"},
-			expectedScore:  0,
+			request: createTestRequest("GET", "/test?region=US", nil, map[string]string{
+				"X-User-Role": "admin",
+			}),
+			requestStore:       store.Store{},
+			imposterConfig:     &config.ImposterConfig{},
+			expectedScore:      0,
+			expectedIsWildcard: false,
 		},
 		{
-			name: "multiple expressions all match",
-			matcher: config.RequestMatcher{
-				AllOf: []config.ExpressionMatchCondition{
-					{
-						Expression: "${stores.request.foo}",
-						MatchCondition: config.MatchCondition{
-							Value: "bar",
-						},
+			name: "fails when all conditions fail",
+			allOf: []config.ExpressionMatchCondition{
+				{
+					Expression: "${context.request.headers.X-User-Role}",
+					MatchCondition: config.MatchCondition{
+						Value:    "admin",
+						Operator: "EqualTo",
 					},
-					{
-						Expression: "${stores.request.baz}",
-						MatchCondition: config.MatchCondition{
-							Value:    "qux",
-							Operator: "NotEqualTo",
-						},
+				},
+				{
+					Expression: "${context.request.queryParams.region}",
+					MatchCondition: config.MatchCondition{
+						Value:    "EU",
+						Operator: "EqualTo",
 					},
 				},
 			},
-			request:        httptest.NewRequest(http.MethodGet, "/test", nil),
-			imposterConfig: &config.ImposterConfig{ServerPort: "8080"},
-			requestStore:   store.Store{"foo": "bar", "baz": "not-qux"},
-			expectedScore:  2,
+			request: createTestRequest("GET", "/test?region=US", nil, map[string]string{
+				"X-User-Role": "user",
+			}),
+			requestStore:       store.Store{},
+			imposterConfig:     &config.ImposterConfig{},
+			expectedScore:      0,
+			expectedIsWildcard: false,
+		},
+		{
+			name:               "empty conditions list",
+			allOf:              []config.ExpressionMatchCondition{},
+			request:            createTestRequest("GET", "/test", nil, nil),
+			requestStore:       store.Store{},
+			imposterConfig:     &config.ImposterConfig{},
+			expectedScore:      0,
+			expectedIsWildcard: false,
+		},
+		{
+			name: "matches with store value",
+			allOf: []config.ExpressionMatchCondition{
+				{
+					Expression: "${stores.request.user_role}",
+					MatchCondition: config.MatchCondition{
+						Value:    "admin",
+						Operator: "EqualTo",
+					},
+				},
+				{
+					Expression: "${stores.request.region}",
+					MatchCondition: config.MatchCondition{
+						Value:    "EU",
+						Operator: "EqualTo",
+					},
+				},
+			},
+			request:            createTestRequest("GET", "/test", nil, nil),
+			requestStore:       store.Store{"user_role": "admin", "region": "EU"},
+			imposterConfig:     &config.ImposterConfig{},
+			expectedScore:      2,
+			expectedIsWildcard: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			score, wildcard := CalculateMatchScore(&tt.matcher, tt.request, tt.body, tt.systemNamespaces, tt.imposterConfig, tt.requestStore)
-			if score != tt.expectedScore {
-				t.Errorf("expected score %d, got %d", tt.expectedScore, score)
+			matcher := &config.RequestMatcher{
+				AllOf: tt.allOf,
 			}
-			if wildcard != tt.expectedWildcard {
-				t.Errorf("expected wildcard %v, got %v", tt.expectedWildcard, wildcard)
-			}
+
+			score, isWildcard := CalculateMatchScore(matcher, tt.request, nil, map[string]string{}, tt.imposterConfig, tt.requestStore)
+			require.Equal(t, tt.expectedScore, score)
+			require.Equal(t, tt.expectedIsWildcard, isWildcard)
 		})
 	}
 }
