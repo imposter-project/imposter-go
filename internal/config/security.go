@@ -54,9 +54,9 @@ func transformSecurityBlock(cfg *Config, security *SecurityConfig, prefix string
 		// Create an interceptor for the condition check
 		interceptor := Interceptor{
 			RequestMatcher: RequestMatcher{
-				Headers:     make(map[string]MatcherUnmarshaler),
-				QueryParams: make(map[string]MatcherUnmarshaler),
-				FormParams:  make(map[string]MatcherUnmarshaler),
+				RequestHeaders: make(map[string]MatcherUnmarshaler),
+				QueryParams:    make(map[string]MatcherUnmarshaler),
+				FormParams:     make(map[string]MatcherUnmarshaler),
 				Capture: map[string]Capture{
 					conditionKey: {
 						Store: "request",
@@ -71,7 +71,7 @@ func transformSecurityBlock(cfg *Config, security *SecurityConfig, prefix string
 
 		// Add header conditions
 		for header, matcher := range condition.RequestHeaders {
-			interceptor.Headers[header] = matcher
+			interceptor.RequestHeaders[header] = matcher
 		}
 
 		// Add query parameter conditions

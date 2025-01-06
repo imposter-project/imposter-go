@@ -224,7 +224,7 @@ func TestSOAPHandler_HandleRequest_WithInterceptor(t *testing.T) {
 				RequestMatcher: config.RequestMatcher{
 					Method: http.MethodPost,
 					Path:   "/pets/",
-					Headers: map[string]config.MatcherUnmarshaler{
+					RequestHeaders: map[string]config.MatcherUnmarshaler{
 						"X-Test-Header": {Matcher: config.StringMatcher("test-value")},
 					},
 				},
@@ -302,7 +302,7 @@ func TestSOAPHandler_HandleRequest_WithPassthroughInterceptor(t *testing.T) {
 				RequestMatcher: config.RequestMatcher{
 					Method: http.MethodPost,
 					Path:   "/pets/",
-					Headers: map[string]config.MatcherUnmarshaler{
+					RequestHeaders: map[string]config.MatcherUnmarshaler{
 						"X-Test-Header": {Matcher: config.StringMatcher("test-value")},
 					},
 				},

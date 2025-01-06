@@ -122,16 +122,16 @@ type ExpressionMatchCondition struct {
 
 // RequestMatcher contains the common fields for matching requests
 type RequestMatcher struct {
-	Method      string                        `yaml:"method"`
-	Path        string                        `yaml:"path"`
-	QueryParams map[string]MatcherUnmarshaler `yaml:"queryParams"`
-	Headers     map[string]MatcherUnmarshaler `yaml:"headers"`
-	RequestBody RequestBody                   `yaml:"requestBody"`
-	FormParams  map[string]MatcherUnmarshaler `yaml:"formParams"`
-	PathParams  map[string]MatcherUnmarshaler `yaml:"pathParams"`
-	AllOf       []ExpressionMatchCondition    `yaml:"allOf,omitempty"`
-	AnyOf       []ExpressionMatchCondition    `yaml:"anyOf,omitempty"`
-	Capture     map[string]Capture            `yaml:"capture,omitempty"`
+	Method         string                        `yaml:"method"`
+	Path           string                        `yaml:"path"`
+	QueryParams    map[string]MatcherUnmarshaler `yaml:"queryParams"`
+	RequestHeaders map[string]MatcherUnmarshaler `yaml:"requestHeaders"`
+	RequestBody    RequestBody                   `yaml:"requestBody"`
+	FormParams     map[string]MatcherUnmarshaler `yaml:"formParams"`
+	PathParams     map[string]MatcherUnmarshaler `yaml:"pathParams"`
+	AllOf          []ExpressionMatchCondition    `yaml:"allOf,omitempty"`
+	AnyOf          []ExpressionMatchCondition    `yaml:"anyOf,omitempty"`
+	Capture        map[string]Capture            `yaml:"capture,omitempty"`
 	// SOAP-specific fields
 	Operation  string `yaml:"operation,omitempty"`
 	SOAPAction string `yaml:"soapAction,omitempty"`

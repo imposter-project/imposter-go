@@ -335,7 +335,7 @@ func (h *Handler) calculateScore(reqMatcher *config.RequestMatcher, r *http.Requ
 	// If no matchers were specified at all, return 0
 	if score == 0 && reqMatcher.Method == "" && reqMatcher.Path == "" &&
 		reqMatcher.Operation == "" && reqMatcher.SOAPAction == "" && reqMatcher.Binding == "" &&
-		len(reqMatcher.Headers) == 0 && len(reqMatcher.QueryParams) == 0 && len(reqMatcher.FormParams) == 0 {
+		len(reqMatcher.RequestHeaders) == 0 && len(reqMatcher.QueryParams) == 0 && len(reqMatcher.FormParams) == 0 {
 		return 0, false
 	}
 

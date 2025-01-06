@@ -61,8 +61,8 @@ func TestTransformSecurityConfig_SingleCondition(t *testing.T) {
 
 	// Check condition interceptor
 	interceptor := cfg.Interceptors[0]
-	require.Contains(t, interceptor.Headers, "Authorization")
-	matcher := interceptor.Headers["Authorization"].Matcher
+	require.Contains(t, interceptor.RequestHeaders, "Authorization")
+	matcher := interceptor.RequestHeaders["Authorization"].Matcher
 	require.IsType(t, StringMatcher(""), matcher)
 	require.Equal(t, StringMatcher("Bearer token"), matcher)
 	require.Contains(t, interceptor.Capture, "security_condition1")
@@ -117,8 +117,8 @@ func TestTransformSecurityConfig_AllConditionTypes(t *testing.T) {
 	interceptor := cfg.Interceptors[0]
 
 	// Check headers
-	require.Contains(t, interceptor.Headers, "Authorization")
-	authMatcher := interceptor.Headers["Authorization"].Matcher
+	require.Contains(t, interceptor.RequestHeaders, "Authorization")
+	authMatcher := interceptor.RequestHeaders["Authorization"].Matcher
 	require.IsType(t, StringMatcher(""), authMatcher)
 	require.Equal(t, StringMatcher("Bearer token"), authMatcher)
 
@@ -161,8 +161,8 @@ func TestTransformSecurityConfig_DefaultPermit(t *testing.T) {
 
 	// Check condition interceptor
 	interceptor := cfg.Interceptors[0]
-	require.Contains(t, interceptor.Headers, "Authorization")
-	authMatcher := interceptor.Headers["Authorization"].Matcher
+	require.Contains(t, interceptor.RequestHeaders, "Authorization")
+	authMatcher := interceptor.RequestHeaders["Authorization"].Matcher
 	require.IsType(t, StringMatcher(""), authMatcher)
 	require.Equal(t, StringMatcher("Bearer token"), authMatcher)
 }
@@ -234,8 +234,8 @@ resources:
 	// Check first condition interceptor
 	authInterceptor := cfg.Interceptors[0]
 	// Check headers
-	require.Contains(t, authInterceptor.Headers, "Authorization")
-	authMatcher := authInterceptor.Headers["Authorization"].Matcher
+	require.Contains(t, authInterceptor.RequestHeaders, "Authorization")
+	authMatcher := authInterceptor.RequestHeaders["Authorization"].Matcher
 	require.IsType(t, StringMatcher(""), authMatcher)
 	require.Equal(t, StringMatcher("s3cr3t"), authMatcher)
 	// Check query params
@@ -257,8 +257,8 @@ resources:
 	// Check second condition interceptor
 	apiKeyInterceptor := cfg.Interceptors[1]
 	// Check headers
-	require.Contains(t, apiKeyInterceptor.Headers, "X-API-Key")
-	xapiKeyMatcher := apiKeyInterceptor.Headers["X-API-Key"].Matcher
+	require.Contains(t, apiKeyInterceptor.RequestHeaders, "X-API-Key")
+	xapiKeyMatcher := apiKeyInterceptor.RequestHeaders["X-API-Key"].Matcher
 	require.IsType(t, StringMatcher(""), xapiKeyMatcher)
 	require.Equal(t, StringMatcher("key789"), xapiKeyMatcher)
 	// Check query params
@@ -363,23 +363,23 @@ func TestTransformSecurityConfig_AllOperators(t *testing.T) {
 	interceptor := cfg.Interceptors[0]
 
 	// Check headers
-	require.Contains(t, interceptor.Headers, "Authorization")
-	auth := interceptor.Headers["Authorization"].Matcher.(MatchCondition)
+	require.Contains(t, interceptor.RequestHeaders, "Authorization")
+	auth := interceptor.RequestHeaders["Authorization"].Matcher.(MatchCondition)
 	require.Equal(t, "Bearer .*", auth.Value)
 	require.Equal(t, "Matches", auth.Operator)
 
-	require.Contains(t, interceptor.Headers, "X-API-Key")
-	apiKey := interceptor.Headers["X-API-Key"].Matcher.(MatchCondition)
+	require.Contains(t, interceptor.RequestHeaders, "X-API-Key")
+	apiKey := interceptor.RequestHeaders["X-API-Key"].Matcher.(MatchCondition)
 	require.Equal(t, "secret", apiKey.Value)
 	require.Equal(t, "NotEqualTo", apiKey.Operator)
 
-	require.Contains(t, interceptor.Headers, "X-Custom")
-	custom := interceptor.Headers["X-Custom"].Matcher.(MatchCondition)
+	require.Contains(t, interceptor.RequestHeaders, "X-Custom")
+	custom := interceptor.RequestHeaders["X-Custom"].Matcher.(MatchCondition)
 	require.Equal(t, "", custom.Value)
 	require.Equal(t, "Exists", custom.Operator)
 
-	require.Contains(t, interceptor.Headers, "X-Other")
-	other := interceptor.Headers["X-Other"].Matcher.(MatchCondition)
+	require.Contains(t, interceptor.RequestHeaders, "X-Other")
+	other := interceptor.RequestHeaders["X-Other"].Matcher.(MatchCondition)
 	require.Equal(t, "", other.Value)
 	require.Equal(t, "NotExists", other.Operator)
 
@@ -462,8 +462,8 @@ func TestTransformSecurityConfig_ResourceLevel(t *testing.T) {
 
 	// Check first resource's condition interceptor
 	interceptor1 := cfg.Interceptors[0]
-	require.Contains(t, interceptor1.Headers, "Authorization")
-	authMatcher := interceptor1.Headers["Authorization"].Matcher
+	require.Contains(t, interceptor1.RequestHeaders, "Authorization")
+	authMatcher := interceptor1.RequestHeaders["Authorization"].Matcher
 	require.IsType(t, StringMatcher(""), authMatcher)
 	require.Equal(t, StringMatcher("Bearer token"), authMatcher)
 	require.Contains(t, interceptor1.Capture, "resource1_security_condition1")
@@ -560,8 +560,8 @@ func TestTransformSecurityConfig_BothLevels(t *testing.T) {
 
 	// Check root level condition interceptor
 	interceptor1 := cfg.Interceptors[0]
-	require.Contains(t, interceptor1.Headers, "X-API-Key")
-	apiKeyMatcher := interceptor1.Headers["X-API-Key"].Matcher
+	require.Contains(t, interceptor1.RequestHeaders, "X-API-Key")
+	apiKeyMatcher := interceptor1.RequestHeaders["X-API-Key"].Matcher
 	require.IsType(t, StringMatcher(""), apiKeyMatcher)
 	require.Equal(t, StringMatcher("global-key"), apiKeyMatcher)
 	require.Contains(t, interceptor1.Capture, "security_condition1")
@@ -573,8 +573,8 @@ func TestTransformSecurityConfig_BothLevels(t *testing.T) {
 
 	// Check resource level condition interceptor
 	interceptor2 := cfg.Interceptors[2]
-	require.Contains(t, interceptor2.Headers, "Authorization")
-	authMatcher := interceptor2.Headers["Authorization"].Matcher
+	require.Contains(t, interceptor2.RequestHeaders, "Authorization")
+	authMatcher := interceptor2.RequestHeaders["Authorization"].Matcher
 	require.IsType(t, StringMatcher(""), authMatcher)
 	require.Equal(t, StringMatcher("Bearer token"), authMatcher)
 	require.Contains(t, interceptor2.Capture, "resource1_security_condition1")

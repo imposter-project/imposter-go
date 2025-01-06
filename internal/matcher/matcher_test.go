@@ -166,7 +166,7 @@ func TestCalculateMatchScore(t *testing.T) {
 		{
 			name: "header match",
 			matcher: &config.RequestMatcher{
-				Headers: map[string]config.MatcherUnmarshaler{
+				RequestHeaders: map[string]config.MatcherUnmarshaler{
 					"Content-Type": {Matcher: config.StringMatcher("application/json")},
 				},
 			},
@@ -211,7 +211,7 @@ func TestCalculateMatchScore(t *testing.T) {
 			matcher: &config.RequestMatcher{
 				Method: "POST",
 				Path:   "/users",
-				Headers: map[string]config.MatcherUnmarshaler{
+				RequestHeaders: map[string]config.MatcherUnmarshaler{
 					"Content-Type": {Matcher: config.StringMatcher("application/json")},
 				},
 			},

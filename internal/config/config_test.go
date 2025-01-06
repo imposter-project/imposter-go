@@ -442,7 +442,7 @@ func TestLoadConfig_WithInterceptors(t *testing.T) {
 interceptors:
   - path: /auth
     method: POST
-    headers:
+    requestHeaders:
       Authorization:
         value: Bearer
         operator: Contains
@@ -480,8 +480,8 @@ resources:
 	auth := cfg.Interceptors[0]
 	require.Equal(t, "/auth", auth.Path)
 	require.Equal(t, "POST", auth.Method)
-	require.Contains(t, auth.Headers, "Authorization")
-	authMatcher, ok := auth.Headers["Authorization"].Matcher.(MatchCondition)
+	require.Contains(t, auth.RequestHeaders, "Authorization")
+	authMatcher, ok := auth.RequestHeaders["Authorization"].Matcher.(MatchCondition)
 	require.True(t, ok, "Expected Authorization header matcher to be a MatchCondition")
 	require.Equal(t, "Bearer", authMatcher.Value)
 	require.Equal(t, "Contains", authMatcher.Operator)

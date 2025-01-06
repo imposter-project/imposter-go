@@ -73,7 +73,7 @@ func CalculateMatchScore(matcher *config.RequestMatcher, r *http.Request, body [
 	}
 
 	// Headers match
-	for key, condition := range matcher.Headers {
+	for key, condition := range matcher.RequestHeaders {
 		actualValue := r.Header.Get(key)
 		if !condition.Matcher.Match(actualValue) {
 			return 0, false
@@ -145,7 +145,7 @@ func CalculateMatchScore(matcher *config.RequestMatcher, r *http.Request, body [
 		}
 		score += len(matcher.AllOf)
 
-	// At least one expression must match
+		// At least one expression must match
 	} else if len(matcher.AnyOf) > 0 {
 		matched := false
 		for _, expr := range matcher.AnyOf {

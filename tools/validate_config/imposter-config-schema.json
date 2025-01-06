@@ -91,7 +91,7 @@
                     "type": "object",
                     "additionalProperties": { "$ref": "#/definitions/matchCondition" }
                 },
-                "headers": {
+                "requestHeaders": {
                     "type": "object",
                     "additionalProperties": { "$ref": "#/definitions/matchCondition" }
                 },

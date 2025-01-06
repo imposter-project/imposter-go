@@ -23,7 +23,7 @@ func NewResource(method, path string, response config.Response) config.Resource 
 // NewInterceptor creates a new Interceptor for testing
 func NewInterceptor(method, path string, headers map[string]config.MatcherUnmarshaler, response *config.Response, cont bool) config.Interceptor {
 	rm := NewRequestMatcher(method, path)
-	rm.Headers = headers
+	rm.RequestHeaders = headers
 	return config.Interceptor{
 		RequestMatcher: rm,
 		Response:       response,
