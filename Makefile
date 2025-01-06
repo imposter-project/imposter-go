@@ -7,7 +7,7 @@ build:
 
 .PHONY: install
 install:
-	go install -tags lambda.norpc -ldflags "$(LDFLAGS)" -o "${GOPATH}/bin/imposter-go" ./cmd/imposter
+	go install -tags lambda.norpc -ldflags "$(LDFLAGS)" ./cmd/imposter
 
 .PHONY: run
 run:
