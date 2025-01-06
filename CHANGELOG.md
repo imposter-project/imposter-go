@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.6.0] - 2025-01-06
+### Added
+- feat: adds anyOf expression matcher.
+
+### Changed
+- docs: adds example for security config.
+- refactor: improves expression matcher config naming.
+- refactor: switches transformed security interceptors to anyOf expressions.
+
+### Fixed
+- fix: improves SOAP version namespace validation.
+
 ## [0.5.0] - 2025-01-05
 ### Added
 - feat: transforms security blocks into interceptors.
