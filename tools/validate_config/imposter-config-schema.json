@@ -104,7 +104,7 @@
                     "type": "object",
                     "additionalProperties": { "$ref": "#/definitions/matchCondition" }
                 },
-                "evals": {
+                "allOf": {
                     "type": "array",
                     "items": {
                         "type": "object",

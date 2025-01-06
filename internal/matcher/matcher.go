@@ -131,15 +131,15 @@ func CalculateMatchScore(matcher *config.RequestMatcher, r *http.Request, body [
 		score++
 	}
 
-	// Evals match
-	if len(matcher.Evals) > 0 {
-		for _, eval := range matcher.Evals {
+	// Expression match
+	if len(matcher.AllOf) > 0 {
+		for _, expr := range matcher.AllOf {
 			// Evaluate the expression using the template engine
-			result, err := evaluateExpression(eval.Expression, r, imposterConfig, requestStore)
+			result, err := evaluateExpression(expr.Expression, r, imposterConfig, requestStore)
 			if err != nil {
 				return 0, false
 			}
-			if !eval.Match(result) {
+			if !expr.Match(result) {
 				return 0, false
 			}
 			score++

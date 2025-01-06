@@ -2,7 +2,7 @@ plugin: rest
 
 resources:
   - path: /example
-    evals:
+    allOf:
       - expression: "${stores.example.foo}"
         value: "bar"
     response:
@@ -10,7 +10,7 @@ resources:
       statusCode: 200
 
   - path: /example
-    evals:
+    allOf:
       - expression: "${stores.example.baz}"
         operator: NotEqualTo
         value: "qux"
@@ -19,7 +19,7 @@ resources:
       statusCode: 200
 
   - path: /example
-    evals:
+    allOf:
       - expression: "${stores.example.exists}"
         operator: Exists
     response:
@@ -27,7 +27,7 @@ resources:
       statusCode: 200
 
   - path: /example
-    evals:
+    allOf:
       - expression: "${context.request.queryParams.foo}"
         value: "bar"
       - expression: "${context.request.queryParams.baz}"

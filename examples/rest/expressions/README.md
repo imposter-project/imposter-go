@@ -1,21 +1,21 @@
-# Evals Example
+# Expression Matching Example
 
-This example demonstrates the use of the `evals` matcher, which allows you to evaluate expressions and match their values against expected results.
+This example demonstrates the use of the `allOf` matcher, which allows you to evaluate expressions and match their values against expected results.
 
 ## Overview
 
-The `evals` matcher evaluates expressions using Imposter's template syntax and compares the results using standard matching operators. This is useful for:
+The `allOf` matcher evaluates expressions using Imposter's template syntax and compares the results using standard matching operators. This is useful for:
 - Matching against store values
 - Complex request matching using multiple conditions
 - Combining different sources of data (query params, headers, store values, etc.)
 
 ## Example Configuration
 
-The configuration shows several ways to use evals:
+The configuration shows several ways to use expression matching:
 
 1. Simple store value matching:
 ```yaml
-evals:
+allOf:
   - expression: "${stores.example.foo}"
     value: "bar"
 ```
@@ -23,7 +23,7 @@ Matches when the value of `foo` in the `example` store equals "bar".
 
 2. Using different operators:
 ```yaml
-evals:
+allOf:
   - expression: "${stores.example.baz}"
     operator: NotEqualTo
     value: "qux"
@@ -32,7 +32,7 @@ Matches when the value of `baz` in the `example` store is not equal to "qux".
 
 3. Checking for existence:
 ```yaml
-evals:
+allOf:
   - expression: "${stores.example.exists}"
     operator: Exists
 ```
@@ -40,7 +40,7 @@ Matches when the `exists` key is present in the `example` store (value doesn't m
 
 4. Multiple conditions:
 ```yaml
-evals:
+allOf:
   - expression: "${context.request.queryParams.foo}"
     value: "bar"
   - expression: "${context.request.queryParams.baz}"

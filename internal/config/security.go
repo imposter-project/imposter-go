@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net/http"
 	"strings"
 	"sync/atomic"
 )
@@ -90,10 +91,10 @@ func transformSecurityBlock(cfg *Config, security *SecurityConfig, prefix string
 	if strings.EqualFold(security.Default, "Deny") {
 		denyInterceptor := Interceptor{
 			RequestMatcher: RequestMatcher{
-				Evals: buildSecurityEvalConditions(len(security.Conditions), prefix),
+				AllOf: buildSecurityEvalConditions(len(security.Conditions), prefix),
 			},
 			Response: &Response{
-				StatusCode: 401,
+				StatusCode: http.StatusUnauthorized,
 				Content:    "Unauthorised",
 				Headers: map[string]string{
 					"Content-Type": "text/plain",
@@ -106,13 +107,13 @@ func transformSecurityBlock(cfg *Config, security *SecurityConfig, prefix string
 }
 
 // buildSecurityEvalConditions creates evaluation conditions to check if any security condition was met
-func buildSecurityEvalConditions(numConditions int, prefix string) []EvalMatchCondition {
+func buildSecurityEvalConditions(numConditions int, prefix string) []ExpressionMatchCondition {
 	if numConditions == 0 {
-		return []EvalMatchCondition{}
+		return []ExpressionMatchCondition{}
 	}
-	conditions := make([]EvalMatchCondition, 0, numConditions)
+	conditions := make([]ExpressionMatchCondition, 0, numConditions)
 	for i := 1; i <= numConditions; i++ {
-		conditions = append(conditions, EvalMatchCondition{
+		conditions = append(conditions, ExpressionMatchCondition{
 			Expression: fmt.Sprintf("${stores.request.%ssecurity_condition%d}", prefix, i),
 			MatchCondition: MatchCondition{
 				Value:    "met",

@@ -72,10 +72,10 @@ func TestTransformSecurityConfig_SingleCondition(t *testing.T) {
 
 	// Check deny interceptor
 	deny := cfg.Interceptors[1]
-	require.Len(t, deny.Evals, 1)
-	require.Equal(t, "${stores.request.security_condition1}", deny.Evals[0].Expression)
-	require.Equal(t, "met", deny.Evals[0].Value)
-	require.Equal(t, "NotEqualTo", deny.Evals[0].Operator)
+	require.Len(t, deny.AllOf, 1)
+	require.Equal(t, "${stores.request.security_condition1}", deny.AllOf[0].Expression)
+	require.Equal(t, "met", deny.AllOf[0].MatchCondition.Value)
+	require.Equal(t, "NotEqualTo", deny.AllOf[0].MatchCondition.Operator)
 	require.Equal(t, 401, deny.Response.StatusCode)
 	require.Equal(t, "Unauthorised", deny.Response.Content)
 	require.Equal(t, "text/plain", deny.Response.Headers["Content-Type"])
@@ -168,90 +168,23 @@ func TestTransformSecurityConfig_DefaultPermit(t *testing.T) {
 }
 
 func TestBuildSecurityEvalConditions(t *testing.T) {
-	tests := []struct {
-		name          string
-		numConditions int
-		prefix        string
-		want          []EvalMatchCondition
-	}{
-		{
-			name:          "no conditions",
-			numConditions: 0,
-			prefix:        "",
-			want:          []EvalMatchCondition{},
-		},
-		{
-			name:          "single condition",
-			numConditions: 1,
-			prefix:        "",
-			want: []EvalMatchCondition{
-				{
-					Expression: "${stores.request.security_condition1}",
-					MatchCondition: MatchCondition{
-						Value:    "met",
-						Operator: "NotEqualTo",
-					},
-				},
-			},
-		},
-		{
-			name: "multiple conditions",
+	conditions := buildSecurityEvalConditions(0, "")
+	require.Empty(t, conditions)
 
-			numConditions: 3,
-			prefix:        "",
-			want: []EvalMatchCondition{
-				{
-					Expression: "${stores.request.security_condition1}",
-					MatchCondition: MatchCondition{
-						Value:    "met",
-						Operator: "NotEqualTo",
-					},
-				},
-				{
-					Expression: "${stores.request.security_condition2}",
-					MatchCondition: MatchCondition{
-						Value:    "met",
-						Operator: "NotEqualTo",
-					},
-				},
-				{
-					Expression: "${stores.request.security_condition3}",
-					MatchCondition: MatchCondition{
-						Value:    "met",
-						Operator: "NotEqualTo",
-					},
-				},
-			},
-		},
-		{
-			name:          "with prefix",
-			numConditions: 2,
-			prefix:        "resource1_",
-			want: []EvalMatchCondition{
-				{
-					Expression: "${stores.request.resource1_security_condition1}",
-					MatchCondition: MatchCondition{
-						Value:    "met",
-						Operator: "NotEqualTo",
-					},
-				},
-				{
-					Expression: "${stores.request.resource1_security_condition2}",
-					MatchCondition: MatchCondition{
-						Value:    "met",
-						Operator: "NotEqualTo",
-					},
-				},
-			},
-		},
-	}
+	conditions = buildSecurityEvalConditions(1, "")
+	require.Len(t, conditions, 1)
+	require.Equal(t, "${stores.request.security_condition1}", conditions[0].Expression)
+	require.Equal(t, "met", conditions[0].MatchCondition.Value)
+	require.Equal(t, "NotEqualTo", conditions[0].MatchCondition.Operator)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := buildSecurityEvalConditions(tt.numConditions, tt.prefix)
-			require.Equal(t, tt.want, got)
-		})
-	}
+	conditions = buildSecurityEvalConditions(2, "prefix_")
+	require.Len(t, conditions, 2)
+	require.Equal(t, "${stores.request.prefix_security_condition1}", conditions[0].Expression)
+	require.Equal(t, "met", conditions[0].MatchCondition.Value)
+	require.Equal(t, "NotEqualTo", conditions[0].MatchCondition.Operator)
+	require.Equal(t, "${stores.request.prefix_security_condition2}", conditions[1].Expression)
+	require.Equal(t, "met", conditions[1].MatchCondition.Value)
+	require.Equal(t, "NotEqualTo", conditions[1].MatchCondition.Operator)
 }
 
 // Keep the existing integration test
@@ -346,16 +279,16 @@ resources:
 
 	// Check deny interceptor
 	denyInterceptor := cfg.Interceptors[2]
-	require.Len(t, denyInterceptor.Evals, 2)
+	require.Len(t, denyInterceptor.AllOf, 2)
 	// Check first eval condition
-	require.Equal(t, "${stores.request.security_condition1}", denyInterceptor.Evals[0].Expression)
-	require.Equal(t, "met", denyInterceptor.Evals[0].Value)
-	require.Equal(t, "NotEqualTo", denyInterceptor.Evals[0].Operator)
+	require.Equal(t, "${stores.request.security_condition1}", denyInterceptor.AllOf[0].Expression)
+	require.Equal(t, "met", denyInterceptor.AllOf[0].MatchCondition.Value)
+	require.Equal(t, "NotEqualTo", denyInterceptor.AllOf[0].MatchCondition.Operator)
 
 	// Check second eval condition
-	require.Equal(t, "${stores.request.security_condition2}", denyInterceptor.Evals[1].Expression)
-	require.Equal(t, "met", denyInterceptor.Evals[1].Value)
-	require.Equal(t, "NotEqualTo", denyInterceptor.Evals[1].Operator)
+	require.Equal(t, "${stores.request.security_condition2}", denyInterceptor.AllOf[1].Expression)
+	require.Equal(t, "met", denyInterceptor.AllOf[1].MatchCondition.Value)
+	require.Equal(t, "NotEqualTo", denyInterceptor.AllOf[1].MatchCondition.Operator)
 
 	require.NotNil(t, denyInterceptor.Response)
 	require.Equal(t, 401, denyInterceptor.Response.StatusCode)
@@ -540,10 +473,10 @@ func TestTransformSecurityConfig_ResourceLevel(t *testing.T) {
 
 	// Check first resource's deny interceptor
 	deny1 := cfg.Interceptors[1]
-	require.Len(t, deny1.Evals, 1)
-	require.Equal(t, "${stores.request.resource1_security_condition1}", deny1.Evals[0].Expression)
-	require.Equal(t, "met", deny1.Evals[0].Value)
-	require.Equal(t, "NotEqualTo", deny1.Evals[0].Operator)
+	require.Len(t, deny1.AllOf, 1)
+	require.Equal(t, "${stores.request.resource1_security_condition1}", deny1.AllOf[0].Expression)
+	require.Equal(t, "met", deny1.AllOf[0].MatchCondition.Value)
+	require.Equal(t, "NotEqualTo", deny1.AllOf[0].MatchCondition.Operator)
 	require.Equal(t, 401, deny1.Response.StatusCode)
 	require.Equal(t, "Unauthorised", deny1.Response.Content)
 	require.Equal(t, "text/plain", deny1.Response.Headers["Content-Type"])
@@ -562,10 +495,10 @@ func TestTransformSecurityConfig_ResourceLevel(t *testing.T) {
 
 	// Check second resource's deny interceptor
 	deny2 := cfg.Interceptors[3]
-	require.Len(t, deny2.Evals, 1)
-	require.Equal(t, "${stores.request.resource2_security_condition1}", deny2.Evals[0].Expression)
-	require.Equal(t, "met", deny2.Evals[0].Value)
-	require.Equal(t, "NotEqualTo", deny2.Evals[0].Operator)
+	require.Len(t, deny2.AllOf, 1)
+	require.Equal(t, "${stores.request.resource2_security_condition1}", deny2.AllOf[0].Expression)
+	require.Equal(t, "met", deny2.AllOf[0].MatchCondition.Value)
+	require.Equal(t, "NotEqualTo", deny2.AllOf[0].MatchCondition.Operator)
 	require.Equal(t, 401, deny2.Response.StatusCode)
 	require.Equal(t, "Unauthorised", deny2.Response.Content)
 	require.Equal(t, "text/plain", deny2.Response.Headers["Content-Type"])
@@ -636,7 +569,7 @@ func TestTransformSecurityConfig_BothLevels(t *testing.T) {
 
 	// Check root level deny interceptor
 	deny1 := cfg.Interceptors[1]
-	require.Equal(t, "${stores.request.security_condition1}", deny1.Evals[0].Expression)
+	require.Equal(t, "${stores.request.security_condition1}", deny1.AllOf[0].Expression)
 
 	// Check resource level condition interceptor
 	interceptor2 := cfg.Interceptors[2]
@@ -649,7 +582,7 @@ func TestTransformSecurityConfig_BothLevels(t *testing.T) {
 
 	// Check resource level deny interceptor
 	deny2 := cfg.Interceptors[3]
-	require.Equal(t, "${stores.request.resource1_security_condition1}", deny2.Evals[0].Expression)
+	require.Equal(t, "${stores.request.resource1_security_condition1}", deny2.AllOf[0].Expression)
 }
 
 func TestTransformSecurityConfig_UniqueResourcePrefixes(t *testing.T) {
@@ -713,14 +646,14 @@ func TestTransformSecurityConfig_UniqueResourcePrefixes(t *testing.T) {
 	interceptor1 := cfg1.Interceptors[0]
 	require.Contains(t, interceptor1.Capture, "resource1_security_condition1")
 	deny1 := cfg1.Interceptors[1]
-	require.Equal(t, "${stores.request.resource1_security_condition1}", deny1.Evals[0].Expression)
+	require.Equal(t, "${stores.request.resource1_security_condition1}", deny1.AllOf[0].Expression)
 
 	// Check second config's interceptors
 	require.Len(t, cfg2.Interceptors, 2) // condition + deny
 	interceptor2 := cfg2.Interceptors[0]
 	require.Contains(t, interceptor2.Capture, "resource2_security_condition1")
 	deny2 := cfg2.Interceptors[1]
-	require.Equal(t, "${stores.request.resource2_security_condition1}", deny2.Evals[0].Expression)
+	require.Equal(t, "${stores.request.resource2_security_condition1}", deny2.AllOf[0].Expression)
 
 	// Create third config with multiple protected resources
 	cfg3 := &Config{
@@ -773,10 +706,10 @@ func TestTransformSecurityConfig_UniqueResourcePrefixes(t *testing.T) {
 	interceptor3a := cfg3.Interceptors[0]
 	require.Contains(t, interceptor3a.Capture, "resource3_security_condition1")
 	deny3a := cfg3.Interceptors[1]
-	require.Equal(t, "${stores.request.resource3_security_condition1}", deny3a.Evals[0].Expression)
+	require.Equal(t, "${stores.request.resource3_security_condition1}", deny3a.AllOf[0].Expression)
 
 	interceptor3b := cfg3.Interceptors[2]
 	require.Contains(t, interceptor3b.Capture, "resource4_security_condition1")
 	deny3b := cfg3.Interceptors[3]
-	require.Equal(t, "${stores.request.resource4_security_condition1}", deny3b.Evals[0].Expression)
+	require.Equal(t, "${stores.request.resource4_security_condition1}", deny3b.AllOf[0].Expression)
 }

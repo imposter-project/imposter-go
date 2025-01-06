@@ -9,7 +9,7 @@ import (
 	"github.com/imposter-project/imposter-go/internal/store"
 )
 
-func TestCalculateMatchScore_Evals(t *testing.T) {
+func TestCalculateMatchScore_AllOf(t *testing.T) {
 	tests := []struct {
 		name             string
 		matcher          config.RequestMatcher
@@ -22,9 +22,9 @@ func TestCalculateMatchScore_Evals(t *testing.T) {
 		expectedWildcard bool
 	}{
 		{
-			name: "single eval matches",
+			name: "single expression matches",
 			matcher: config.RequestMatcher{
-				Evals: []config.EvalMatchCondition{
+				AllOf: []config.ExpressionMatchCondition{
 					{
 						Expression: "${stores.request.foo}",
 						MatchCondition: config.MatchCondition{
@@ -39,9 +39,9 @@ func TestCalculateMatchScore_Evals(t *testing.T) {
 			expectedScore:  1,
 		},
 		{
-			name: "single eval does not match",
+			name: "single expression does not match",
 			matcher: config.RequestMatcher{
-				Evals: []config.EvalMatchCondition{
+				AllOf: []config.ExpressionMatchCondition{
 					{
 						Expression: "${stores.request.foo}",
 						MatchCondition: config.MatchCondition{
@@ -56,9 +56,9 @@ func TestCalculateMatchScore_Evals(t *testing.T) {
 			expectedScore:  0,
 		},
 		{
-			name: "multiple evals all match",
+			name: "multiple expressions all match",
 			matcher: config.RequestMatcher{
-				Evals: []config.EvalMatchCondition{
+				AllOf: []config.ExpressionMatchCondition{
 					{
 						Expression: "${stores.request.foo}",
 						MatchCondition: config.MatchCondition{
