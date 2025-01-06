@@ -91,7 +91,7 @@ func transformSecurityBlock(cfg *Config, security *SecurityConfig, prefix string
 	if strings.EqualFold(security.Default, "Deny") {
 		denyInterceptor := Interceptor{
 			RequestMatcher: RequestMatcher{
-				AllOf: buildSecurityEvalConditions(len(security.Conditions), prefix),
+				AnyOf: buildSecurityEvalConditions(len(security.Conditions), prefix),
 			},
 			Response: &Response{
 				StatusCode: http.StatusUnauthorized,
