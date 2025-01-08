@@ -6,14 +6,25 @@ import sys
 import argparse
 from pathlib import Path
 import yaml
-from jsonschema import validate, ValidationError, Draft7Validator
+from jsonschema import validate, ValidationError, Draft7Validator, RefResolver
+from urllib.parse import urlparse
 
-def load_schema():
+def load_schema(schema_path=None, schema_type='current'):
     """Load the JSON schema from file."""
-    schema_file = Path(__file__).parent / 'imposter-config-schema.json'
-    if not schema_file.exists():
-        print(f"Error: Schema file not found at {schema_file}")
-        sys.exit(1)
+    schema_dir = Path(__file__).parent.resolve()
+    
+    if schema_path:
+        schema_file = Path(schema_path).resolve()
+    else:
+        # Use either current or legacy format schema based on schema_type
+        if schema_type == 'legacy':
+            schema_file = schema_dir / 'legacy-format-schema.json'
+        else:
+            schema_file = schema_dir / 'current-format-schema.json'
+        
+        if not schema_file.exists():
+            print(f"Error: Schema file not found at {schema_file}")
+            sys.exit(1)
     
     try:
         with open(schema_file, 'r') as f:
@@ -27,7 +38,33 @@ def validate_config_file(file_path, schema):
     try:
         with open(file_path, 'r') as f:
             config = yaml.safe_load(f)
-            validate(instance=config, schema=schema)
+            
+            # Create a resolver that can handle references to other schema files
+            schema_dir = Path(__file__).parent.resolve()
+            
+            # Load shared definitions schema
+            shared_schema = json.loads((schema_dir / 'shared-definitions.json').read_text())
+            
+            # Create store with relative paths
+            store = {
+                'shared-definitions.json': shared_schema
+            }
+            
+            # Create a resolver that handles relative paths
+            def custom_uri_handler(uri):
+                parsed = urlparse(uri)
+                if parsed.scheme == '':  # Relative path
+                    path = parsed.path.lstrip('/')  # Remove leading slash if present
+                    return store.get(path)
+                return None
+            
+            resolver = RefResolver.from_schema(
+                schema,
+                store=store,
+                handlers={'': custom_uri_handler}
+            )
+            
+            Draft7Validator(schema, resolver=resolver).validate(config)
             print(f"✓ {file_path} - Valid")
             return True
     except ValidationError as e:
@@ -51,10 +88,12 @@ def main():
     parser = argparse.ArgumentParser(description='Validate Imposter configuration files against JSON schema.')
     parser.add_argument('directory', help='Directory containing config files to validate')
     parser.add_argument('--schema', help='Path to custom schema file (optional)')
+    parser.add_argument('--schema-type', choices=['current', 'legacy'], default='current',
+                      help='Type of schema to validate against (default: current)')
     args = parser.parse_args()
 
     # Load schema
-    schema = load_schema()
+    schema = load_schema(args.schema, args.schema_type)
 
     # Convert relative path to absolute path
     search_dir = Path(args.directory).resolve()
@@ -68,7 +107,7 @@ def main():
         print("No config files found")
         sys.exit(1)
 
-    print(f"\nValidating {len(config_files)} config files...")
+    print(f"\nValidating {len(config_files)} config files against {args.schema_type} schema...")
     valid_count = sum(validate_config_file(f, schema) for f in sorted(config_files))
     print(f"\nSummary: {valid_count}/{len(config_files)} files valid")
 

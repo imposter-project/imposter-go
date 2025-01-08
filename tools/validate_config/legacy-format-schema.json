@@ -1,0 +1,106 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$ref": "#/definitions/legacyFormat",
+    "definitions": {
+        "legacyFormat": {
+            "type": "object",
+            "required": ["plugin"],
+            "oneOf": [
+                {
+                    "required": ["resources"],
+                    "not": {
+                        "required": ["response", "path", "method", "contentType"]
+                    }
+                },
+                {
+                    "anyOf": [
+                        { "required": ["response"] },
+                        { "required": ["path"] },
+                        { "required": ["method"] },
+                        { "required": ["contentType"] }
+                    ],
+                    "not": {
+                        "required": ["resources"]
+                    }
+                }
+            ],
+            "properties": {
+                "plugin": {
+                    "type": "string",
+                    "enum": ["rest", "soap", "hbase", "openapi"]
+                },
+                "basePath": {
+                    "type": "string"
+                },
+                "wsdlFile": {
+                    "type": "string"
+                },
+                "resources": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "allOf": [
+                            { "$ref": "shared-definitions.json#/definitions/requestMatcher" },
+                            {
+                                "type": "object",
+                                "required": ["response"],
+                                "properties": {
+                                    "response": { "$ref": "shared-definitions.json#/definitions/response" },
+                                    "contentType": { 
+                                        "type": "string",
+                                        "description": "[DEPRECATED] Please use response.headers['Content-Type'] instead. This property will be removed in a future version."
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                },
+                "interceptors": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "allOf": [
+                            { "$ref": "shared-definitions.json#/definitions/requestMatcher" },
+                            {
+                                "type": "object",
+                                "properties": {
+                                    "response": { "$ref": "shared-definitions.json#/definitions/response" },
+                                    "continue": { "type": "boolean" }
+                                }
+                            }
+                        ]
+                    }
+                },
+                "system": {
+                    "type": "object",
+                    "properties": {
+                        "stores": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "object",
+                                "properties": {
+                                    "preloadFile": { "type": "string" },
+                                    "preloadData": {
+                                        "type": "object",
+                                        "additionalProperties": true
+                                    }
+                                }
+                            }
+                        },
+                        "xmlNamespaces": {
+                            "type": "object",
+                            "additionalProperties": { "type": "string" }
+                        }
+                    }
+                },
+                "response": { "$ref": "shared-definitions.json#/definitions/response" },
+                "path": { "type": "string" },
+                "method": { "type": "string" },
+                "contentType": { 
+                    "type": "string",
+                    "description": "[DEPRECATED] Please use response.headers['Content-Type'] instead. This property will be removed in a future version."
+                }
+            }
+        }
+    }
+} 

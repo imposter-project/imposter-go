@@ -1,0 +1,79 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$ref": "#/definitions/currentFormat",
+    "definitions": {
+        "currentFormat": {
+            "type": "object",
+            "required": ["plugin", "resources"],
+            "properties": {
+                "plugin": {
+                    "type": "string",
+                    "enum": ["rest", "soap", "hbase", "openapi"]
+                },
+                "basePath": {
+                    "type": "string"
+                },
+                "wsdlFile": {
+                    "type": "string"
+                },
+                "resources": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "allOf": [
+                            { "$ref": "shared-definitions.json#/definitions/requestMatcher" },
+                            {
+                                "type": "object",
+                                "required": ["response"],
+                                "properties": {
+                                    "response": { "$ref": "shared-definitions.json#/definitions/response" }
+                                }
+                            }
+                        ]
+                    }
+                },
+                "interceptors": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "allOf": [
+                            { "$ref": "shared-definitions.json#/definitions/requestMatcher" },
+                            {
+                                "type": "object",
+                                "properties": {
+                                    "response": { "$ref": "shared-definitions.json#/definitions/response" },
+                                    "continue": { "type": "boolean" }
+                                }
+                            }
+                        ]
+                    }
+                },
+                "system": {
+                    "type": "object",
+                    "properties": {
+                        "stores": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "object",
+                                "properties": {
+                                    "preloadFile": { "type": "string" },
+                                    "preloadData": {
+                                        "type": "object",
+                                        "additionalProperties": true
+                                    }
+                                },
+                                "additionalProperties": false
+                            }
+                        },
+                        "xmlNamespaces": {
+                            "type": "object",
+                            "additionalProperties": { "type": "string" }
+                        }
+                    },
+                    "additionalProperties": false
+                }
+            },
+            "additionalProperties": false
+        }
+    }
+} 

@@ -1,7 +1,5 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
-    "type": "object",
-    "required": ["plugin"],
     "definitions": {
         "matchConditionObject": {
             "type": "object",
@@ -21,19 +19,19 @@
         },
         "bodyMatchCondition": {
             "type": "object",
-            "allOf": [
-                { "$ref": "#/definitions/matchConditionObject" },
-                {
-                    "properties": {
-                        "jsonPath": { "type": "string" },
-                        "xPath": { "type": "string" },
-                        "xmlNamespaces": {
-                            "type": "object",
-                            "additionalProperties": { "type": "string" }
-                        }
-                    }
+            "properties": {
+                "value": { "type": ["string", "number"] },
+                "operator": {
+                    "type": "string",
+                    "enum": ["EqualTo", "NotEqualTo", "Exists", "NotExists", "Contains", "NotContains", "Matches", "NotMatches", ""]
+                },
+                "jsonPath": { "type": "string" },
+                "xPath": { "type": "string" },
+                "xmlNamespaces": {
+                    "type": "object",
+                    "additionalProperties": { "type": "string" }
                 }
-            ]
+            }
         },
         "requestBody": {
             "type": "object",
@@ -57,27 +55,33 @@
             "type": "object",
             "properties": {
                 "content": { "type": "string" },
+                "staticContent": { 
+                    "type": "string",
+                    "description": "[DEPRECATED] Please use 'content' instead. This property will be removed in a future version."
+                },
                 "statusCode": { "type": "integer" },
                 "file": { "type": "string" },
                 "staticFile": { 
                     "type": "string",
                     "description": "[DEPRECATED] Please use 'file' instead. This property will be removed in a future version."
                 },
-                "fail": { "type": "string" },
+                "fail": { "type": "string", "enum": ["EmptyResponse", "CloseConnection"] },
                 "delay": {
                     "type": "object",
                     "properties": {
                         "exact": { "type": "integer" },
                         "min": { "type": "integer" },
                         "max": { "type": "integer" }
-                    }
+                    },
+                    "additionalProperties": false
                 },
                 "headers": {
                     "type": "object",
                     "additionalProperties": { "type": "string" }
                 },
                 "template": { "type": "boolean" }
-            }
+            },
+            "additionalProperties": false
         },
         "requestMatcher": {
             "type": "object",
@@ -109,14 +113,14 @@
                     "items": {
                         "type": "object",
                         "required": ["expression"],
-                        "allOf": [
-                            { "$ref": "#/definitions/matchConditionObject" },
-                            {
-                                "properties": {
-                                    "expression": { "type": "string" }
-                                }
-                            }
-                        ]
+                        "properties": {
+                            "value": { "type": ["string", "number"] },
+                            "operator": {
+                                "type": "string",
+                                "enum": ["EqualTo", "NotEqualTo", "Exists", "NotExists", "Contains", "NotContains", "Matches", "NotMatches", ""]
+                            },
+                            "expression": { "type": "string" }
+                        }
                     }
                 },
                 "capture": {
@@ -151,88 +155,8 @@
                         }
                     }
                 }
-            }
-        },
-        "currentFormat": {
-            "type": "object",
-            "properties": {
-                "plugin": {
-                    "type": "string",
-                    "enum": ["rest", "soap", "hbase", "openapi"]
-                },
-                "basePath": {
-                    "type": "string"
-                },
-                "wsdlFile": {
-                    "type": "string"
-                },
-                "resources": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "allOf": [
-                            { "$ref": "#/definitions/requestMatcher" },
-                            {
-                                "properties": {
-                                    "response": { "$ref": "#/definitions/response" }
-                                }
-                            }
-                        ]
-                    }
-                },
-                "interceptors": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "allOf": [
-                            { "$ref": "#/definitions/requestMatcher" },
-                            {
-                                "properties": {
-                                    "response": { "$ref": "#/definitions/response" },
-                                    "continue": { "type": "boolean" }
-                                }
-                            }
-                        ]
-                    }
-                },
-                "system": {
-                    "type": "object",
-                    "properties": {
-                        "stores": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "object",
-                                "properties": {
-                                    "preloadFile": { "type": "string" },
-                                    "preloadData": {
-                                        "type": "object",
-                                        "additionalProperties": true
-                                    }
-                                }
-                            }
-                        },
-                        "xmlNamespaces": {
-                            "type": "object",
-                            "additionalProperties": { "type": "string" }
-                        }
-                    }
-                }
-            }
-        },
-        "legacyFormat": {
-            "type": "object",
-            "required": ["plugin", "response"],
-            "properties": {
-                "plugin": {
-                    "type": "string",
-                    "enum": ["rest", "soap", "hbase", "openapi"]
-                },
-                "response": { "$ref": "#/definitions/response" }
-            }
+            },
+            "additionalProperties": true
         }
-    },
-    "oneOf": [
-        { "$ref": "#/definitions/currentFormat" },
-        { "$ref": "#/definitions/legacyFormat" }
-    ]
+    }
 } 
