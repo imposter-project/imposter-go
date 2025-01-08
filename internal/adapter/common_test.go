@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/store"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -95,7 +96,13 @@ system:
 			}
 
 			// Run initialisation
-			imposterConfig, configDir, configs := InitialiseImposter(tt.configDirArg)
+			imposterConfig, configDir, plugins := InitialiseImposter(tt.configDirArg)
+			assert.NotEmpty(t, plugins)
+
+			configs := []*config.Config{}
+			for _, plugin := range plugins {
+				configs = append(configs, plugin.GetConfig())
+			}
 
 			// Verify results
 			assert.NotNil(t, imposterConfig)
@@ -190,12 +197,18 @@ resources:
 	require.NoError(t, err)
 
 	// Run initialisation - it should not panic on invalid config
-	imposterConfig, configDir, configs := InitialiseImposter(tmpDir)
+	imposterConfig, configDir, plugins := InitialiseImposter(tmpDir)
+	assert.NotEmpty(t, plugins)
+
+	configs := []*config.Config{}
+	for _, plugin := range plugins {
+		configs = append(configs, plugin.GetConfig())
+	}
 
 	// Verify results
 	assert.NotNil(t, imposterConfig)
 	assert.Equal(t, tmpDir, configDir)
-	assert.NotNil(t, configs)
+	assert.NotEmpty(t, configs)
 	// The invalid config should still be loaded, but might be partially populated
 	assert.Len(t, configs, 1)
 	if len(configs) > 0 {

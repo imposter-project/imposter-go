@@ -6,10 +6,11 @@ import (
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/logger"
 	"github.com/imposter-project/imposter-go/internal/store"
+	"github.com/imposter-project/imposter-go/plugin"
 )
 
 // InitialiseImposter performs common initialisation tasks for all adapters
-func InitialiseImposter(configDirArg string) (*config.ImposterConfig, string, []config.Config) {
+func InitialiseImposter(configDirArg string) (*config.ImposterConfig, string, []plugin.Plugin) {
 	logger.Infoln("starting imposter-go...")
 
 	imposterConfig := config.LoadImposterConfig()
@@ -29,9 +30,10 @@ func InitialiseImposter(configDirArg string) (*config.ImposterConfig, string, []
 	}
 
 	configs := config.LoadConfig(configDir)
+	plugins := plugin.LoadPlugins(configs, configDir, imposterConfig)
 
 	store.InitStoreProvider()
 	store.PreloadStores(configDir, configs)
 
-	return imposterConfig, configDir, configs
+	return imposterConfig, configDir, plugins
 }

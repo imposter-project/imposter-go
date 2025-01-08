@@ -11,6 +11,7 @@ import (
 
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/handler"
+	"github.com/imposter-project/imposter-go/plugin"
 	"github.com/imposter-project/imposter-go/test/testutils"
 	"github.com/stretchr/testify/require"
 )
@@ -31,9 +32,13 @@ resources:
 	err := os.WriteFile(filepath.Join(tempDir, "test-config.yaml"), []byte(configContent), 0644)
 	require.NoError(t, err)
 
+	imposterConfig := config.LoadImposterConfig()
+	configs := config.LoadConfig(tempDir)
+	plugins := plugin.LoadPlugins(configs, tempDir, imposterConfig)
+
 	// Start the server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		handler.HandleRequest(w, r, tempDir, config.LoadConfig(tempDir), config.LoadImposterConfig())
+		handler.HandleRequest(w, r, tempDir, plugins, imposterConfig)
 	}))
 	defer server.Close()
 
@@ -68,9 +73,13 @@ resources:
 	err := os.WriteFile(filepath.Join(tempDir, "test-config.yaml"), []byte(configContent), 0644)
 	require.NoError(t, err)
 
+	imposterConfig := config.LoadImposterConfig()
+	configs := config.LoadConfig(tempDir)
+	plugins := plugin.LoadPlugins(configs, tempDir, imposterConfig)
+
 	// Start the server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		handler.HandleRequest(w, r, tempDir, config.LoadConfig(tempDir), config.LoadImposterConfig())
+		handler.HandleRequest(w, r, tempDir, plugins, imposterConfig)
 	}))
 	defer server.Close()
 
@@ -125,6 +134,7 @@ func TestInterceptors_ShortCircuit(t *testing.T) {
 	imposterConfig := &config.ImposterConfig{
 		ServerPort: "8080",
 	}
+	plugins := plugin.LoadPlugins(configs, "", imposterConfig)
 
 	// Test with invalid user agent
 	req, err := http.NewRequest("GET", "/example", new(strings.Reader))
@@ -134,7 +144,8 @@ func TestInterceptors_ShortCircuit(t *testing.T) {
 	req.Header.Set("User-Agent", "Invalid-Agent")
 
 	rec := httptest.NewRecorder()
-	handler.HandleRequest(rec, req, "", configs, imposterConfig)
+
+	handler.HandleRequest(rec, req, "", plugins, imposterConfig)
 
 	if status := rec.Code; status != http.StatusBadRequest {
 		t.Errorf("Expected status code %d, got %d", http.StatusBadRequest, status)
@@ -148,7 +159,7 @@ func TestInterceptors_ShortCircuit(t *testing.T) {
 	// Test with valid user agent
 	req.Header.Set("User-Agent", "Some-User-Agent")
 	rec = httptest.NewRecorder()
-	handler.HandleRequest(rec, req, "", configs, imposterConfig)
+	handler.HandleRequest(rec, req, "", plugins, imposterConfig)
 
 	if status := rec.Code; status != http.StatusOK {
 		t.Errorf("Expected status code %d, got %d", http.StatusOK, status)
@@ -188,6 +199,7 @@ func TestInterceptors_Passthrough(t *testing.T) {
 	imposterConfig := &config.ImposterConfig{
 		ServerPort: "8080",
 	}
+	plugins := plugin.LoadPlugins(configs, "", imposterConfig)
 
 	req, err := http.NewRequest("GET", "/example", new(strings.Reader))
 	if err != nil {
@@ -196,7 +208,7 @@ func TestInterceptors_Passthrough(t *testing.T) {
 	req.Header.Set("User-Agent", "Test-Agent")
 
 	rec := httptest.NewRecorder()
-	handler.HandleRequest(rec, req, "", configs, imposterConfig)
+	handler.HandleRequest(rec, req, "", plugins, imposterConfig)
 
 	if status := rec.Code; status != http.StatusOK {
 		t.Errorf("Expected status code %d, got %d", http.StatusOK, status)

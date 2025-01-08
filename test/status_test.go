@@ -8,6 +8,7 @@ import (
 
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/handler"
+	"github.com/imposter-project/imposter-go/plugin"
 	"github.com/stretchr/testify/require"
 )
 
@@ -29,14 +30,14 @@ func TestSystemStatus(t *testing.T) {
 			},
 		},
 	}
-
 	imposterConfig := &config.ImposterConfig{
 		ServerPort: "8080",
 	}
+	plugins := plugin.LoadPlugins(configs, "", imposterConfig)
 
 	// Start test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		handler.HandleRequest(w, r, "", configs, imposterConfig)
+		handler.HandleRequest(w, r, "", plugins, imposterConfig)
 	}))
 	defer server.Close()
 

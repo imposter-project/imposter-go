@@ -58,8 +58,8 @@ type BaseWSDLParser struct {
 	operations map[string]*Operation
 }
 
-// NewWSDLParser creates a new version-aware WSDL parser instance
-func NewWSDLParser(wsdlPath string) (WSDLParser, error) {
+// newWSDLParser creates a new version-aware WSDL parser instance
+func newWSDLParser(wsdlPath string) (WSDLParser, error) {
 	// Read and parse the WSDL file
 	file, err := os.Open(wsdlPath)
 	if err != nil {
@@ -296,8 +296,8 @@ func (p *wsdl2Parser) GetBindingName(op *Operation) string {
 	return op.Binding
 }
 
-// AugmentConfigWithWSDL enriches the configuration with auto-generated interceptors for each WSDL operation.
-func AugmentConfigWithWSDL(cfg *config.Config, parser WSDLParser) error {
+// augmentConfigWithWSDL enriches the configuration with auto-generated interceptors for each WSDL operation.
+func augmentConfigWithWSDL(cfg *config.Config, parser WSDLParser) error {
 	ops := parser.GetOperations()
 	for _, op := range ops {
 		// Create an interceptor with default RequestMatcher
@@ -328,8 +328,8 @@ func AugmentConfigWithWSDL(cfg *config.Config, parser WSDLParser) error {
     <!-- Example response for ` + op.Name + ` -->
   </soap:Body>
 </soap:Envelope>`,
-				},
-			}
+			},
+		}
 		cfg.Interceptors = append(cfg.Interceptors, newInterceptor)
 	}
 
@@ -341,7 +341,7 @@ func AugmentConfigWithWSDL(cfg *config.Config, parser WSDLParser) error {
 					Expression: "${stores.request._matched-soap-operation}",
 					MatchCondition: config.MatchCondition{
 						Operator: "EqualTo",
-						Value: "true",
+						Value:    "true",
 					},
 				},
 			},

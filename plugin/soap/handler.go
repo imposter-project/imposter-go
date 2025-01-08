@@ -5,7 +5,6 @@ import (
 	"encoding/xml"
 	"fmt"
 	"net/http"
-	"path/filepath"
 	"strings"
 
 	"github.com/antchfx/xmlquery"
@@ -89,43 +88,8 @@ type SOAP12Fault struct {
 	Detail string `xml:"Detail,omitempty"`
 }
 
-// Handler handles SOAP requests based on WSDL configuration
-type Handler struct {
-	config         *config.Config
-	configDir      string
-	wsdlParser     WSDLParser
-	imposterConfig *config.ImposterConfig
-}
-
-// NewHandler creates a new SOAP handler
-func NewHandler(cfg *config.Config, configDir string, imposterConfig *config.ImposterConfig) (*Handler, error) {
-	// If WSDLFile is not absolute, make it relative to configDir
-	wsdlPath := cfg.WSDLFile
-	if !filepath.IsAbs(wsdlPath) {
-		wsdlPath = filepath.Join(configDir, wsdlPath)
-	}
-
-	parser, err := NewWSDLParser(wsdlPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse WSDL: %w", err)
-	}
-
-	// Augment existing config with generated interceptors based on the WSDL
-	// TODO move this to load time
-	if err := AugmentConfigWithWSDL(cfg, parser); err != nil {
-		return nil, fmt.Errorf("failed to augment config with WSDL: %w", err)
-	}
-
-	return &Handler{
-		config:         cfg,
-		configDir:      configDir,
-		wsdlParser:     parser,
-		imposterConfig: imposterConfig,
-	}, nil
-}
-
 // getSoapAction extracts the SOAPAction from headers
-func (h *Handler) getSoapAction(r *http.Request) string {
+func (h *PluginHandler) getSoapAction(r *http.Request) string {
 	// Try SOAPAction header first
 	if soapAction := r.Header.Get("SOAPAction"); soapAction != "" {
 		return strings.Trim(soapAction, "\"")
@@ -153,7 +117,7 @@ type MessageBodyHolder struct {
 }
 
 // parseBody parses the SOAP body based on configuration
-func (h *Handler) parseBody(body []byte) (*MessageBodyHolder, error) {
+func (h *PluginHandler) parseBody(body []byte) (*MessageBodyHolder, error) {
 	doc, err := xmlquery.Parse(bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse XML: %w", err)
@@ -229,7 +193,7 @@ func (h *Handler) parseBody(body []byte) (*MessageBodyHolder, error) {
 }
 
 // determineOperation determines the operation from SOAPAction and body
-func (h *Handler) determineOperation(soapAction string, bodyHolder *MessageBodyHolder) *Operation {
+func (h *PluginHandler) determineOperation(soapAction string, bodyHolder *MessageBodyHolder) *Operation {
 	// Try matching by SOAPAction first
 	if soapAction != "" {
 		for _, op := range h.wsdlParser.GetOperations() {
@@ -295,7 +259,7 @@ func splitQName(qname string) (namespace, localPart string) {
 }
 
 // calculateScore calculates how well a request matches a resource or interceptor
-func (h *Handler) calculateScore(reqMatcher *config.RequestMatcher, r *http.Request, body []byte, operation string, soapAction string, requestStore store.Store) (score int, isWildcard bool) {
+func (h *PluginHandler) calculateScore(reqMatcher *config.RequestMatcher, r *http.Request, body []byte, operation string, soapAction string, requestStore store.Store) (score int, isWildcard bool) {
 	// Get system XML namespaces
 	var systemNamespaces map[string]string
 	if h.config.System != nil {
@@ -349,7 +313,7 @@ func (h *Handler) calculateScore(reqMatcher *config.RequestMatcher, r *http.Requ
 }
 
 // HandleRequest processes incoming SOAP requests
-func (h *Handler) HandleRequest(r *http.Request, requestStore store.Store, responseState *response.ResponseState) {
+func (h *PluginHandler) HandleRequest(r *http.Request, requestStore store.Store, responseState *response.ResponseState) {
 	// Only handle POST requests for SOAP
 	if r.Method != http.MethodPost {
 		return // Let the main handler deal with non-POST requests
@@ -421,7 +385,7 @@ func (h *Handler) HandleRequest(r *http.Request, requestStore store.Store, respo
 }
 
 // sendSOAPFault sends a SOAP fault response
-func (h *Handler) sendSOAPFault(rs *response.ResponseState, message string, statusCode int) {
+func (h *PluginHandler) sendSOAPFault(rs *response.ResponseState, message string, statusCode int) {
 	rs.Headers["Content-Type"] = "application/soap+xml"
 	rs.StatusCode = statusCode
 
@@ -456,7 +420,7 @@ func (h *Handler) sendSOAPFault(rs *response.ResponseState, message string, stat
 }
 
 // ProcessResponse processes and sends the SOAP response
-func (h *Handler) ProcessResponse(rs *response.ResponseState, r *http.Request, resp config.Response, requestStore store.Store) {
+func (h *PluginHandler) ProcessResponse(rs *response.ResponseState, r *http.Request, resp config.Response, requestStore store.Store) {
 	// Set content type for SOAP response
 	rs.Headers["Content-Type"] = "application/soap+xml"
 

@@ -12,24 +12,8 @@ import (
 	"github.com/imposter-project/imposter-go/internal/store"
 )
 
-// Handler handles REST API requests
-type Handler struct {
-	config         *config.Config
-	configDir      string
-	imposterConfig *config.ImposterConfig
-}
-
-// NewHandler creates a new REST handler
-func NewHandler(cfg *config.Config, configDir string, imposterConfig *config.ImposterConfig) (*Handler, error) {
-	return &Handler{
-		config:         cfg,
-		configDir:      configDir,
-		imposterConfig: imposterConfig,
-	}, nil
-}
-
 // HandleRequest processes incoming REST API requests
-func (h *Handler) HandleRequest(r *http.Request, requestStore store.Store, responseState *response.ResponseState) {
+func (h *PluginHandler) HandleRequest(r *http.Request, requestStore store.Store, responseState *response.ResponseState) {
 	body, err := matcher.GetRequestBody(r)
 	if err != nil {
 		responseState.StatusCode = http.StatusBadRequest
@@ -85,6 +69,6 @@ func (h *Handler) HandleRequest(r *http.Request, requestStore store.Store, respo
 }
 
 // ProcessResponse handles preparing the response state
-func (h *Handler) ProcessResponse(rs *response.ResponseState, r *http.Request, resp config.Response, requestStore store.Store) {
+func (h *PluginHandler) ProcessResponse(rs *response.ResponseState, r *http.Request, resp config.Response, requestStore store.Store) {
 	response.ProcessResponse(rs, r, resp, h.configDir, requestStore, h.imposterConfig)
 }

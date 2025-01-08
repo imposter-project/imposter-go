@@ -86,7 +86,7 @@ func TestNewWSDLParser(t *testing.T) {
 			require.NoError(t, err)
 
 			// Parse WSDL
-			parser, err := NewWSDLParser(wsdlPath)
+			parser, err := newWSDLParser(wsdlPath)
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
@@ -122,7 +122,7 @@ func TestWSDL1Operations(t *testing.T) {
 	require.NoError(t, err)
 
 	// Parse WSDL
-	parser, err := NewWSDLParser(wsdlPath)
+	parser, err := newWSDLParser(wsdlPath)
 	require.NoError(t, err)
 
 	// Test GetOperations
@@ -169,7 +169,7 @@ func TestWSDL2Operations(t *testing.T) {
 	require.NoError(t, err)
 
 	// Parse WSDL
-	parser, err := NewWSDLParser(wsdlPath)
+	parser, err := newWSDLParser(wsdlPath)
 	require.NoError(t, err)
 
 	// Test GetOperations
@@ -213,7 +213,7 @@ func TestValidateRequest(t *testing.T) {
 	require.NoError(t, err)
 
 	// Parse WSDL
-	parser, err := NewWSDLParser(wsdlPath)
+	parser, err := newWSDLParser(wsdlPath)
 	require.NoError(t, err)
 
 	// Test ValidateRequest (currently a no-op)
@@ -223,7 +223,7 @@ func TestValidateRequest(t *testing.T) {
 
 func TestErrorCases(t *testing.T) {
 	t.Run("non-existent file", func(t *testing.T) {
-		_, err := NewWSDLParser("non_existent.wsdl")
+		_, err := newWSDLParser("non_existent.wsdl")
 		assert.Error(t, err)
 	})
 
@@ -233,7 +233,7 @@ func TestErrorCases(t *testing.T) {
 		err := os.WriteFile(wsdlPath, []byte("invalid xml content"), 0644)
 		require.NoError(t, err)
 
-		_, err = NewWSDLParser(wsdlPath)
+		_, err = newWSDLParser(wsdlPath)
 		assert.Error(t, err)
 	})
 
@@ -243,7 +243,7 @@ func TestErrorCases(t *testing.T) {
 		err := os.WriteFile(wsdlPath, []byte(""), 0644)
 		require.NoError(t, err)
 
-		_, err = NewWSDLParser(wsdlPath)
+		_, err = newWSDLParser(wsdlPath)
 		assert.Error(t, err)
 	})
 }

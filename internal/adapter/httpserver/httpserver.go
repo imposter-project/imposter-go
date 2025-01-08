@@ -9,6 +9,7 @@ import (
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/handler"
 	"github.com/imposter-project/imposter-go/internal/logger"
+	"github.com/imposter-project/imposter-go/plugin"
 )
 
 // HTTPAdapter represents the HTTP server runtime adapter
@@ -39,15 +40,15 @@ func (a *HTTPAdapter) Start() {
 type httpServer struct {
 	Addr      string
 	ConfigDir string
-	Configs   []config.Config
+	Plugins   []plugin.Plugin
 }
 
 // newServer creates a new instance of httpServer.
-func newServer(imposterConfig *config.ImposterConfig, configDir string, configs []config.Config) *httpServer {
+func newServer(imposterConfig *config.ImposterConfig, configDir string, plugins []plugin.Plugin) *httpServer {
 	return &httpServer{
 		Addr:      ":" + imposterConfig.ServerPort,
 		ConfigDir: configDir,
-		Configs:   configs,
+		Plugins:   plugins,
 	}
 }
 
@@ -56,7 +57,7 @@ func (s *httpServer) start(imposterConfig *config.ImposterConfig) {
 	logger.Infof("server is listening on %s...", s.Addr)
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		handler.HandleRequest(w, r, s.ConfigDir, s.Configs, imposterConfig)
+		handler.HandleRequest(w, r, s.ConfigDir, s.Plugins, imposterConfig)
 	})
 
 	if err := http.ListenAndServe(s.Addr, nil); err != nil {

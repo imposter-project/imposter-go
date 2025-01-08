@@ -5,12 +5,12 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/response"
+	"github.com/imposter-project/imposter-go/plugin"
 )
 
 // handleNotFound generates a custom 404 page with available resources
-func handleNotFound(r *http.Request, responseState *response.ResponseState, configs []config.Config) {
+func handleNotFound(r *http.Request, responseState *response.ResponseState, plugins []plugin.Plugin) {
 	responseState.StatusCode = http.StatusNotFound
 	responseState.Headers["Content-Type"] = "text/html"
 
@@ -18,7 +18,8 @@ func handleNotFound(r *http.Request, responseState *response.ResponseState, conf
 	var restResources []string
 	var soapResources []string
 
-	for _, cfg := range configs {
+	for _, plg := range plugins {
+		cfg := plg.GetConfig()
 		switch cfg.Plugin {
 		case "rest":
 			for _, resource := range cfg.Resources {

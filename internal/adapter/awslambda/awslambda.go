@@ -13,6 +13,7 @@ import (
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/handler"
 	"github.com/imposter-project/imposter-go/internal/logger"
+	"github.com/imposter-project/imposter-go/plugin"
 )
 
 // LambdaAdapter represents the AWS Lambda runtime adapter
@@ -32,7 +33,7 @@ var (
 	// Package-level variables to store configuration
 	imposterConfig *config.ImposterConfig
 	configDir      string
-	configs        []config.Config
+	plugins        []plugin.Plugin
 )
 
 func init() {
@@ -53,7 +54,7 @@ func init() {
 	}
 
 	// Load configuration once during cold start
-	imposterConfig, configDir, configs = adapter.InitialiseImposter("")
+	imposterConfig, configDir, plugins = adapter.InitialiseImposter("")
 }
 
 // HandleLambdaRequest handles incoming Lambda requests and routes them to the appropriate handler.
@@ -62,16 +63,16 @@ func HandleLambdaRequest(req json.RawMessage) (interface{}, error) {
 	var lambdaFunctionURLReq events.LambdaFunctionURLRequest
 
 	if err := json.Unmarshal(req, &apiGatewayReq); err == nil && apiGatewayReq.HTTPMethod != "" {
-		return handleAPIGatewayProxyRequest(apiGatewayReq, configDir, configs, imposterConfig)
+		return handleAPIGatewayProxyRequest(apiGatewayReq, configDir, plugins, imposterConfig)
 	} else if err := json.Unmarshal(req, &lambdaFunctionURLReq); err == nil && lambdaFunctionURLReq.RequestContext.HTTP.Method != "" {
-		return handleLambdaFunctionURLRequest(lambdaFunctionURLReq, configDir, configs, imposterConfig)
+		return handleLambdaFunctionURLRequest(lambdaFunctionURLReq, configDir, plugins, imposterConfig)
 	} else {
 		return events.LambdaFunctionURLResponse{StatusCode: 400, Body: "Unsupported request type"}, nil
 	}
 }
 
 // handleAPIGatewayProxyRequest processes API Gateway Proxy requests.
-func handleAPIGatewayProxyRequest(req events.APIGatewayProxyRequest, configDir string, configs []config.Config, imposterConfig *config.ImposterConfig) (events.APIGatewayProxyResponse, error) {
+func handleAPIGatewayProxyRequest(req events.APIGatewayProxyRequest, configDir string, plugins []plugin.Plugin, imposterConfig *config.ImposterConfig) (events.APIGatewayProxyResponse, error) {
 	// Convert APIGatewayProxyRequest to http.Request
 	httpReq, err := convertLambdaRequestToHTTPRequest(req.HTTPMethod, req.Path, req.Headers, req.Body)
 	if err != nil {
@@ -83,7 +84,7 @@ func handleAPIGatewayProxyRequest(req events.APIGatewayProxyRequest, configDir s
 	recorder := &responseRecorder{Headers: make(http.Header)}
 
 	// Handle the request
-	handler.HandleRequest(recorder, httpReq, configDir, configs, imposterConfig)
+	handler.HandleRequest(recorder, httpReq, configDir, plugins, imposterConfig)
 	logResponse(recorder)
 
 	// Convert the captured response to APIGatewayProxyResponse
@@ -91,7 +92,7 @@ func handleAPIGatewayProxyRequest(req events.APIGatewayProxyRequest, configDir s
 }
 
 // handleLambdaFunctionURLRequest processes Lambda Function URL requests.
-func handleLambdaFunctionURLRequest(req events.LambdaFunctionURLRequest, configDir string, configs []config.Config, imposterConfig *config.ImposterConfig) (events.LambdaFunctionURLResponse, error) {
+func handleLambdaFunctionURLRequest(req events.LambdaFunctionURLRequest, configDir string, plugins []plugin.Plugin, imposterConfig *config.ImposterConfig) (events.LambdaFunctionURLResponse, error) {
 	// Convert LambdaFunctionURLRequest to http.Request
 	httpReq, err := convertLambdaRequestToHTTPRequest(req.RequestContext.HTTP.Method, req.RawPath, req.Headers, req.Body)
 	if err != nil {
@@ -103,7 +104,7 @@ func handleLambdaFunctionURLRequest(req events.LambdaFunctionURLRequest, configD
 	recorder := &responseRecorder{Headers: make(http.Header)}
 
 	// Handle the request
-	handler.HandleRequest(recorder, httpReq, configDir, configs, imposterConfig)
+	handler.HandleRequest(recorder, httpReq, configDir, plugins, imposterConfig)
 	logResponse(recorder)
 
 	// Convert the captured response to LambdaFunctionURLResponse
