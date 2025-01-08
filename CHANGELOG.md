@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.7.0] - 2025-01-08
+### Added
+- feat(wsdl): prepopulate responses based on WSDL.
+- feat: logs start up time.
+- feat: supports more legacy format fields.
+
+### Changed
+- docs: splits legacy and current schema files.
+- refactor: generalises capture signature to support interceptors.
+- refactor: improves failed handler logging.
+- refactor: lambda init should be conditional on runtime.
+- refactor: moves configuration parsing earlier in lifecycle.
+
+### Fixed
+- fix(soap): check all attributes of root element to determine WSDL version.
+
 ## [0.6.1] - 2025-01-06
 ### Changed
 - build: removes unsupported install flag.
