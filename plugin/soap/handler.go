@@ -110,6 +110,12 @@ func NewHandler(cfg *config.Config, configDir string, imposterConfig *config.Imp
 		return nil, fmt.Errorf("failed to parse WSDL: %w", err)
 	}
 
+	// Augment existing config with generated interceptors based on the WSDL
+	// TODO move this to load time
+	if err := AugmentConfigWithWSDL(cfg, parser); err != nil {
+		return nil, fmt.Errorf("failed to augment config with WSDL: %w", err)
+	}
+
 	return &Handler{
 		config:         cfg,
 		configDir:      configDir,

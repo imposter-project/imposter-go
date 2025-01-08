@@ -27,10 +27,10 @@ func TestCaptureRequestData(t *testing.T) {
 					Capture: map[string]config.Capture{
 						"test": {
 							Enabled: boolPtr(true),
-							Key: config.CaptureKey{
+							Key: config.CaptureConfig{
 								Const: "myKey",
 							},
-							CaptureKey: config.CaptureKey{
+							CaptureConfig: config.CaptureConfig{
 								QueryParam: "param",
 							},
 							Store: "request",
@@ -54,10 +54,10 @@ func TestCaptureRequestData(t *testing.T) {
 					Capture: map[string]config.Capture{
 						"test": {
 							Enabled: boolPtr(true),
-							Key: config.CaptureKey{
+							Key: config.CaptureConfig{
 								Const: "headerValue",
 							},
-							CaptureKey: config.CaptureKey{
+							CaptureConfig: config.CaptureConfig{
 								RequestHeader: "X-Test-Header",
 							},
 							Store: "request",
@@ -82,10 +82,10 @@ func TestCaptureRequestData(t *testing.T) {
 					Capture: map[string]config.Capture{
 						"test": {
 							Enabled: boolPtr(true),
-							Key: config.CaptureKey{
+							Key: config.CaptureConfig{
 								Const: "formValue",
 							},
-							CaptureKey: config.CaptureKey{
+							CaptureConfig: config.CaptureConfig{
 								FormParam: "field",
 							},
 							Store: "request",
@@ -111,10 +111,10 @@ func TestCaptureRequestData(t *testing.T) {
 					Capture: map[string]config.Capture{
 						"test": {
 							Enabled: boolPtr(true),
-							Key: config.CaptureKey{
+							Key: config.CaptureConfig{
 								Const: "jsonValue",
 							},
-							CaptureKey: config.CaptureKey{
+							CaptureConfig: config.CaptureConfig{
 								RequestBody: struct {
 									JSONPath      string            `yaml:"jsonPath,omitempty"`
 									XPath         string            `yaml:"xPath,omitempty"`
@@ -146,10 +146,10 @@ func TestCaptureRequestData(t *testing.T) {
 					Capture: map[string]config.Capture{
 						"test": {
 							Enabled: boolPtr(true),
-							Key: config.CaptureKey{
+							Key: config.CaptureConfig{
 								Const: "xmlValue",
 							},
-							CaptureKey: config.CaptureKey{
+							CaptureConfig: config.CaptureConfig{
 								RequestBody: struct {
 									JSONPath      string            `yaml:"jsonPath,omitempty"`
 									XPath         string            `yaml:"xPath,omitempty"`
@@ -181,10 +181,10 @@ func TestCaptureRequestData(t *testing.T) {
 					Capture: map[string]config.Capture{
 						"test": {
 							Enabled: boolPtr(false),
-							Key: config.CaptureKey{
+							Key: config.CaptureConfig{
 								Const: "disabled",
 							},
-							CaptureKey: config.CaptureKey{
+							CaptureConfig: config.CaptureConfig{
 								QueryParam: "param",
 							},
 							Store: "request",
@@ -208,10 +208,10 @@ func TestCaptureRequestData(t *testing.T) {
 				RequestMatcher: config.RequestMatcher{
 					Capture: map[string]config.Capture{
 						"test": {
-							Key: config.CaptureKey{
+							Key: config.CaptureConfig{
 								Const: "enabled_not_set",
 							},
-							CaptureKey: config.CaptureKey{
+							CaptureConfig: config.CaptureConfig{
 								QueryParam: "param",
 							},
 							Store: "request",

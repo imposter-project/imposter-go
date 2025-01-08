@@ -177,7 +177,7 @@ func TestInterceptors_Passthrough(t *testing.T) {
 					"userAgent": {
 						Enabled: boolPtr(true),
 						Store:   "request",
-						CaptureKey: config.CaptureKey{
+						CaptureConfig: config.CaptureConfig{
 							RequestHeader: "User-Agent",
 						},
 					},

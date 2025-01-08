@@ -60,7 +60,7 @@ func transformSecurityBlock(cfg *Config, security *SecurityConfig, prefix string
 				Capture: map[string]Capture{
 					conditionKey: {
 						Store: "request",
-						CaptureKey: CaptureKey{
+						CaptureConfig: CaptureConfig{
 							Const: "met",
 						},
 					},

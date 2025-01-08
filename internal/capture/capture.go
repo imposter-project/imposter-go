@@ -15,6 +15,7 @@ import (
 )
 
 // CaptureRequestData captures elements of the request and stores them in the specified store.
+// TODO change the signature of this function to accept a map of string to CaptureConfig instead of a resource (as used by interceptors too)
 func CaptureRequestData(imposterConfig *config.ImposterConfig, resource config.Resource, r *http.Request, body []byte, requestStore store.Store) {
 	for key, capture := range resource.Capture {
 		if capture.Enabled != nil && !*capture.Enabled {
@@ -22,7 +23,7 @@ func CaptureRequestData(imposterConfig *config.ImposterConfig, resource config.R
 		}
 
 		itemName := getValueFromCaptureKey(capture.Key, key, r, body, imposterConfig, requestStore)
-		value := getValueFromCaptureKey(capture.CaptureKey, "", r, body, imposterConfig, requestStore)
+		value := getValueFromCaptureKey(capture.CaptureConfig, "", r, body, imposterConfig, requestStore)
 
 		if value != "" {
 			if capture.Store == "request" {
@@ -35,7 +36,7 @@ func CaptureRequestData(imposterConfig *config.ImposterConfig, resource config.R
 }
 
 // getValueFromCaptureKey retrieves the value based on the capture key configuration.
-func getValueFromCaptureKey(key config.CaptureKey, defaultKey string, r *http.Request, body []byte, imposterConfig *config.ImposterConfig, requestStore store.Store) string {
+func getValueFromCaptureKey(key config.CaptureConfig, defaultKey string, r *http.Request, body []byte, imposterConfig *config.ImposterConfig, requestStore store.Store) string {
 	if key.PathParam != "" {
 		return utils.ExtractPathParams(r.URL.Path, r.URL.Path)[key.PathParam]
 	} else if key.QueryParam != "" {

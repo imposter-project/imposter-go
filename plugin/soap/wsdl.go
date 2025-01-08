@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/antchfx/xmlquery"
+	"github.com/imposter-project/imposter-go/internal/config"
 )
 
 // WSDLVersion represents the version of WSDL being used
@@ -293,4 +294,69 @@ func (p *wsdl2Parser) GetBindingName(op *Operation) string {
 		return ""
 	}
 	return op.Binding
+}
+
+// AugmentConfigWithWSDL enriches the configuration with auto-generated interceptors for each WSDL operation.
+func AugmentConfigWithWSDL(cfg *config.Config, parser WSDLParser) error {
+	ops := parser.GetOperations()
+	for _, op := range ops {
+		// Create an interceptor with default RequestMatcher
+		newInterceptor := config.Interceptor{
+			Continue: true,
+			RequestMatcher: config.RequestMatcher{
+				Method:     "POST",
+				SOAPAction: op.SOAPAction,
+				Operation:  op.Name,
+				Binding:    parser.GetBindingName(op),
+				Capture: map[string]config.Capture{
+					"_matched-soap-operation": config.Capture{
+						Store: "request",
+						CaptureConfig: config.CaptureConfig{
+							Const: "true",
+						},
+					},
+				},
+			},
+			Response: &config.Response{
+				StatusCode: 200,
+				Headers: map[string]string{
+					"Content-Type": "application/soap+xml",
+				},
+				// Minimal placeholder for a SOAP response
+				Content: `<soap:Envelope xmlns:soap="` + getNamespace(parser.GetSOAPVersion()) + `">
+  <soap:Body>
+    <!-- Example response for ` + op.Name + ` -->
+  </soap:Body>
+</soap:Envelope>`,
+				},
+			}
+		cfg.Interceptors = append(cfg.Interceptors, newInterceptor)
+	}
+
+	// Add a default resource to handle unmatched requests
+	defaultResource := config.Resource{
+		RequestMatcher: config.RequestMatcher{
+			AllOf: []config.ExpressionMatchCondition{
+				{
+					Expression: "${stores.request._matched-soap-operation}",
+					MatchCondition: config.MatchCondition{
+						Operator: "EqualTo",
+						Value: "true",
+					},
+				},
+			},
+		},
+		Response: config.Response{},
+	}
+	cfg.Resources = append(cfg.Resources, defaultResource)
+
+	return nil
+}
+
+// getNamespace returns SOAP envelope namespace for the specified SOAP version
+func getNamespace(version SOAPVersion) string {
+	if version == SOAP12 {
+		return "http://www.w3.org/2003/05/soap-envelope"
+	}
+	return "http://schemas.xmlsoap.org/soap/envelope/"
 }

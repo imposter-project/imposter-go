@@ -68,7 +68,7 @@ func TestProcessInterceptor(t *testing.T) {
 						"test": {
 							Enabled: boolPtr(true),
 							Store:   "request",
-							CaptureKey: config.CaptureKey{
+							CaptureConfig: config.CaptureConfig{
 								RequestHeader: "X-Test",
 							},
 						},
@@ -88,7 +88,7 @@ func TestProcessInterceptor(t *testing.T) {
 						"test": {
 							Enabled: boolPtr(true),
 							Store:   "request",
-							CaptureKey: config.CaptureKey{
+							CaptureConfig: config.CaptureConfig{
 								RequestHeader: "X-Test",
 							},
 						},

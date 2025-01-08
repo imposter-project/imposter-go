@@ -108,24 +108,28 @@ func ProcessResponse(rs *ResponseState, req *http.Request, resp config.Response,
 		}
 	}
 
-	// Get resp content
-	var responseContent string
-	if resp.File != "" {
-		filePath := filepath.Join(configDir, resp.File)
-		data, err := os.ReadFile(filePath)
-		if err != nil {
-			rs.StatusCode = http.StatusInternalServerError
-			rs.Body = []byte("Failed to read file")
-			return
+	// Only override response content if specified, as it may have been set by an interceptor
+	if resp.File != "" || resp.Content != "" {
+		var responseContent string
+		if resp.File != "" {
+			filePath := filepath.Join(configDir, resp.File)
+			data, err := os.ReadFile(filePath)
+			if err != nil {
+				rs.StatusCode = http.StatusInternalServerError
+				rs.Body = []byte("Failed to read file")
+				return
+			}
+			responseContent = string(data)
+		} else if resp.Content != "" {
+			responseContent = resp.Content
 		}
-		responseContent = string(data)
-	} else {
-		responseContent = resp.Content
-	}
 
-	// Process template if enabled
-	if resp.Template {
-		responseContent = template.ProcessTemplate(responseContent, req, imposterConfig, requestStore)
+		// Process template if enabled
+		if resp.Template {
+			responseContent = template.ProcessTemplate(responseContent, req, imposterConfig, requestStore)
+		}
+
+		rs.Body = []byte(responseContent)
 	}
 
 	// Set Content-Type header if not already set
@@ -146,7 +150,6 @@ func ProcessResponse(rs *ResponseState, req *http.Request, resp config.Response,
 		}
 	}
 
-	rs.Body = []byte(responseContent)
 	logger.Infof("handled request - method:%s, path:%s, status:%d, length:%d",
-		req.Method, req.URL.Path, rs.StatusCode, len(responseContent))
+		req.Method, req.URL.Path, rs.StatusCode, len(rs.Body))
 }
