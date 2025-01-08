@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/imposter-project/imposter-go/internal/logger"
 	"github.com/imposter-project/imposter-go/internal/response"
 	"github.com/imposter-project/imposter-go/plugin/rest"
 	"github.com/imposter-project/imposter-go/plugin/soap"
@@ -44,6 +45,7 @@ func HandleRequest(w http.ResponseWriter, r *http.Request, configDir string, con
 		}
 
 		if err != nil {
+			logger.Errorf("Failed to initialise handler: %v", err)
 			http.Error(w, "Failed to initialise handler", http.StatusInternalServerError)
 			return
 		}
