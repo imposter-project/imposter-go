@@ -13,11 +13,7 @@ import (
 func ProcessInterceptor(rs *response.ResponseState, r *http.Request, body []byte, interceptor config.Interceptor, requestStore store.Store, imposterConfig *config.ImposterConfig, configDir string, processor response.Processor) bool {
 	// Capture request data if specified
 	if interceptor.Capture != nil {
-		capture.CaptureRequestData(imposterConfig, config.Resource{
-			RequestMatcher: config.RequestMatcher{
-				Capture: interceptor.Capture,
-			},
-		}, r, body, requestStore)
+		capture.CaptureRequestData(imposterConfig, interceptor.Capture, r, body, requestStore)
 	}
 
 	if interceptor.Response != nil {

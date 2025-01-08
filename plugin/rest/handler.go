@@ -77,7 +77,7 @@ func (h *Handler) HandleRequest(r *http.Request, requestStore store.Store, respo
 	}
 
 	// Capture request data
-	capture.CaptureRequestData(h.imposterConfig, *best.Resource, r, body, requestStore)
+	capture.CaptureRequestData(h.imposterConfig, best.Resource.Capture, r, body, requestStore)
 
 	// Process the response
 	h.ProcessResponse(responseState, r, best.Resource.Response, requestStore)

@@ -15,9 +15,8 @@ import (
 )
 
 // CaptureRequestData captures elements of the request and stores them in the specified store.
-// TODO change the signature of this function to accept a map of string to CaptureConfig instead of a resource (as used by interceptors too)
-func CaptureRequestData(imposterConfig *config.ImposterConfig, resource config.Resource, r *http.Request, body []byte, requestStore store.Store) {
-	for key, capture := range resource.Capture {
+func CaptureRequestData(imposterConfig *config.ImposterConfig, captureMap map[string]config.Capture, r *http.Request, body []byte, requestStore store.Store) {
+	for key, capture := range captureMap {
 		if capture.Enabled != nil && !*capture.Enabled {
 			continue
 		}
