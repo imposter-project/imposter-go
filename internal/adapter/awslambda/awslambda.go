@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/imposter-project/imposter-go/internal/adapter"
@@ -15,6 +16,11 @@ import (
 
 // HandleLambdaRequest handles incoming Lambda requests and routes them to the appropriate handler.
 func HandleLambdaRequest(req json.RawMessage) (interface{}, error) {
+	startTime := time.Now()
+	defer func() {
+		logger.Infof("lambda startup completed in %v", time.Since(startTime))
+	}()
+
 	// For Lambda, default to /var/task/config if IMPOSTER_CONFIG_DIR is not set
 	if os.Getenv("IMPOSTER_CONFIG_DIR") == "" {
 		logger.Infoln("IMPOSTER_CONFIG_DIR not set, defaulting to /var/task/config")

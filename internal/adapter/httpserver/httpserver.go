@@ -3,6 +3,7 @@ package httpserver
 import (
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/imposter-project/imposter-go/internal/adapter"
 	"github.com/imposter-project/imposter-go/internal/config"
@@ -19,6 +20,7 @@ type httpServer struct {
 
 // StartServer initialises and starts the HTTP server.
 func StartServer() {
+	startTime := time.Now()
 	var configDirArg string
 	if len(os.Args) >= 2 {
 		configDirArg = os.Args[1]
@@ -28,6 +30,7 @@ func StartServer() {
 
 	// Initialise and start the server with multiple configs
 	srv := newServer(imposterConfig, configDir, configs)
+	logger.Infof("server startup completed in %v", time.Since(startTime))
 	srv.start(imposterConfig)
 }
 
