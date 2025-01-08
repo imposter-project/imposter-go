@@ -11,15 +11,16 @@ import (
 	"github.com/imposter-project/imposter-go/internal/logger"
 )
 
-// httpServer represents the HTTP server configuration.
-type httpServer struct {
-	Addr      string
-	ConfigDir string
-	Configs   []config.Config
+// HTTPAdapter represents the HTTP server runtime adapter
+type HTTPAdapter struct{}
+
+// NewAdapter creates a new HTTP server adapter instance
+func NewAdapter() adapter.Adapter {
+	return &HTTPAdapter{}
 }
 
-// StartServer initialises and starts the HTTP server.
-func StartServer() {
+// Start begins the HTTP server runtime
+func (a *HTTPAdapter) Start() {
 	startTime := time.Now()
 	var configDirArg string
 	if len(os.Args) >= 2 {
@@ -30,8 +31,15 @@ func StartServer() {
 
 	// Initialise and start the server with multiple configs
 	srv := newServer(imposterConfig, configDir, configs)
-	logger.Infof("server startup completed in %v", time.Since(startTime))
+	logger.Infof("startup completed in %v", time.Since(startTime))
 	srv.start(imposterConfig)
+}
+
+// httpServer represents the HTTP server configuration.
+type httpServer struct {
+	Addr      string
+	ConfigDir string
+	Configs   []config.Config
 }
 
 // newServer creates a new instance of httpServer.

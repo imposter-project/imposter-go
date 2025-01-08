@@ -8,17 +8,42 @@ import (
 	"time"
 
 	"github.com/aws/aws-lambda-go/events"
+	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/imposter-project/imposter-go/internal/adapter"
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/handler"
 	"github.com/imposter-project/imposter-go/internal/logger"
 )
 
-// HandleLambdaRequest handles incoming Lambda requests and routes them to the appropriate handler.
-func HandleLambdaRequest(req json.RawMessage) (interface{}, error) {
+// LambdaAdapter represents the AWS Lambda runtime adapter
+type LambdaAdapter struct{}
+
+// NewAdapter creates a new Lambda adapter instance
+func NewAdapter() adapter.Adapter {
+	return &LambdaAdapter{}
+}
+
+// Start begins the Lambda runtime
+func (a *LambdaAdapter) Start() {
+	lambda.Start(HandleLambdaRequest)
+}
+
+var (
+	// Package-level variables to store configuration
+	imposterConfig *config.ImposterConfig
+	configDir      string
+	configs        []config.Config
+)
+
+func init() {
+	// Only execute Lambda initialization if we're running in Lambda mode
+	if !adapter.IsLambda() {
+		return
+	}
+
 	startTime := time.Now()
 	defer func() {
-		logger.Infof("lambda startup completed in %v", time.Since(startTime))
+		logger.Infof("startup completed in %v", time.Since(startTime))
 	}()
 
 	// For Lambda, default to /var/task/config if IMPOSTER_CONFIG_DIR is not set
@@ -27,8 +52,12 @@ func HandleLambdaRequest(req json.RawMessage) (interface{}, error) {
 		os.Setenv("IMPOSTER_CONFIG_DIR", "/var/task/config")
 	}
 
-	imposterConfig, configDir, configs := adapter.InitialiseImposter("")
+	// Load configuration once during cold start
+	imposterConfig, configDir, configs = adapter.InitialiseImposter("")
+}
 
+// HandleLambdaRequest handles incoming Lambda requests and routes them to the appropriate handler.
+func HandleLambdaRequest(req json.RawMessage) (interface{}, error) {
 	var apiGatewayReq events.APIGatewayProxyRequest
 	var lambdaFunctionURLReq events.LambdaFunctionURLRequest
 
