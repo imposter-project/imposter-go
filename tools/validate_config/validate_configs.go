@@ -55,7 +55,7 @@ func main() {
 				} else {
 					fmt.Printf("✗ %s - Invalid:\n", path)
 					for _, desc := range result.Errors() {
-						fmt.Printf("- %s\n", desc)
+						fmt.Printf("\t - %s\n", desc)
 					}
 				}
 			}
