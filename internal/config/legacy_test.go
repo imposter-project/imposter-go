@@ -41,12 +41,43 @@ response:
 			envVar:   "true",
 		},
 		{
+			name: "legacy config with staticContent",
+			config: `
+plugin: rest
+response:
+  statusCode: 200
+  staticContent: example response`,
+			expected: true,
+			envVar:   "true",
+		},
+		{
 			name: "legacy config with staticFile",
 			config: `
 plugin: rest
 response:
   statusCode: 200
   staticFile: example.json`,
+			expected: true,
+			envVar:   "true",
+		},
+		{
+			name: "legacy config with root level properties",
+			config: `
+plugin: rest
+path: /static-multi
+contentType: text/html
+method: GET`,
+			expected: true,
+			envVar:   "true",
+		},
+		{
+			name: "legacy config with resource level contentType",
+			config: `
+plugin: rest
+resources:
+  - path: /static-multi
+    contentType: text/html
+    method: GET`,
 			expected: true,
 			envVar:   "true",
 		},
@@ -126,6 +157,21 @@ resources:
     headers: {}`,
 		},
 		{
+			name: "legacy config with staticContent",
+			config: `
+plugin: rest
+response:
+  statusCode: 200
+  staticContent: example response`,
+			expectedConfig: `
+plugin: rest
+resources:
+- response:
+    statusCode: 200
+    content: example response
+    headers: {}`,
+		},
+		{
 			name: "legacy config with staticFile",
 			config: `
 plugin: rest
@@ -159,23 +205,55 @@ resources:
       Content-Type: application/json`,
 		},
 		{
-			name: "legacy config with delay",
+			name: "legacy config with root level properties",
 			config: `
 plugin: rest
-response:
-  statusCode: 200
-  content: example response
-  delay:
-    exact: 1000`,
+path: /static-multi
+contentType: text/html
+method: GET`,
 			expectedConfig: `
 plugin: rest
 resources:
-- response:
-    statusCode: 200
+- path: /static-multi
+  method: GET
+  response:
+    headers:
+      Content-Type: text/html`,
+		},
+		{
+			name: "legacy config with resource level contentType",
+			config: `
+plugin: rest
+resources:
+  - path: /static-multi
+    contentType: text/html
+    method: GET`,
+			expectedConfig: `
+plugin: rest
+resources:
+- path: /static-multi
+  method: GET
+  response:
+    headers:
+      Content-Type: text/html`,
+		},
+		{
+			name: "legacy config with resource level staticContent",
+			config: `
+plugin: rest
+resources:
+  - path: /static-multi
+    method: GET
+    response:
+      staticContent: example response`,
+			expectedConfig: `
+plugin: rest
+resources:
+- path: /static-multi
+  method: GET
+  response:
     content: example response
-    headers: {}
-    delay:
-      exact: 1000`,
+    headers: {}`,
 		},
 		{
 			name:        "invalid yaml",
@@ -205,13 +283,12 @@ resources:
 
 			// Compare resources
 			for i := range expectedConfig.Resources {
+				assert.Equal(t, expectedConfig.Resources[i].Path, actualConfig.Resources[i].Path)
+				assert.Equal(t, expectedConfig.Resources[i].Method, actualConfig.Resources[i].Method)
 				assert.Equal(t, expectedConfig.Resources[i].Response.StatusCode, actualConfig.Resources[i].Response.StatusCode)
 				assert.Equal(t, expectedConfig.Resources[i].Response.Content, actualConfig.Resources[i].Response.Content)
 				assert.Equal(t, expectedConfig.Resources[i].Response.File, actualConfig.Resources[i].Response.File)
 				assert.Equal(t, expectedConfig.Resources[i].Response.Headers, actualConfig.Resources[i].Response.Headers)
-				if expectedConfig.Resources[i].Response.Delay.Exact != 0 {
-					assert.Equal(t, expectedConfig.Resources[i].Response.Delay.Exact, actualConfig.Resources[i].Response.Delay.Exact)
-				}
 			}
 		})
 	}
