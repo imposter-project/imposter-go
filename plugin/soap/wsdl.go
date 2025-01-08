@@ -83,13 +83,18 @@ func NewWSDLParser(wsdlPath string) (WSDLParser, error) {
 	}
 
 	// Check for WSDL 2.0
-	if strings.Contains(root.Attr[0].Value, "http://www.w3.org/ns/wsdl") {
-		return newWSDL2Parser(doc, wsdlPath)
+	for _, attr := range root.Attr {
+		if strings.Contains(attr.Value, "http://www.w3.org/ns/wsdl") {
+			return newWSDL2Parser(doc, wsdlPath)
+		}
 	}
 
 	// Check for WSDL 1.1
-	if strings.Contains(root.Attr[0].Value, "http://schemas.xmlsoap.org/wsdl/") {
-		return newWSDL1Parser(doc, wsdlPath)
+	// check all root attributes
+	for _, attr := range root.Attr {
+		if strings.Contains(attr.Value, "http://schemas.xmlsoap.org/wsdl/") {
+			return newWSDL1Parser(doc, wsdlPath)
+		}
 	}
 
 	return nil, fmt.Errorf("unsupported WSDL version")
