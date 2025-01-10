@@ -25,14 +25,25 @@ const (
 	SOAP12
 )
 
+// WSDLDocProvider is the interface that provides the WSDL document
+type WSDLDocProvider interface {
+	GetWSDLDoc() *xmlquery.Node
+	GetWSDLPath() string
+}
+
 // WSDLParser is the interface that all WSDL parsers must implement
 type WSDLParser interface {
+	WSDLDocProvider
 	GetVersion() WSDLVersion
 	GetSOAPVersion() SOAPVersion
 	GetOperations() map[string]*Operation
 	GetOperation(name string) *Operation
 	ValidateRequest(operation string, body []byte) error
 	GetBindingName(op *Operation) string
+}
+
+func (w *BaseWSDLParser) GetWSDLPath() string {
+	return w.wsdlPath
 }
 
 // Operation represents a WSDL operation
@@ -53,9 +64,32 @@ type Message struct {
 
 // BaseWSDLParser provides common functionality for WSDL parsers
 type BaseWSDLParser struct {
-	doc        *xmlquery.Node
 	wsdlPath   string
+	doc        *xmlquery.Node
 	operations map[string]*Operation
+}
+
+// GetBindingName returns the binding name for the given operation
+func (p *BaseWSDLParser) GetBindingName(op *Operation) string {
+	if op == nil {
+		return ""
+	}
+	return op.Binding
+}
+
+// GetOperation returns the operation by name
+func (p *BaseWSDLParser) GetOperation(name string) *Operation {
+	return p.operations[name]
+}
+
+// GetOperations returns all operations
+func (p *BaseWSDLParser) GetOperations() map[string]*Operation {
+	return p.operations
+}
+
+// GetWSDLDoc returns the WSDL document
+func (p *BaseWSDLParser) GetWSDLDoc() *xmlquery.Node {
+	return p.doc
 }
 
 // newWSDLParser creates a new version-aware WSDL parser instance
@@ -105,6 +139,12 @@ func newWSDLParser(wsdlPath string) (WSDLParser, error) {
 func augmentConfigWithWSDL(cfg *config.Config, parser WSDLParser) error {
 	ops := parser.GetOperations()
 	for _, op := range ops {
+		// Generate example response XML
+		exampleResponse, err := generateExampleXML(op.Output.Element, parser.GetWSDLPath(), parser.GetWSDLDoc())
+		if err != nil {
+			return err
+		}
+
 		// Create an interceptor with default RequestMatcher
 		newInterceptor := config.Interceptor{
 			Continue: true,
@@ -127,11 +167,9 @@ func augmentConfigWithWSDL(cfg *config.Config, parser WSDLParser) error {
 				Headers: map[string]string{
 					"Content-Type": "application/soap+xml",
 				},
-				// Minimal placeholder for a SOAP response
+				// Use generated example response
 				Content: `<soap:Envelope xmlns:soap="` + getNamespace(parser.GetSOAPVersion()) + `">
-  <soap:Body>
-    <!-- Example response for ` + op.Name + ` -->
-  </soap:Body>
+  <soap:Body>` + exampleResponse + `</soap:Body>
 </soap:Envelope>`,
 			},
 		}
