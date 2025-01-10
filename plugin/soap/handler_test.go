@@ -57,10 +57,10 @@ func TestSOAPHandler_HandleRequest(t *testing.T) {
 <env:Envelope xmlns:env="http://www.w3.org/2003/05/soap-envelope">
     <env:Header/>
     <env:Body>
-        <getPetByIdResponse xmlns="urn:com:example:petstore">
-            <id>3</id>
-            <n>Test Pet<n>
-        </getPetByIdResponse>
+        <pet:getPetByIdResponse xmlns:pet="urn:com:example:petstore">
+            <pet:id>3</pet:id>
+            <pet:name>Test Pet</pet:name>
+        </pet:getPetByIdResponse>
     </env:Body>
 </env:Envelope>`,
 					StatusCode: 200,
@@ -77,10 +77,10 @@ func TestSOAPHandler_HandleRequest(t *testing.T) {
 
 	// Create test request
 	soapRequest := `<?xml version="1.0" encoding="UTF-8"?>
-<env:Envelope xmlns:env="http://www.w3.org/2003/05/soap-envelope" xmlns:pet="urn:com:example:petstore">
+<env:Envelope xmlns:env="http://www.w3.org/2003/05/soap-envelope">
     <env:Header/>
     <env:Body>
-        <pet:getPetByIdRequest>
+        <pet:getPetByIdRequest xmlns:pet="urn:com:example:petstore">
             <pet:id>3</pet:id>
         </pet:getPetByIdRequest>
     </env:Body>
@@ -111,10 +111,10 @@ func TestSOAPHandler_HandleRequest(t *testing.T) {
 	}
 
 	responseBody := string(responseState.Body)
-	if !strings.Contains(responseBody, "<getPetByIdResponse") {
+	if !strings.Contains(responseBody, "<pet:getPetByIdResponse") {
 		t.Errorf("Expected response to contain getPetByIdResponse, got %s", responseBody)
 	}
-	if !strings.Contains(responseBody, "<n>Test Pet<n>") {
+	if !strings.Contains(responseBody, "<pet:name>Test Pet</pet:name>") {
 		t.Errorf("Expected response to contain Test Pet, got %s", responseBody)
 	}
 }
@@ -508,7 +508,11 @@ func TestSOAPHandler_SOAP11Fault(t *testing.T) {
       <soapenv:Fault>
          <faultcode>soapenv:Client</faultcode>
          <faultstring>Invalid pet ID</faultstring>
-         <detail>Pet ID must be a positive integer</detail>
+         <detail>
+            <pet:getPetByIdFault xmlns:pet="urn:com:example:petstore">
+                <pet:message>Pet ID must be a positive integer</pet:message>
+            </pet:getPetByIdFault>
+         </detail>
       </soapenv:Fault>
    </soapenv:Body>
 </soapenv:Envelope>`,
@@ -528,9 +532,9 @@ func TestSOAPHandler_SOAP11Fault(t *testing.T) {
 	soapRequest := `<?xml version="1.0" encoding="UTF-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/">
    <soapenv:Body>
-      <getPetById xmlns="urn:com:example:petstore">
-         <id>invalid</id>
-      </getPetById>
+      <pet:getPetByIdRequest xmlns:pet="urn:com:example:petstore">
+         <pet:id>invalid</pet:id>
+      </pet:getPetByIdRequest>
    </soapenv:Body>
 </soapenv:Envelope>`
 
@@ -582,11 +586,18 @@ func TestSOAPHandler_SOAP12Fault(t *testing.T) {
       <env:Fault>
          <env:Code>
             <env:Value>env:Sender</env:Value>
+            <env:Subcode>
+               <env:Value>pet:InvalidId</env:Value>
+            </env:Subcode>
          </env:Code>
          <env:Reason>
-            <env:Text>Invalid pet ID</env:Text>
+            <env:Text xml:lang="en">Invalid pet ID</env:Text>
          </env:Reason>
-         <env:Detail>Pet ID must be a positive integer</env:Detail>
+         <env:Detail>
+            <pet:getPetByIdFault xmlns:pet="urn:com:example:petstore">
+                <pet:message>Pet ID must be a positive integer</pet:message>
+            </pet:getPetByIdFault>
+         </env:Detail>
       </env:Fault>
    </env:Body>
 </env:Envelope>`,
@@ -606,9 +617,9 @@ func TestSOAPHandler_SOAP12Fault(t *testing.T) {
 	soapRequest := `<?xml version="1.0" encoding="UTF-8"?>
 <env:Envelope xmlns:env="http://www.w3.org/2003/05/soap-envelope">
    <env:Body>
-      <getPetById xmlns="urn:com:example:petstore">
-         <id>invalid</id>
-      </getPetById>
+      <pet:getPetByIdRequest xmlns:pet="urn:com:example:petstore">
+         <pet:id>invalid</pet:id>
+      </pet:getPetByIdRequest>
    </env:Body>
 </env:Envelope>`
 
@@ -639,7 +650,7 @@ func TestSOAPHandler_SOAP12Fault(t *testing.T) {
 	if !strings.Contains(responseBody, "<env:Value>env:Sender</env:Value>") {
 		t.Errorf("Expected fault to contain error code, got %s", responseBody)
 	}
-	if !strings.Contains(responseBody, "<env:Text>Invalid pet ID</env:Text>") {
+	if !strings.Contains(responseBody, "<env:Text xml:lang=\"en\">Invalid pet ID</env:Text>") {
 		t.Errorf("Expected fault to contain error message, got %s", responseBody)
 	}
 }

@@ -25,6 +25,15 @@ const (
 	SOAP12
 )
 
+const (
+	WSDL1Namespace     = "http://schemas.xmlsoap.org/wsdl/"
+	WSDL2Namespace     = "http://www.w3.org/ns/wsdl"
+	XMLSchemaNamespace = "http://www.w3.org/2001/XMLSchema"
+	SOAP11Namespace    = "http://schemas.xmlsoap.org/wsdl/soap/"
+	SOAP12Namespace    = "http://schemas.xmlsoap.org/wsdl/soap12/"
+	WSOAP20Namespace   = "http://www.w3.org/ns/wsdl/soap"
+)
+
 // WSDLDocProvider is the interface that provides the WSDL document
 type WSDLDocProvider interface {
 	GetWSDLDoc() *xmlquery.Node
@@ -40,6 +49,7 @@ type WSDLParser interface {
 	GetOperation(name string) *Operation
 	ValidateRequest(operation string, body []byte) error
 	GetBindingName(op *Operation) string
+	GetTargetNamespace() string
 }
 
 func (w *BaseWSDLParser) GetWSDLPath() string {
@@ -60,6 +70,7 @@ type Operation struct {
 type Message struct {
 	Name    string
 	Element string
+	Type    string // For WSDL 1.1 message parts that use type references
 }
 
 // BaseWSDLParser provides common functionality for WSDL parsers
@@ -92,6 +103,15 @@ func (p *BaseWSDLParser) GetWSDLDoc() *xmlquery.Node {
 	return p.doc
 }
 
+// GetTargetNamespace returns the target namespace of the WSDL document
+func (p *BaseWSDLParser) GetTargetNamespace() string {
+	root := p.doc.SelectElement("*")
+	if root == nil {
+		return ""
+	}
+	return root.SelectAttr("targetNamespace")
+}
+
 // newWSDLParser creates a new version-aware WSDL parser instance
 func newWSDLParser(wsdlPath string) (WSDLParser, error) {
 	// Read and parse the WSDL file
@@ -119,15 +139,14 @@ func newWSDLParser(wsdlPath string) (WSDLParser, error) {
 
 	// Check for WSDL 2.0
 	for _, attr := range root.Attr {
-		if strings.Contains(attr.Value, "http://www.w3.org/ns/wsdl") {
+		if strings.Contains(attr.Value, WSDL2Namespace) {
 			return newWSDL2Parser(doc, wsdlPath)
 		}
 	}
 
 	// Check for WSDL 1.1
-	// check all root attributes
 	for _, attr := range root.Attr {
-		if strings.Contains(attr.Value, "http://schemas.xmlsoap.org/wsdl/") {
+		if strings.Contains(attr.Value, WSDL1Namespace) {
 			return newWSDL1Parser(doc, wsdlPath)
 		}
 	}
@@ -202,4 +221,36 @@ func getNamespace(version SOAPVersion) string {
 		return "http://www.w3.org/2003/05/soap-envelope"
 	}
 	return "http://schemas.xmlsoap.org/soap/envelope/"
+}
+
+// getLocalPart extracts the local part from a QName
+func getLocalPart(qname string) string {
+	if idx := strings.Index(qname, ":"); idx != -1 {
+		return qname[idx+1:]
+	}
+	return qname
+}
+
+// getPrefix extracts the prefix from a QName
+func getPrefix(qname string) string {
+	if idx := strings.Index(qname, ":"); idx != -1 {
+		return qname[:idx]
+	}
+	return ""
+}
+
+// resolveNamespace resolves a namespace prefix to its URI
+func resolveNamespace(node *xmlquery.Node, prefix string) string {
+	if prefix == "" {
+		return ""
+	}
+	for _, attr := range node.Attr {
+		if attr.Name.Space == "xmlns" && attr.Name.Local == prefix {
+			return attr.Value
+		}
+	}
+	if node.Parent != nil {
+		return resolveNamespace(node.Parent, prefix)
+	}
+	return ""
 }
