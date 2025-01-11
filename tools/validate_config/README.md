@@ -55,6 +55,8 @@ Run the validator by providing a directory containing config files to validate:
 
 ```bash
 ./validate_configs -c <directory>
+OR
+go run validate_configs.go -c <directory>
 
 
 
