@@ -29,14 +29,32 @@ func loadConfigFiles(configDir string) []string {
 	return configFiles
 }
 
-func validateConfig(configDir string) int {
-	fmt.Println("Validating config files")
-	schemaLoader, err := loadSchema()
+func validateConfig(schema gojsonschema.JSONLoader, configFile string) (int, error) {
+	documentLoader := gojsonschema.NewStringLoader(configFile)
+	result, err := gojsonschema.Validate(schema, documentLoader)
+
 	if err != nil {
 		panic(err.Error())
 	}
+
+	if result.Valid() {
+		return 1, nil
+	} else {
+		for _, desc := range result.Errors() {
+			fmt.Printf("\t - %s\n", desc)
+		}
+		return 0, nil
+	}
+}
+
+func loadConfigFromFile(configDir string) (int, int, error) {
 	var configFiles = loadConfigFiles(configDir)
 	var validFiles int
+	var totalFiles = len(configFiles)
+	schema, err := loadSchema()
+	if err != nil {
+		panic(err.Error())
+	}
 	for _, configFile := range configFiles {
 		docYaml, err := os.ReadFile(configFile)
 		if err != nil {
@@ -46,26 +64,18 @@ func validateConfig(configDir string) int {
 		if err != nil {
 			panic(err.Error())
 		}
-
-		documentLoader := gojsonschema.NewStringLoader(string(j2))
-		result, err := gojsonschema.Validate(schemaLoader, documentLoader)
-
+		fileResult, err := validateConfig(schema, string(j2))
 		if err != nil {
 			panic(err.Error())
-
 		}
-
-		if result.Valid() {
+		if fileResult == 1 {
 			fmt.Printf("✓ %s - Valid\n", configFile)
-			validFiles++
+			validFiles = validFiles + fileResult
 		} else {
 			fmt.Printf("✗ %s - Invalid:\n", configFile)
-			for _, desc := range result.Errors() {
-				fmt.Printf("\t - %s\n", desc)
-			}
 		}
 	}
-	return validFiles
+	return validFiles, totalFiles, nil
 }
 
 func loadSchema() (gojsonschema.JSONLoader, error) {
@@ -97,7 +107,10 @@ func main() {
 		log.Println(err)
 	}
 
-	valid := validateConfig(*c)
-	fmt.Printf("Successfully validated %d files.\n", valid)
+	valid, total, err := loadConfigFromFile(*c)
+	if err != nil {
+		log.Println(err)
+	}
+	fmt.Printf("Successfully validated %d files of %d.\n", valid, total)
 
 }
