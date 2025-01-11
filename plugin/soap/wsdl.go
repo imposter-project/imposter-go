@@ -109,7 +109,26 @@ func (p *BaseWSDLParser) GetTargetNamespace() string {
 	if root == nil {
 		return ""
 	}
-	return root.SelectAttr("targetNamespace")
+	for _, attr := range root.Attr {
+		if attr.Name.Local == "targetNamespace" {
+			return attr.Value
+		}
+	}
+	return ""
+}
+
+// GetNamespaceByPrefix returns the namespace URI for a given prefix
+func (p *BaseWSDLParser) GetNamespaceByPrefix(prefix string) string {
+	root := p.doc.SelectElement("*")
+	if root == nil {
+		return ""
+	}
+	for _, attr := range root.Attr {
+		if attr.Name.Space == "xmlns" && attr.Name.Local == prefix {
+			return attr.Value
+		}
+	}
+	return ""
 }
 
 // newWSDLParser creates a new version-aware WSDL parser instance
@@ -159,6 +178,7 @@ func augmentConfigWithWSDL(cfg *config.Config, parser WSDLParser) error {
 	ops := parser.GetOperations()
 	for _, op := range ops {
 		// Generate example response XML
+		// TODO make this lazy; use a template placeholder function, such as ${soap.example('${op.Name}')}
 		exampleResponse, err := generateExampleXML(op.Output.Element, parser.GetWSDLPath(), parser.GetWSDLDoc())
 		if err != nil {
 			return err

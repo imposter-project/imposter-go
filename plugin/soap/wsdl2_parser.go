@@ -98,6 +98,12 @@ func (p *wsdl2Parser) parseOperations() error {
 				if bindingNode := xmlquery.FindOne(bindingOp, "ancestor::wsdl:binding|ancestor::binding"); bindingNode != nil {
 					op.Binding = bindingNode.SelectAttr("name")
 				}
+			} else {
+				// If no binding operation found, try to find binding by interface name
+				bindingExpr := fmt.Sprintf(`//wsdl:binding[@interface='tns:%[1]s']|//binding[@interface='tns:%[1]s']|//wsdl:binding[@interface='%[1]s']|//binding[@interface='%[1]s']`, interfaceName)
+				if bindingNode := xmlquery.FindOne(p.doc, bindingExpr); bindingNode != nil {
+					op.Binding = bindingNode.SelectAttr("name")
+				}
 			}
 
 			p.operations[op.Name] = op
@@ -110,14 +116,16 @@ func (p *wsdl2Parser) parseOperations() error {
 // findBindingOperation finds the binding operation node for a given interface and operation name
 func (p *wsdl2Parser) findBindingOperation(interfaceName, opName string) *xmlquery.Node {
 	// First find the binding for this interface
-	bindingExpr := fmt.Sprintf("//wsdl:binding[@interface='tns:%s']|//binding[@interface='tns:%s']|//wsdl:binding[@interface='%s']|//binding[@interface='%s']", interfaceName, interfaceName, interfaceName, interfaceName)
+	// Try with and without tns: prefix, and with both wsdl: and no prefix
+	bindingExpr := fmt.Sprintf(`//wsdl:binding[@interface='tns:%[1]s']|//binding[@interface='tns:%[1]s']|//wsdl:binding[@interface='%[1]s']|//binding[@interface='%[1]s']`, interfaceName)
 	bindingNode := xmlquery.FindOne(p.doc, bindingExpr)
 	if bindingNode == nil {
 		return nil
 	}
 
 	// Then find the operation within this binding
-	return xmlquery.FindOne(bindingNode, fmt.Sprintf("./wsdl:operation[@ref='tns:%s']|./operation[@ref='tns:%s']|./wsdl:operation[@ref='%s']|./operation[@ref='%s']", opName, opName, opName, opName))
+	// Try with and without tns: prefix
+	return xmlquery.FindOne(bindingNode, fmt.Sprintf(`./wsdl:operation[@ref='tns:%[1]s']|./operation[@ref='tns:%[1]s']|./wsdl:operation[@ref='%[1]s']|./operation[@ref='%[1]s']`, opName))
 }
 
 // getMessage extracts message details from a WSDL 2.0 message reference

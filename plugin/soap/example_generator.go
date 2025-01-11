@@ -1,7 +1,6 @@
 package soap
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,71 +12,102 @@ import (
 )
 
 // generateExampleXML generates example XML based on the WSDL schema
-func generateExampleXML(elementName string, wsdlPath string, wsdlDoc *xmlquery.Node) (string, error) {
-	wsdlDir := filepath.Dir(wsdlPath)
+func generateExampleXML(element string, wsdlPath string, doc *xmlquery.Node) (string, error) {
+	// Create a temporary directory for schema files
+	tempDir, err := os.MkdirTemp("", "wsdl-schemas-*")
+	if err != nil {
+		return "", fmt.Errorf("failed to create temp directory: %w", err)
+	}
+	defer os.RemoveAll(tempDir)
 
-	// extract all schemas from the wsdlDoc
-	typesNode := xmlquery.FindOne(wsdlDoc, "//*[local-name()='types']")
+	// Process all schemas and their imports
+	typesNode := xmlquery.FindOne(doc, "//*[local-name()='types']")
 	if typesNode == nil {
-		return "", errors.New("types element not found")
+		return "", fmt.Errorf("types element not found")
 	}
 
 	schemas := xmlquery.Find(typesNode, ".//*[local-name()='schema']")
 	if len(schemas) == 0 {
-		return "", errors.New("no schemas found")
+		return "", fmt.Errorf("no schemas found")
 	}
-
-	// Create a temporary directory for all schema files
-	tempDir, err := os.MkdirTemp("", "schema_files")
-	if err != nil {
-		return "", fmt.Errorf("failed to create temporary directory: %w", err)
-	}
-	defer os.RemoveAll(tempDir)
 
 	// Track processed schemas to avoid duplicates
 	processedSchemas := make(map[string]string)
 
 	// Process each schema and its imports recursively
+	wsdlDir := filepath.Dir(wsdlPath)
 	for i, schema := range schemas {
 		if err := processSchema(wsdlDir, schema, tempDir, i, processedSchemas); err != nil {
 			return "", fmt.Errorf("failed to process schema %d: %w", i, err)
 		}
 	}
 
-	// Create an umbrella schema that imports all the processed schemas
-	umbrellaFile := filepath.Join(tempDir, "umbrella_schema.xsd")
-	umbrellaSchema := `<?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">`
-
-	for _, schemaPath := range processedSchemas {
-		targetNs := extractTargetNamespace(schemaPath)
-		relPath, _ := filepath.Rel(filepath.Dir(umbrellaFile), schemaPath)
-
-		if targetNs != "" {
-			umbrellaSchema += fmt.Sprintf(`
-    <xs:import namespace="%s" schemaLocation="%s"/>`, targetNs, relPath)
-		} else {
-			umbrellaSchema += fmt.Sprintf(`
-    <xs:include schemaLocation="%s"/>`, relPath)
+	// Get target namespace from first schema (or root if not found)
+	var targetNS string
+	for _, schemaNode := range schemas {
+		if ns := schemaNode.SelectAttr("targetNamespace"); ns != "" {
+			targetNS = ns
+			break
+		}
+	}
+	if targetNS == "" {
+		// Try to get from root element as fallback
+		if root := doc.SelectElement("*"); root != nil {
+			targetNS = root.SelectAttr("targetNamespace")
 		}
 	}
 
-	umbrellaSchema += `
-</xs:schema>`
+	// Extract local part of element QName
+	localPart := getLocalPart(element)
+	prefix := getPrefix(element)
 
-	if err := os.WriteFile(umbrellaFile, []byte(umbrellaSchema), 0644); err != nil {
-		return "", fmt.Errorf("failed to write umbrella schema: %w", err)
+	elementExpr := fmt.Sprintf("//*[local-name()='element' and @name='%s']", localPart)
+	
+	// the path to the schema file that contains the element
+	var elementSchemaPath string
+
+	// If not found in main WSDL, try each processed schema
+	if elementSchemaPath == "" {
+		for _, schemaPath := range processedSchemas {
+			schemaContent, err := os.ReadFile(schemaPath)
+			if err != nil {
+				logger.Warnf("failed to read schema file %s: %v", schemaPath, err)
+				continue
+			}
+
+			schemaDoc, err := xmlquery.Parse(strings.NewReader(string(schemaContent)))
+			if err != nil {
+				logger.Warnf("failed to parse schema file %s: %v", schemaPath, err)
+				continue
+			}
+
+			elementNode := xmlquery.FindOne(schemaDoc, elementExpr)
+			if elementNode != nil {
+				// Found the element, remember the path to the schema file and get its target namespace
+				elementSchemaPath = schemaPath
+				
+				if schemaRoot := schemaDoc.SelectElement("schema"); schemaRoot != nil {
+					if ns := schemaRoot.SelectAttr("targetNamespace"); ns != "" {
+						targetNS = ns
+					}
+				}
+				break
+			}
+		}
 	}
-	logger.Tracef("wrote umbrella schema to %s", umbrellaFile)
 
-	// Generate XML using the umbrella schema
-	xml, err := examplegen.Generate(umbrellaFile, elementName)
+	if elementSchemaPath == "" {
+		return "", fmt.Errorf("element definition not found: %s (searched in WSDL and %d schema files)", element, len(processedSchemas))
+	}
+
+	logger.Debugf("generating example for element [localPart: %s, prefix: %s, target namespace: %s]", localPart, prefix, targetNS)
+
+	example, err := examplegen.GenerateWithNs(elementSchemaPath, localPart, targetNS, prefix)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate XML: %w", err)
 	}
 
-	logger.Tracef("generated XML: %s", xml)
-	return xml, nil
+	return example, nil
 }
 
 // processSchema writes a schema to a temporary file and processes its imports
@@ -116,6 +146,14 @@ func processSchema(wsdlDir string, schema *xmlquery.Node, tempDir string, index 
 				continue
 			}
 
+			// Copy the imported schema to the temp directory
+			targetPath := filepath.Join(tempDir, filepath.Base(schemaLocation))
+			if err := os.WriteFile(targetPath, importedContent, 0644); err != nil {
+				logger.Warnf("failed to write imported schema %s: %v", targetPath, err)
+				continue
+			}
+			processedSchemas[schemaLocation] = targetPath
+
 			importedDoc, err := xmlquery.Parse(strings.NewReader(string(importedContent)))
 			if err != nil {
 				logger.Warnf("failed to parse imported schema %s: %v", resolvedPath, err)
@@ -143,31 +181,6 @@ func processSchema(wsdlDir string, schema *xmlquery.Node, tempDir string, index 
 	processedSchemas[getSchemaKey(schema)] = schemaPath
 	logger.Tracef("wrote schema %d to %s", index, schemaPath)
 	return nil
-}
-
-// extractTargetNamespace gets the target namespace from a schema file
-func extractTargetNamespace(schemaPath string) string {
-	content, err := os.ReadFile(schemaPath)
-	if err != nil {
-		return ""
-	}
-
-	doc, err := xmlquery.Parse(strings.NewReader(string(content)))
-	if err != nil {
-		return ""
-	}
-
-	schemaNode := xmlquery.FindOne(doc, "//*[local-name()='schema']")
-	if schemaNode == nil {
-		return ""
-	}
-
-	for _, attr := range schemaNode.Attr {
-		if attr.Name.Local == "targetNamespace" {
-			return attr.Value
-		}
-	}
-	return ""
 }
 
 // getSchemaKey generates a unique key for a schema node

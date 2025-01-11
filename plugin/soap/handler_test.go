@@ -338,7 +338,7 @@ func TestSOAPHandler_HandleRequest_WithPassthroughInterceptor(t *testing.T) {
     <env:Body>
         <getPetByIdResponse xmlns="urn:com:example:petstore">
             <id>3</id>
-            <n>Test Pet<n>
+            <name>Test Pet</name>
         </getPetByIdResponse>
     </env:Body>
 </env:Envelope>`,
@@ -389,7 +389,7 @@ func TestSOAPHandler_HandleRequest_WithPassthroughInterceptor(t *testing.T) {
 	if !strings.Contains(responseBody, "<getPetByIdResponse") {
 		t.Errorf("Expected response to contain getPetByIdResponse, got %s", responseBody)
 	}
-	if !strings.Contains(responseBody, "<n>Test Pet<n>") {
+	if !strings.Contains(responseBody, "<name>Test Pet</name>") {
 		t.Errorf("Expected response to contain Test Pet, got %s", responseBody)
 	}
 }
