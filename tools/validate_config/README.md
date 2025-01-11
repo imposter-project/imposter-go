@@ -2,7 +2,8 @@
 
 A tool to validate Imposter configuration files against a JSON schema.
 
-## Setup
+## Python
+### Setup
 
 1. Create and activate the virtual environment:
 ```bash
@@ -17,7 +18,7 @@ source venv/bin/activate  # On Unix/macOS
 pip install -r requirements.txt
 ```
 
-## Usage
+### Usage
 
 Run the validator by providing a directory containing config files to validate:
 
@@ -39,6 +40,26 @@ For example:
 
 The script will find all files ending in `-config.yaml` or `-config.yml` in the specified directory (recursively) and validate them against the schema.
 
+## GoLang
+
+### Setup
+
+Run
+```bash
+go build -o validate_configs
+```
+
+### Usage
+
+Run the validator by providing a directory containing config files to validate:
+
+```bash
+./validate_configs -c <directory>
+OR
+go run validate_configs.go -c <directory>
+
+
+
 ## Schema
 
 The schema is defined in `imposter-config-schema.json` and supports:
@@ -55,6 +76,7 @@ The schema uses JSON Schema inheritance to represent the type hierarchy:
 - `bodyMatchCondition` - extends `matchCondition` with JSON/XML path support
 - `requestBody` - extends `bodyMatchCondition` with allOf/anyOf support
 - `requestMatcher` - base type for resources and interceptors
+
 
 ## Example Output
 
