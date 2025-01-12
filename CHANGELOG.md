@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [0.8.0] - 2025-01-12
+### Added
+- feat(soap): improves WSDL message parsing.
+- feat: adds XML example generator.
+- feat: improves SOAP response example generation.
+
+### Changed
+- refactor(soap): moves WSDL parser logic into separate files.
+
+### Fixed
+- fix: WSDL 2 parser should look up interface operation from binding ref.
+
 ## [0.7.0] - 2025-01-08
 ### Added
 - feat(wsdl): prepopulate responses based on WSDL.
