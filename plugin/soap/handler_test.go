@@ -19,11 +19,11 @@ func TestSOAPHandler_HandleRequest(t *testing.T) {
 	tempDir := t.TempDir()
 
 	// Copy test WSDL file to temp directory
-	wsdlContent, err := os.ReadFile("testdata/petstore.wsdl")
+	wsdlContent, err := os.ReadFile("testdata/petstore20.wsdl")
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = os.WriteFile(filepath.Join(tempDir, "petstore.wsdl"), wsdlContent, 0644)
+	err = os.WriteFile(filepath.Join(tempDir, "petstore20.wsdl"), wsdlContent, 0644)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -31,7 +31,7 @@ func TestSOAPHandler_HandleRequest(t *testing.T) {
 	// Create test configuration
 	cfg := &config.Config{
 		Plugin:   "soap",
-		WSDLFile: filepath.Join(tempDir, "petstore.wsdl"),
+		WSDLFile: filepath.Join(tempDir, "petstore20.wsdl"),
 		System: &config.System{
 			XMLNamespaces: map[string]string{
 				"pet": "urn:com:example:petstore",
@@ -123,7 +123,7 @@ func TestSOAPHandler_HandleRequest_InvalidMethod(t *testing.T) {
 	// Create test configuration
 	cfg := &config.Config{
 		Plugin:   "soap",
-		WSDLFile: filepath.Join("testdata", "petstore.wsdl"),
+		WSDLFile: filepath.Join("testdata", "petstore20.wsdl"),
 		Resources: []config.Resource{
 			{
 				RequestMatcher: config.RequestMatcher{
@@ -165,7 +165,7 @@ func TestSOAPHandler_HandleRequest_NoMatchingOperation(t *testing.T) {
 	// Create test configuration
 	cfg := &config.Config{
 		Plugin:   "soap",
-		WSDLFile: filepath.Join("testdata", "petstore.wsdl"),
+		WSDLFile: filepath.Join("testdata", "petstore20.wsdl"),
 		Resources: []config.Resource{
 			{
 				RequestMatcher: config.RequestMatcher{
@@ -218,7 +218,7 @@ func TestSOAPHandler_HandleRequest_WithInterceptor(t *testing.T) {
 	// Create test configuration
 	cfg := &config.Config{
 		Plugin:   "soap",
-		WSDLFile: filepath.Join("testdata", "petstore.wsdl"),
+		WSDLFile: filepath.Join("testdata", "petstore20.wsdl"),
 		Interceptors: []config.Interceptor{
 			{
 				RequestMatcher: config.RequestMatcher{
@@ -296,7 +296,7 @@ func TestSOAPHandler_HandleRequest_WithPassthroughInterceptor(t *testing.T) {
 	// Create test configuration
 	cfg := &config.Config{
 		Plugin:   "soap",
-		WSDLFile: filepath.Join("testdata", "petstore.wsdl"),
+		WSDLFile: filepath.Join("testdata", "petstore20.wsdl"),
 		Interceptors: []config.Interceptor{
 			{
 				RequestMatcher: config.RequestMatcher{
@@ -398,7 +398,7 @@ func TestSOAPHandler_HandleRequest_InvalidXML(t *testing.T) {
 	// Create test configuration
 	cfg := &config.Config{
 		Plugin:   "soap",
-		WSDLFile: filepath.Join("testdata", "petstore.wsdl"),
+		WSDLFile: filepath.Join("testdata", "petstore20.wsdl"),
 	}
 
 	// Create handler
@@ -446,7 +446,7 @@ func TestSOAPHandler_HandleRequest_MissingBody(t *testing.T) {
 	// Create test configuration
 	cfg := &config.Config{
 		Plugin:   "soap",
-		WSDLFile: filepath.Join("testdata", "petstore.wsdl"),
+		WSDLFile: filepath.Join("testdata", "petstore20.wsdl"),
 	}
 
 	// Create handler
@@ -571,7 +571,7 @@ func TestSOAPHandler_SOAP12Fault(t *testing.T) {
 	// Create test configuration
 	cfg := &config.Config{
 		Plugin:   "soap",
-		WSDLFile: filepath.Join("testdata", "petstore.wsdl"),
+		WSDLFile: filepath.Join("testdata", "petstore20.wsdl"),
 		Resources: []config.Resource{
 			{
 				RequestMatcher: config.RequestMatcher{
@@ -659,7 +659,7 @@ func TestSOAPHandler_InvalidSOAPVersion(t *testing.T) {
 	// Create test configuration
 	cfg := &config.Config{
 		Plugin:   "soap",
-		WSDLFile: filepath.Join("testdata", "petstore.wsdl"),
+		WSDLFile: filepath.Join("testdata", "petstore20.wsdl"),
 	}
 
 	// Create handler

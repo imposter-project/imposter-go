@@ -49,67 +49,86 @@ func (p *wsdl2Parser) ValidateRequest(operation string, body []byte) error {
 }
 
 func (p *wsdl2Parser) parseOperations() error {
-	// Find all interface nodes
-	interfaceNodes := xmlquery.Find(p.doc, "//wsdl:interface|//interface")
-	for _, iface := range interfaceNodes {
-		interfaceName := iface.SelectAttr("name")
-		operationNodes := xmlquery.Find(iface, "./wsdl:operation|./operation")
-		for _, node := range operationNodes {
-			opName := node.SelectAttr("name")
-			op := &Operation{
-				Name: opName,
-			}
+	// Find all bindings
+	bindingNodes := xmlquery.Find(p.doc, "//wsdl:binding|//binding")
+	for _, wsdlBinding := range bindingNodes {
+		bindingName := wsdlBinding.SelectAttr("name")
 
-			// Parse input message
-			if msg, err := p.getMessage(node, "./wsdl:input|./input", true); err != nil {
-				return fmt.Errorf("failed to parse input message: %w", err)
-			} else if msg != nil {
-				op.Input = msg
-			}
+		interfaceName := wsdlBinding.SelectAttr("interface")
+		if interfaceName == "" {
+			return fmt.Errorf("interface attribute is required for WSDL 2.0 bindings")
+		}
 
-			// Parse output message
-			if msg, err := p.getMessage(node, "./wsdl:output|./output", true); err != nil {
-				return fmt.Errorf("failed to parse output message: %w", err)
-			} else if msg != nil {
-				op.Output = msg
-			}
+		_, ifaceLocalName := splitQName(interfaceName)
 
-			// Try fault at operation level first, then interface level
-			if msg, err := p.getMessage(node, "./wsdl:fault|./fault|./wsdl:outfault|./outfault", false); err != nil {
-				return fmt.Errorf("failed to parse fault message: %w", err)
-			} else if msg != nil {
-				op.Fault = msg
-			} else {
-				// Try interface level fault
-				if msg, err := p.getMessage(iface, "./wsdl:fault|./fault", false); err != nil {
-					return fmt.Errorf("failed to parse interface fault message: %w", err)
-				} else if msg != nil {
-					op.Fault = msg
-				}
-			}
+		// Find the interface node
+		interfaceNode := xmlquery.FindOne(p.doc, fmt.Sprintf("//wsdl:interface[@name='tns:%[1]s']|//interface[@name='tns:%[1]s']|//wsdl:interface[@name='%[1]s']|//interface[@name='%[1]s']", ifaceLocalName))
+		if interfaceNode == nil {
+			return fmt.Errorf("interface not found for binding: %s", interfaceName)
+		}
 
-			// Find corresponding binding operation to get SOAPAction
-			bindingOp := p.findBindingOperation(interfaceName, opName)
-			if bindingOp != nil {
-				if soapActionNode := xmlquery.FindOne(bindingOp, "./wsoap:operation"); soapActionNode != nil {
-					op.SOAPAction = soapActionNode.SelectAttr("soapAction")
-				}
-				// Get binding name from parent binding node
-				if bindingNode := xmlquery.FindOne(bindingOp, "ancestor::wsdl:binding|ancestor::binding"); bindingNode != nil {
-					op.Binding = bindingNode.SelectAttr("name")
-				}
-			} else {
-				// If no binding operation found, try to find binding by interface name
-				bindingExpr := fmt.Sprintf(`//wsdl:binding[@interface='tns:%[1]s']|//binding[@interface='tns:%[1]s']|//wsdl:binding[@interface='%[1]s']|//binding[@interface='%[1]s']`, interfaceName)
-				if bindingNode := xmlquery.FindOne(p.doc, bindingExpr); bindingNode != nil {
-					op.Binding = bindingNode.SelectAttr("name")
-				}
+		// Find all operation nodes
+		operationNodes := xmlquery.Find(wsdlBinding, "./wsdl:operation|./operation")
+		for _, bindingOperation := range operationNodes {
+			if err := p.parseOperation(bindingOperation, interfaceNode, bindingName); err != nil {
+				return err
 			}
-
-			p.operations[op.Name] = op
 		}
 	}
 
+	return nil
+}
+
+func (p *wsdl2Parser) parseOperation(bindingOperation *xmlquery.Node, interfaceNode *xmlquery.Node, bindingName string) error {
+	opRef := bindingOperation.SelectAttr("ref")
+
+	_, opRefLocalName := splitQName(opRef)
+
+	// get interface operation node
+	interfaceOperation := xmlquery.FindOne(interfaceNode, fmt.Sprintf("./wsdl:operation[@name='%[1]s']|./operation[@name='%[1]s']", opRefLocalName))
+	if interfaceOperation == nil {
+		return fmt.Errorf("operation not found for binding: %s", opRefLocalName)
+	}
+
+	op := &Operation{
+		Name:    interfaceOperation.SelectAttr("name"),
+		Binding: bindingName,
+	}
+
+	// Parse input message
+	if msg, err := p.getMessage(interfaceOperation, "./wsdl:input|./input", true); err != nil {
+		return fmt.Errorf("failed to parse input message: %w", err)
+	} else if msg != nil {
+		op.Input = msg
+	}
+
+	// Parse output message
+	if msg, err := p.getMessage(interfaceOperation, "./wsdl:output|./output", true); err != nil {
+		return fmt.Errorf("failed to parse output message: %w", err)
+	} else if msg != nil {
+		op.Output = msg
+	}
+
+	// Try fault at operation level first, then interface level
+	if msg, err := p.getMessage(interfaceOperation, "./wsdl:fault|./fault|./wsdl:outfault|./outfault", false); err != nil {
+		return fmt.Errorf("failed to parse fault message: %w", err)
+	} else if msg != nil {
+		op.Fault = msg
+	} else {
+		// Try interface level fault
+		if msg, err := p.getMessage(interfaceNode, "./wsdl:fault|./fault", false); err != nil {
+			return fmt.Errorf("failed to parse interface fault message: %w", err)
+		} else if msg != nil {
+			op.Fault = msg
+		}
+	}
+
+	soapOp := xmlquery.FindOne(interfaceOperation, "./wsoap:operation")
+	if soapOp != nil {
+		op.SOAPAction = soapOp.SelectAttr("soapAction")
+	}
+
+	p.operations[op.Name] = op
 	return nil
 }
 

@@ -62,37 +62,34 @@ func generateExampleXML(element string, wsdlPath string, doc *xmlquery.Node) (st
 	prefix := getPrefix(element)
 
 	elementExpr := fmt.Sprintf("//*[local-name()='element' and @name='%s']", localPart)
-	
+
 	// the path to the schema file that contains the element
 	var elementSchemaPath string
 
-	// If not found in main WSDL, try each processed schema
-	if elementSchemaPath == "" {
-		for _, schemaPath := range processedSchemas {
-			schemaContent, err := os.ReadFile(schemaPath)
-			if err != nil {
-				logger.Warnf("failed to read schema file %s: %v", schemaPath, err)
-				continue
-			}
+	for _, schemaPath := range processedSchemas {
+		schemaContent, err := os.ReadFile(schemaPath)
+		if err != nil {
+			logger.Warnf("failed to read schema file %s: %v", schemaPath, err)
+			continue
+		}
 
-			schemaDoc, err := xmlquery.Parse(strings.NewReader(string(schemaContent)))
-			if err != nil {
-				logger.Warnf("failed to parse schema file %s: %v", schemaPath, err)
-				continue
-			}
+		schemaDoc, err := xmlquery.Parse(strings.NewReader(string(schemaContent)))
+		if err != nil {
+			logger.Warnf("failed to parse schema file %s: %v", schemaPath, err)
+			continue
+		}
 
-			elementNode := xmlquery.FindOne(schemaDoc, elementExpr)
-			if elementNode != nil {
-				// Found the element, remember the path to the schema file and get its target namespace
-				elementSchemaPath = schemaPath
-				
-				if schemaRoot := schemaDoc.SelectElement("schema"); schemaRoot != nil {
-					if ns := schemaRoot.SelectAttr("targetNamespace"); ns != "" {
-						targetNS = ns
-					}
+		elementNode := xmlquery.FindOne(schemaDoc, elementExpr)
+		if elementNode != nil {
+			// Found the element, remember the path to the schema file and get its target namespace
+			elementSchemaPath = schemaPath
+
+			if schemaRoot := schemaDoc.SelectElement("schema"); schemaRoot != nil {
+				if ns := schemaRoot.SelectAttr("targetNamespace"); ns != "" {
+					targetNS = ns
 				}
-				break
 			}
+			break
 		}
 	}
 
@@ -112,6 +109,9 @@ func generateExampleXML(element string, wsdlPath string, doc *xmlquery.Node) (st
 
 // processSchema writes a schema to a temporary file and processes its imports
 func processSchema(wsdlDir string, schema *xmlquery.Node, tempDir string, index int, processedSchemas map[string]string) error {
+	// Add missing xsd namespace if not present
+	ensureXsdNamespace(schema)
+
 	schemaXML := schema.OutputXML(true)
 	schemaDoc, err := xmlquery.Parse(strings.NewReader(schemaXML))
 	if err != nil {
@@ -181,6 +181,30 @@ func processSchema(wsdlDir string, schema *xmlquery.Node, tempDir string, index 
 	processedSchemas[getSchemaKey(schema)] = schemaPath
 	logger.Tracef("wrote schema %d to %s", index, schemaPath)
 	return nil
+}
+
+// ensureXsdNamespace adds the xsd namespace to a schema if it is missing
+func ensureXsdNamespace(schema *xmlquery.Node) {
+	hasXSDNS := false
+	for _, attr := range schema.Attr {
+		if attr.Name.Space == "xmlns" && attr.Name.Local == "xsd" {
+			hasXSDNS = true
+			break
+		}
+	}
+	if !hasXSDNS {
+		logger.Tracef("adding xsd namespace to schema")
+		schema.Attr = append(schema.Attr, xmlquery.Attr{
+			Name: struct {
+				Space string
+				Local string
+			}{
+				Space: "xmlns",
+				Local: "xsd",
+			},
+			Value: XMLSchemaNamespace,
+		})
+	}
 }
 
 // getSchemaKey generates a unique key for a schema node
