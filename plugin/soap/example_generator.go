@@ -109,8 +109,7 @@ func generateExampleXML(element string, wsdlPath string, doc *xmlquery.Node) (st
 
 // processSchema writes a schema to a temporary file and processes its imports
 func processSchema(wsdlDir string, schema *xmlquery.Node, tempDir string, index int, processedSchemas map[string]string) error {
-	// Add missing xsd namespace if not present
-	ensureXsdNamespace(schema)
+	inheritNamespaces(schema)
 
 	schemaXML := schema.OutputXML(true)
 	schemaDoc, err := xmlquery.Parse(strings.NewReader(schemaXML))
@@ -183,28 +182,26 @@ func processSchema(wsdlDir string, schema *xmlquery.Node, tempDir string, index 
 	return nil
 }
 
-// ensureXsdNamespace adds the xsd namespace to a schema if it is missing
-func ensureXsdNamespace(schema *xmlquery.Node) {
-	hasXSDNS := false
-	for _, attr := range schema.Attr {
-		if attr.Name.Space == "xmlns" && attr.Name.Local == "xsd" {
-			hasXSDNS = true
-			break
+// inheritNamespaces adds namespace prefixes to the schema if they are missing
+// traversing up the parent nodes until the root
+func inheritNamespaces(node *xmlquery.Node) {
+	for parent := node.Parent; parent != nil; parent = parent.Parent {
+		for _, attr := range parent.Attr {
+			if doesSchemaHaveNsPrefix(node, attr.Name.Local) {
+				continue
+			}
+			node.Attr = append(node.Attr, attr)
 		}
 	}
-	if !hasXSDNS {
-		logger.Tracef("adding xsd namespace to schema")
-		schema.Attr = append(schema.Attr, xmlquery.Attr{
-			Name: struct {
-				Space string
-				Local string
-			}{
-				Space: "xmlns",
-				Local: "xsd",
-			},
-			Value: XMLSchemaNamespace,
-		})
+}
+
+func doesSchemaHaveNsPrefix(node *xmlquery.Node, prefix string) bool {
+	for _, attr := range node.Attr {
+		if attr.Name.Local == prefix {
+			return true
+		}
 	}
+	return false
 }
 
 // getSchemaKey generates a unique key for a schema node
