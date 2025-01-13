@@ -2,7 +2,6 @@ package soap
 
 import (
 	"bytes"
-	"encoding/xml"
 	"fmt"
 	"net/http"
 	"strings"
@@ -23,70 +22,6 @@ const (
 	soap11ContentType  = textXMLContentType
 	soap12ContentType  = "application/soap+xml"
 )
-
-// SOAPEnvelope represents a SOAP envelope structure
-type SOAPEnvelope struct {
-	XMLName xml.Name `xml:"http://schemas.xmlsoap.org/soap/envelope/ Envelope"`
-	Body    SOAPBody
-}
-
-// SOAP11Envelope represents a SOAP 1.1 envelope structure
-type SOAP11Envelope struct {
-	XMLName xml.Name `xml:"http://schemas.xmlsoap.org/soap/envelope/ Envelope"`
-	Body    SOAP11Body
-}
-
-// SOAP12Envelope represents a SOAP 1.2 envelope structure
-type SOAP12Envelope struct {
-	XMLName xml.Name `xml:"http://www.w3.org/2003/05/soap-envelope Envelope"`
-	Body    SOAP12Body
-}
-
-// SOAPBody represents a SOAP body structure
-type SOAPBody struct {
-	XMLName xml.Name `xml:"http://schemas.xmlsoap.org/soap/envelope/ Body"`
-	Content []byte   `xml:",innerxml"`
-}
-
-// SOAP11Body represents a SOAP 1.1 body structure
-type SOAP11Body struct {
-	XMLName xml.Name `xml:"http://schemas.xmlsoap.org/soap/envelope/ Body"`
-	Content []byte   `xml:",innerxml"`
-}
-
-// SOAP12Body represents a SOAP 1.2 body structure
-type SOAP12Body struct {
-	XMLName xml.Name `xml:"http://www.w3.org/2003/05/soap-envelope Body"`
-	Content []byte   `xml:",innerxml"`
-}
-
-// SOAPFault represents a SOAP fault structure
-type SOAPFault struct {
-	XMLName xml.Name `xml:"http://schemas.xmlsoap.org/soap/envelope/ Fault"`
-	Code    string   `xml:"faultcode"`
-	String  string   `xml:"faultstring"`
-	Detail  string   `xml:"detail,omitempty"`
-}
-
-// SOAP11Fault represents a SOAP 1.1 fault structure
-type SOAP11Fault struct {
-	XMLName xml.Name `xml:"http://schemas.xmlsoap.org/soap/envelope/ Fault"`
-	Code    string   `xml:"faultcode"`
-	String  string   `xml:"faultstring"`
-	Detail  string   `xml:"detail,omitempty"`
-}
-
-// SOAP12Fault represents a SOAP 1.2 fault structure
-type SOAP12Fault struct {
-	XMLName xml.Name `xml:"http://www.w3.org/2003/05/soap-envelope Fault"`
-	Code    struct {
-		Value string `xml:"Value"`
-	} `xml:"Code"`
-	Reason struct {
-		Text string `xml:"Text"`
-	} `xml:"Reason"`
-	Detail string `xml:"Detail,omitempty"`
-}
 
 // getSoapAction extracts the SOAPAction from headers
 func (h *PluginHandler) getSoapAction(r *http.Request) string {
@@ -212,7 +147,7 @@ func (h *PluginHandler) determineOperation(soapAction string, bodyHolder *Messag
 	// Get namespace and local name
 	var namespace string
 	for _, attr := range bodyElement.Attr {
-		if attr.Name.Space == "xmlns" {
+		if attr.Name.Local == "xmlns" {
 			namespace = attr.Value
 			break
 		}
@@ -229,16 +164,18 @@ func (h *PluginHandler) determineOperation(soapAction string, bodyHolder *Messag
 	for _, op := range h.wsdlParser.GetOperations() {
 		if op.Input != nil {
 			// Match by element
-			if op.Input.Element != "" {
-				inputNS, inputName := splitQName(op.Input.Element)
+			if op.Input.Element != nil {
+				// inputNS, inputName := splitQName(op.Input.Element)
+				inputNS, inputName := op.Input.Element.Space, op.Input.Element.Local
 				if inputNS == namespace && inputName == localName {
 					matchedOps = append(matchedOps, op)
 				}
 			}
 
-			// Match by name
-			if op.Input.Name == localName {
-				matchedOps = append(matchedOps, op)
+			// Match by type
+			if op.Input.Type != nil {
+				// TODO: implement type matching
+				//matchedOps = append(matchedOps, op)
 			}
 		}
 	}
@@ -247,15 +184,6 @@ func (h *PluginHandler) determineOperation(soapAction string, bodyHolder *Messag
 		return matchedOps[0]
 	}
 	return nil
-}
-
-// splitQName splits a qualified name into namespace and local part
-func splitQName(qname string) (namespace, localPart string) {
-	parts := strings.Split(qname, ":")
-	if len(parts) == 2 {
-		return parts[0], parts[1]
-	}
-	return "", qname
 }
 
 // calculateScore calculates how well a request matches a resource or interceptor
@@ -345,10 +273,9 @@ func (h *PluginHandler) HandleRequest(r *http.Request, requestStore store.Store,
 
 	// Process interceptors first
 	for _, interceptorCfg := range h.config.Interceptors {
-		score, isWildcard := h.calculateScore(&interceptorCfg.RequestMatcher, r, body, op.Name, soapAction, requestStore)
+		score, _ := h.calculateScore(&interceptorCfg.RequestMatcher, r, body, op.Name, soapAction, requestStore)
 		if score > 0 {
-			logger.Infof("matched interceptor - method:%s, path:%s, wildcard:%v",
-				r.Method, r.URL.Path, isWildcard)
+			logger.Infof("matched interceptor - method:%s, path:%s", r.Method, r.URL.Path)
 
 			if !commonInterceptor.ProcessInterceptor(responseState, r, body, interceptorCfg, requestStore, h.imposterConfig, h.configDir, h) {
 				responseState.Handled = true

@@ -1,7 +1,9 @@
 package soap
 
 import (
+	"encoding/xml"
 	"fmt"
+	"github.com/imposter-project/imposter-go/pkg/xsd"
 	"os"
 	"strings"
 
@@ -38,6 +40,7 @@ const (
 type WSDLDocProvider interface {
 	GetWSDLDoc() *xmlquery.Node
 	GetWSDLPath() string
+	GetSchemaSystem() *xsd.SchemaSystem
 }
 
 // WSDLParser is the interface that all WSDL parsers must implement
@@ -68,9 +71,8 @@ type Operation struct {
 
 // Message represents a WSDL message
 type Message struct {
-	Name    string
-	Element string
-	Type    string // For WSDL 1.1 message parts that use type references
+	Element *xml.Name
+	Type    *xml.Name
 }
 
 // BaseWSDLParser provides common functionality for WSDL parsers
@@ -78,6 +80,7 @@ type BaseWSDLParser struct {
 	wsdlPath   string
 	doc        *xmlquery.Node
 	operations map[string]*Operation
+	schemas    *xsd.SchemaSystem
 }
 
 // GetBindingName returns the binding name for the given operation
@@ -101,6 +104,11 @@ func (p *BaseWSDLParser) GetOperations() map[string]*Operation {
 // GetWSDLDoc returns the WSDL document
 func (p *BaseWSDLParser) GetWSDLDoc() *xmlquery.Node {
 	return p.doc
+}
+
+// GetSchemaSystem returns the schema system
+func (p *BaseWSDLParser) GetSchemaSystem() *xsd.SchemaSystem {
+	return p.schemas
 }
 
 // GetTargetNamespace returns the target namespace of the WSDL document
@@ -179,7 +187,7 @@ func augmentConfigWithWSDL(cfg *config.Config, parser WSDLParser) error {
 	for _, op := range ops {
 		// Generate example response XML
 		// TODO make this lazy; use a template placeholder function, such as ${soap.example('${op.Name}')}
-		exampleResponse, err := generateExampleXML(op.Output.Element, parser.GetWSDLPath(), parser.GetWSDLDoc())
+		exampleResponse, err := generateExampleXML(op.Output.Element, &parser)
 		if err != nil {
 			return err
 		}

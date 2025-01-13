@@ -1,6 +1,7 @@
 package soap
 
 import (
+	"encoding/xml"
 	"os"
 	"path/filepath"
 	"testing"
@@ -13,14 +14,59 @@ func TestWSDL1Operations(t *testing.T) {
 	wsdlContent := `<?xml version="1.0" encoding="UTF-8"?>
 <definitions xmlns="http://schemas.xmlsoap.org/wsdl/"
              xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+             xmlns:xsd="http://www.w3.org/2001/XMLSchema"
              xmlns:tns="http://example.com/test">
+
+    <types>
+        <xsd:schema targetNamespace="urn:com:example:petstore">
+            <xsd:element name="TestRequest">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="id" type="xsd:int"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+
+            <xsd:element name="TestResponse">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="id" type="xsd:int"/>
+                        <xsd:element name="name" type="xsd:string"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+
+            <xsd:element name="TestFault">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="code" type="xsd:string"/>
+                        <xsd:element name="message" type="xsd:string"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+        </xsd:schema>
+    </types>
+
+	<message name="TestInput">
+        <part name="parameters" element="tns:TestRequest"/>
+    </message>
+    <message name="TestOutput">
+        <part name="parameters" element="tns:TestResponse"/>
+    </message>
+    <message name="TestFault">
+        <part name="parameters" element="tns:TestFault"/>
+    </message>
+    <portType name="TestPortType">
+        <operation name="TestOperation">
+            <input message="TestInput"/>
+            <output message="TestOutput"/>
+            <fault message="TestFault"/>
+        </operation>
+    </portType>
     <binding name="TestBinding" type="tns:TestPortType">
         <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
         <operation name="TestOperation">
             <soap:operation soapAction="http://example.com/test/action"/>
-            <input name="TestInput" element="tns:TestRequest"/>
-            <output name="TestOutput" element="tns:TestResponse"/>
-            <fault name="TestFault" element="tns:TestFault"/>
         </operation>
     </binding>
 </definitions>`
@@ -47,12 +93,9 @@ func TestWSDL1Operations(t *testing.T) {
 	assert.Equal(t, "TestBinding", op.Binding)
 
 	// Test operation messages
-	assert.Equal(t, "TestInput", op.Input.Name)
-	assert.Equal(t, "tns:TestRequest", op.Input.Element)
-	assert.Equal(t, "TestOutput", op.Output.Name)
-	assert.Equal(t, "tns:TestResponse", op.Output.Element)
-	assert.Equal(t, "TestFault", op.Fault.Name)
-	assert.Equal(t, "tns:TestFault", op.Fault.Element)
+	assert.Equal(t, &xml.Name{Space: "http://www.w3.org/2001/XMLSchema", Local: "TestRequest"}, op.Input.Element)
+	assert.Equal(t, &xml.Name{Space: "http://www.w3.org/2001/XMLSchema", Local: "TestResponse"}, op.Output.Element)
+	assert.Equal(t, &xml.Name{Space: "http://www.w3.org/2001/XMLSchema", Local: "TestFault"}, op.Fault.Element)
 
 	// Test GetBindingName
 	assert.Equal(t, "TestBinding", parser.GetBindingName(op))

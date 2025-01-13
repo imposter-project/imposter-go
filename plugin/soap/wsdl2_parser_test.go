@@ -1,6 +1,7 @@
 package soap
 
 import (
+	"encoding/xml"
 	"os"
 	"path/filepath"
 	"testing"
@@ -12,7 +13,38 @@ import (
 func TestWSDL2Operations(t *testing.T) {
 	wsdlContent := `<?xml version="1.0" encoding="UTF-8"?>
 <description xmlns="http://www.w3.org/ns/wsdl"
+             xmlns:xsd="http://www.w3.org/2001/XMLSchema"
              xmlns:tns="http://example.com/test">
+
+    <types>
+        <xsd:schema targetNamespace="urn:com:example:petstore">
+            <xsd:element name="TestRequest">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="id" type="xsd:int"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+
+            <xsd:element name="TestResponse">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="id" type="xsd:int"/>
+                        <xsd:element name="name" type="xsd:string"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+
+            <xsd:element name="TestFault">
+                <xsd:complexType>
+                    <xsd:sequence>
+                        <xsd:element name="code" type="xsd:string"/>
+                        <xsd:element name="message" type="xsd:string"/>
+                    </xsd:sequence>
+                </xsd:complexType>
+            </xsd:element>
+        </xsd:schema>
+    </types>
     <interface name="TestInterface">
         <operation name="TestOperation">
             <input messageLabel="In" element="tns:TestRequest"/>
@@ -45,12 +77,9 @@ func TestWSDL2Operations(t *testing.T) {
 	assert.Equal(t, "TestOperation", op.Name)
 
 	// Test operation messages
-	assert.Equal(t, "In", op.Input.Name)
-	assert.Equal(t, "tns:TestRequest", op.Input.Element)
-	assert.Equal(t, "Out", op.Output.Name)
-	assert.Equal(t, "tns:TestResponse", op.Output.Element)
-	assert.Equal(t, "Fault", op.Fault.Name)
-	assert.Equal(t, "tns:TestFault", op.Fault.Element)
+	assert.Equal(t, &xml.Name{Space: "http://www.w3.org/2001/XMLSchema", Local: "TestRequest"}, op.Input.Element)
+	assert.Equal(t, &xml.Name{Space: "http://www.w3.org/2001/XMLSchema", Local: "TestResponse"}, op.Output.Element)
+	assert.Equal(t, &xml.Name{Space: "http://www.w3.org/2001/XMLSchema", Local: "TestFault"}, op.Fault.Element)
 
 	// Test GetBindingName
 	assert.Equal(t, "TestBinding", parser.GetBindingName(op))

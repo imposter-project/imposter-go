@@ -1,4 +1,4 @@
-package soap
+package xsd
 
 import (
 	"strings"
@@ -21,7 +21,7 @@ func TestInheritNamespaces_ParentHasNamespaces_InheritsSuccessfully(t *testing.T
 	childNode := xmlquery.FindOne(doc, "//child")
 	require.NotNil(t, childNode)
 
-	inheritNamespaces(childNode)
+	InheritNamespaces(childNode)
 
 	nsAttr := childNode.SelectAttr("xmlns:ns1")
 	require.Equal(t, "http://example.com/ns1", nsAttr)
@@ -40,7 +40,7 @@ func TestInheritNamespaces_NoParentNamespaces_NoInheritance(t *testing.T) {
 	childNode := xmlquery.FindOne(doc, "//child")
 	require.NotNil(t, childNode)
 
-	inheritNamespaces(childNode)
+	InheritNamespaces(childNode)
 
 	nsAttr := childNode.SelectAttr("xmlns:ns1")
 	require.Equal(t, "", nsAttr)
@@ -59,7 +59,7 @@ func TestInheritNamespaces_MultipleParentNamespaces_InheritsAll(t *testing.T) {
 	childNode := xmlquery.FindOne(doc, "//child")
 	require.NotNil(t, childNode)
 
-	inheritNamespaces(childNode)
+	InheritNamespaces(childNode)
 
 	ns1Attr := childNode.SelectAttr("xmlns:ns1")
 	require.Equal(t, "http://example.com/ns1", ns1Attr)
@@ -81,7 +81,7 @@ func TestInheritNamespaces_ChildAlreadyHasNamespace_NoOverride(t *testing.T) {
 	childNode := xmlquery.FindOne(doc, "//child")
 	require.NotNil(t, childNode)
 
-	inheritNamespaces(childNode)
+	InheritNamespaces(childNode)
 
 	nsAttr := childNode.SelectAttr("xmlns:ns1")
 	require.Equal(t, "http://example.com/child-ns1", nsAttr)

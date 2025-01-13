@@ -30,10 +30,9 @@ func (h *PluginHandler) HandleRequest(r *http.Request, requestStore store.Store,
 
 	// Process interceptors first
 	for _, interceptorCfg := range h.config.Interceptors {
-		score, isWildcard := matcher.CalculateMatchScore(&interceptorCfg.RequestMatcher, r, body, systemNamespaces, h.imposterConfig, requestStore)
+		score, _ := matcher.CalculateMatchScore(&interceptorCfg.RequestMatcher, r, body, systemNamespaces, h.imposterConfig, requestStore)
 		if score > 0 {
-			logger.Infof("matched interceptor - method:%s, path:%s, wildcard:%v",
-				r.Method, r.URL.Path, isWildcard)
+			logger.Infof("matched interceptor - method:%s, path:%s", r.Method, r.URL.Path)
 
 			if !commonInterceptor.ProcessInterceptor(responseState, r, body, interceptorCfg, requestStore, h.imposterConfig, h.configDir, h) {
 				responseState.Handled = true

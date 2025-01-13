@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"github.com/imposter-project/imposter-go/internal/logger"
 	"net/http"
 	"strings"
 
@@ -11,20 +12,20 @@ import (
 )
 
 // HandleRequest processes incoming HTTP requests and routes them to the appropriate handler
-func HandleRequest(w http.ResponseWriter, r *http.Request, configDir string, plugins []plugin.Plugin, imposterConfig *config.ImposterConfig) {
+func HandleRequest(w http.ResponseWriter, req *http.Request, configDir string, plugins []plugin.Plugin, imposterConfig *config.ImposterConfig) {
 	// Initialise request-scoped store and response state
 	requestStore := make(store.Store)
 	responseState := response.NewResponseState()
 
 	// Handle system endpoints
-	if handleSystemEndpoint(w, r) {
+	if handleSystemEndpoint(w, req) {
 		return
 	}
 
 	// Process each config
 	for _, plg := range plugins {
 		// Process request with handler
-		plg.HandleRequest(r, requestStore, responseState)
+		plg.HandleRequest(req, requestStore, responseState)
 
 		// If the response has been handled by the handler, break the loop
 		if responseState.Handled {
@@ -34,8 +35,11 @@ func HandleRequest(w http.ResponseWriter, r *http.Request, configDir string, plu
 
 	// If no handler handled the response, return 404
 	if !responseState.Handled {
-		handleNotFound(r, responseState, plugins)
+		handleNotFound(req, responseState, plugins)
 	}
+
+	logger.Infof("handled request - method:%s, path:%s, status:%d, length:%d",
+		req.Method, req.URL.Path, responseState.StatusCode, len(responseState.Body))
 
 	// Write response to client
 	responseState.WriteToResponseWriter(w)

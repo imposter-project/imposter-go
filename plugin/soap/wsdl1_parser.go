@@ -2,6 +2,7 @@ package soap // WSDL 1.1 Parser
 
 import (
 	"fmt"
+	"github.com/imposter-project/imposter-go/pkg/xsd"
 	"strings"
 
 	"github.com/antchfx/xmlquery"
@@ -12,11 +13,16 @@ type wsdl1Parser struct {
 }
 
 func newWSDL1Parser(doc *xmlquery.Node, wsdlPath string) (*wsdl1Parser, error) {
+	schemas, err := xsd.ExtractSchemas(wsdlPath, doc)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract schemas: %w", err)
+	}
 	parser := &wsdl1Parser{
 		BaseWSDLParser: BaseWSDLParser{
 			doc:        doc,
 			wsdlPath:   wsdlPath,
 			operations: make(map[string]*Operation),
+			schemas:    &schemas,
 		},
 	}
 	if err := parser.parseOperations(); err != nil {
@@ -65,31 +71,32 @@ func (p *wsdl1Parser) parseOperations() error {
 			}
 		}
 	} else {
-		// If no portType found, try to get operations from binding elements
-		bindingNodes := xmlquery.Find(p.doc, "//wsdl:binding|//binding")
-		for _, binding := range bindingNodes {
-			bindingName := binding.SelectAttr("name")
-			// Find all operation nodes within this binding
-			operationNodes := xmlquery.Find(binding, "./wsdl:operation|./operation")
-			for _, node := range operationNodes {
-				if err := p.parseOperation(node, "", bindingName); err != nil {
-					return err
-				}
-			}
-		}
+		// TODO check if we need to support this for WSDL 1
+		//// If no portType found, try to get operations from binding elements
+		//bindingNodes := xmlquery.Find(p.doc, "//wsdl:binding|//binding")
+		//for _, binding := range bindingNodes {
+		//	bindingName := binding.SelectAttr("name")
+		//	// Find all operation nodes within this binding
+		//	operationNodes := xmlquery.Find(binding, "./wsdl:operation|./operation")
+		//	for _, node := range operationNodes {
+		//		if err := p.parseOperation(node, "", bindingName); err != nil {
+		//			return err
+		//		}
+		//	}
+		//}
 	}
 
 	return nil
 }
 
-func (p *wsdl1Parser) parseOperation(node *xmlquery.Node, portTypeName string, bindingName ...string) error {
-	opName := node.SelectAttr("name")
+func (p *wsdl1Parser) parseOperation(opNode *xmlquery.Node, portTypeName string, bindingName ...string) error {
+	opName := opNode.SelectAttr("name")
 	op := &Operation{
 		Name: opName,
 	}
 
 	// Parse input message
-	if inputNode := xmlquery.FindOne(node, "./wsdl:input|./input"); inputNode != nil {
+	if inputNode := xmlquery.FindOne(opNode, "./wsdl:input|./input"); inputNode != nil {
 		if msg, err := p.getMessage(inputNode); err != nil {
 			return fmt.Errorf("failed to parse input message: %w", err)
 		} else if msg != nil {
@@ -98,7 +105,7 @@ func (p *wsdl1Parser) parseOperation(node *xmlquery.Node, portTypeName string, b
 	}
 
 	// Parse output message
-	if outputNode := xmlquery.FindOne(node, "./wsdl:output|./output"); outputNode != nil {
+	if outputNode := xmlquery.FindOne(opNode, "./wsdl:output|./output"); outputNode != nil {
 		if msg, err := p.getMessage(outputNode); err != nil {
 			return fmt.Errorf("failed to parse output message: %w", err)
 		} else if msg != nil {
@@ -107,7 +114,7 @@ func (p *wsdl1Parser) parseOperation(node *xmlquery.Node, portTypeName string, b
 	}
 
 	// Parse fault message
-	if faultNode := xmlquery.FindOne(node, "./wsdl:fault|./fault"); faultNode != nil {
+	if faultNode := xmlquery.FindOne(opNode, "./wsdl:fault|./fault"); faultNode != nil {
 		if msg, err := p.getMessage(faultNode); err != nil {
 			return fmt.Errorf("failed to parse fault message: %w", err)
 		} else if msg != nil {
@@ -119,7 +126,7 @@ func (p *wsdl1Parser) parseOperation(node *xmlquery.Node, portTypeName string, b
 	if len(bindingName) > 0 && bindingName[0] != "" {
 		op.Binding = bindingName[0]
 		// Look for SOAPAction in the current node
-		if soapActionNode := xmlquery.FindOne(node, "./soap:operation|./soap12:operation"); soapActionNode != nil {
+		if soapActionNode := xmlquery.FindOne(opNode, "./soap:operation|./soap12:operation"); soapActionNode != nil {
 			op.SOAPAction = soapActionNode.SelectAttr("soapAction")
 		}
 	} else {
@@ -156,14 +163,6 @@ func (p *wsdl1Parser) findBindingOperation(portTypeName, opName string) *xmlquer
 
 // getMessage extracts message details from a WSDL message reference
 func (p *wsdl1Parser) getMessage(msgNode *xmlquery.Node) (*Message, error) {
-	// First try to get element attribute directly (for test cases)
-	if element := msgNode.SelectAttr("element"); element != "" {
-		return &Message{
-			Name:    msgNode.SelectAttr("name"),
-			Element: element,
-		}, nil
-	}
-
 	// Get the message QName (e.g. "tns:GetPetByNameRequest")
 	msgQName := msgNode.SelectAttr("message")
 	if msgQName == "" {
@@ -191,10 +190,11 @@ func (p *wsdl1Parser) getMessage(msgNode *xmlquery.Node) (*Message, error) {
 	}
 
 	// For now, we'll use the first part's element or type
+	// TODO add part filter
 	part := parts[0]
-	msg := &Message{
-		Name: msgNode.SelectAttr("name"),
-	}
+	msg := &Message{}
+
+	schemas := *p.schemas
 
 	// Check for element reference
 	if element := part.SelectAttr("element"); element != "" {
@@ -205,21 +205,32 @@ func (p *wsdl1Parser) getMessage(msgNode *xmlquery.Node) (*Message, error) {
 				element = "tns:" + element
 			}
 		}
-		msg.Element = element
+
+		elementNode, err := schemas.ResolveElement(element)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve element %s: %w", element, err)
+		}
+		msg.Element = elementNode
+
 		return msg, nil
 	}
 
 	// Check for type reference
 	if typeRef := part.SelectAttr("type"); typeRef != "" {
-		// If the type reference is not qualified and we have a target namespace, qualify it
+		// If the type reference is not qualified, and we have a target namespace, qualify it
 		if !strings.Contains(typeRef, ":") {
 			tns := p.GetTargetNamespace()
 			if tns != "" {
 				typeRef = "tns:" + typeRef
 			}
 		}
-		msg.Type = typeRef
-		msg.Name = part.SelectAttr("name") // For type references, use the part name
+
+		typeNode, err := schemas.ResolveType(typeRef)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve type %s: %w", typeRef, err)
+		}
+		msg.Type = typeNode
+
 		return msg, nil
 	}
 

@@ -150,6 +150,6 @@ func ProcessResponse(rs *ResponseState, req *http.Request, resp config.Response,
 		}
 	}
 
-	logger.Infof("handled request - method:%s, path:%s, status:%d, length:%d",
+	logger.Debugf("configured response - method:%s, path:%s, status:%d, length:%d",
 		req.Method, req.URL.Path, rs.StatusCode, len(rs.Body))
 }

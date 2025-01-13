@@ -2,6 +2,7 @@ package soap
 
 import (
 	"fmt"
+	"github.com/imposter-project/imposter-go/pkg/xsd"
 	"strings"
 
 	"github.com/antchfx/xmlquery"
@@ -13,11 +14,16 @@ type wsdl2Parser struct {
 }
 
 func newWSDL2Parser(doc *xmlquery.Node, wsdlPath string) (*wsdl2Parser, error) {
+	schemas, err := xsd.ExtractSchemas(wsdlPath, doc)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract schemas: %w", err)
+	}
 	parser := &wsdl2Parser{
 		BaseWSDLParser: BaseWSDLParser{
 			doc:        doc,
 			wsdlPath:   wsdlPath,
 			operations: make(map[string]*Operation),
+			schemas:    &schemas,
 		},
 	}
 	if err := parser.parseOperations(); err != nil {
@@ -59,7 +65,7 @@ func (p *wsdl2Parser) parseOperations() error {
 			return fmt.Errorf("interface attribute is required for WSDL 2.0 bindings")
 		}
 
-		_, ifaceLocalName := splitQName(interfaceName)
+		_, ifaceLocalName := xsd.SplitQName(interfaceName)
 
 		// Find the interface node
 		interfaceNode := xmlquery.FindOne(p.doc, fmt.Sprintf("//wsdl:interface[@name='tns:%[1]s']|//interface[@name='tns:%[1]s']|//wsdl:interface[@name='%[1]s']|//interface[@name='%[1]s']", ifaceLocalName))
@@ -82,7 +88,7 @@ func (p *wsdl2Parser) parseOperations() error {
 func (p *wsdl2Parser) parseOperation(bindingOperation *xmlquery.Node, interfaceNode *xmlquery.Node, bindingName string) error {
 	opRef := bindingOperation.SelectAttr("ref")
 
-	_, opRefLocalName := splitQName(opRef)
+	_, opRefLocalName := xsd.SplitQName(opRef)
 
 	// get interface operation node
 	interfaceOperation := xmlquery.FindOne(interfaceNode, fmt.Sprintf("./wsdl:operation[@name='%[1]s']|./operation[@name='%[1]s']", opRefLocalName))
@@ -174,8 +180,12 @@ func (p *wsdl2Parser) getMessage(context *xmlquery.Node, expression string, requ
 		}
 	}
 
+	elementNode, err := (*p.schemas).ResolveElement(element)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve element %s: %w", element, err)
+	}
+
 	return &Message{
-		Name:    msgNode.SelectAttr("messageLabel"),
-		Element: element,
+		Element: elementNode,
 	}, nil
 }
