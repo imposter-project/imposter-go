@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.2] - 2025-01-14
+### Changed
+- refactor(soap): improves 404 resource list.
+
+### Fixed
+- fix(soap): fail if a non-matching SOAPAction is specified in the request.
+
 ## [0.9.1] - 2025-01-14
 ### Fixed
 - fix: input element namespace should use schema targetNamespace.
