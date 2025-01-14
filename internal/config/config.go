@@ -131,7 +131,10 @@ type RequestMatcher struct {
 	PathParams     map[string]MatcherUnmarshaler `yaml:"pathParams"`
 	AllOf          []ExpressionMatchCondition    `yaml:"allOf,omitempty"`
 	AnyOf          []ExpressionMatchCondition    `yaml:"anyOf,omitempty"`
-	Capture        map[string]Capture            `yaml:"capture,omitempty"`
+
+	// Capture request data - TODO move to a separate struct
+	Capture map[string]Capture `yaml:"capture,omitempty"`
+
 	// SOAP-specific fields
 	Operation  string `yaml:"operation,omitempty"`
 	SOAPAction string `yaml:"soapAction,omitempty"`

@@ -196,10 +196,9 @@ func augmentConfigWithWSDL(cfg *config.Config, parser WSDLParser) error {
 		newInterceptor := config.Interceptor{
 			Continue: true,
 			RequestMatcher: config.RequestMatcher{
-				Method:     "POST",
-				SOAPAction: op.SOAPAction,
-				Operation:  op.Name,
-				Binding:    parser.GetBindingName(op),
+				Method:    "POST",
+				Operation: op.Name,
+				Binding:   parser.GetBindingName(op),
 				Capture: map[string]config.Capture{
 					"_matched-soap-operation": {
 						Store: "request",
@@ -208,6 +207,9 @@ func augmentConfigWithWSDL(cfg *config.Config, parser WSDLParser) error {
 						},
 					},
 				},
+
+				// SOAPAction header is not mandatory - don't be too strict if we can match the operation and binding
+				//SOAPAction: op.SOAPAction,
 			},
 			Response: &config.Response{
 				StatusCode: 200,

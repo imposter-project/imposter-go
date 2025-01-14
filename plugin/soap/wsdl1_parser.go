@@ -199,6 +199,7 @@ func (p *wsdl1Parser) getMessage(msgNode *xmlquery.Node) (*Message, error) {
 	// Check for element reference
 	if element := part.SelectAttr("element"); element != "" {
 		// If the element reference is not qualified and we have a target namespace, qualify it
+		// TODO check if this should be the targetNamespace from the element's schema
 		if !strings.Contains(element, ":") {
 			tns := p.GetTargetNamespace()
 			if tns != "" {
@@ -218,6 +219,7 @@ func (p *wsdl1Parser) getMessage(msgNode *xmlquery.Node) (*Message, error) {
 	// Check for type reference
 	if typeRef := part.SelectAttr("type"); typeRef != "" {
 		// If the type reference is not qualified, and we have a target namespace, qualify it
+		// TODO check if this should be the targetNamespace from the element's schema
 		if !strings.Contains(typeRef, ":") {
 			tns := p.GetTargetNamespace()
 			if tns != "" {

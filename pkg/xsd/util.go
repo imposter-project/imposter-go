@@ -41,11 +41,11 @@ func doesSchemaHaveNsPrefix(node *xmlquery.Node, prefix string) bool {
 }
 
 // loadXmlFile loads an XML file, parses it, and returns the root node
-func loadXmlFile(schemaPath string) (*xmlquery.Node, error) {
+func loadXmlFile(filePath string) (*xmlquery.Node, error) {
 	// TODO cache this
 
-	logger.Tracef("loading XML file: %s", schemaPath)
-	schemaFile, err := os.Open(schemaPath)
+	logger.Tracef("loading XML file: %s", filePath)
+	schemaFile, err := os.Open(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open XML file: %w", err)
 	}
@@ -56,4 +56,20 @@ func loadXmlFile(schemaPath string) (*xmlquery.Node, error) {
 		return nil, fmt.Errorf("failed to load XML: %w", err)
 	}
 	return schemaDoc, nil
+}
+
+// GetTargetNamespace gets the target namespace from the schema document
+func GetTargetNamespace(schemaDoc *xmlquery.Node) string {
+	if schemaRoot := schemaDoc.SelectElement("schema"); schemaRoot != nil {
+		if ns := schemaRoot.SelectAttr("targetNamespace"); ns != "" {
+			return ns
+		}
+	}
+	// Try to get from root element as fallback
+	if root := schemaDoc.SelectElement("*"); root != nil {
+		if ns := root.SelectAttr("targetNamespace"); ns != "" {
+			return ns
+		}
+	}
+	return ""
 }

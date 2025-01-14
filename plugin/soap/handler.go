@@ -144,20 +144,8 @@ func (h *PluginHandler) determineOperation(soapAction string, bodyHolder *Messag
 		return nil
 	}
 
-	// Get namespace and local name
-	var namespace string
-	for _, attr := range bodyElement.Attr {
-		if attr.Name.Local == "xmlns" {
-			namespace = attr.Value
-			break
-		}
-	}
+	namespace := bodyElement.NamespaceURI
 	localName := bodyElement.Data
-
-	// Remove Request suffix if present
-	if strings.HasSuffix(localName, "Request") {
-		localName = strings.TrimSuffix(localName, "Request")
-	}
 
 	// Match operations based on input message
 	var matchedOps []*Operation
@@ -201,10 +189,6 @@ func (h *PluginHandler) calculateScore(reqMatcher *config.RequestMatcher, r *htt
 
 	// Check SOAP-specific matches
 	if reqMatcher.Operation != "" {
-		// Remove 'Request' suffix from operation name if present
-		if strings.HasSuffix(operation, "Request") {
-			operation = strings.TrimSuffix(operation, "Request")
-		}
 		if reqMatcher.Operation != operation {
 			return 0, false
 		}
@@ -228,13 +212,6 @@ func (h *PluginHandler) calculateScore(reqMatcher *config.RequestMatcher, r *htt
 			return 0, false
 		}
 		score++
-	}
-
-	// If no matchers were specified at all, return 0
-	if score == 0 && reqMatcher.Method == "" && reqMatcher.Path == "" &&
-		reqMatcher.Operation == "" && reqMatcher.SOAPAction == "" && reqMatcher.Binding == "" &&
-		len(reqMatcher.RequestHeaders) == 0 && len(reqMatcher.QueryParams) == 0 && len(reqMatcher.FormParams) == 0 {
-		return 0, false
 	}
 
 	return score, isWildcard

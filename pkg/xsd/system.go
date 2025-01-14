@@ -88,7 +88,7 @@ func (s *schemaSystem) ResolveElement(qname string) (*xml.Name, error) {
 		element := xmlquery.FindOne(schemaDoc, fmt.Sprintf("//*[local-name()='element' and @name='%s']", localName))
 		if element != nil {
 			elName := &xml.Name{
-				Space: element.NamespaceURI,
+				Space: GetTargetNamespace(schemaDoc),
 				Local: element.SelectAttr("name"),
 			}
 			return elName, nil
@@ -109,7 +109,7 @@ func (s *schemaSystem) ResolveType(qname string) (*xml.Name, error) {
 		typ := xmlquery.FindOne(schemaDoc, fmt.Sprintf("//*[local-name()='complexType' and @name='%s']", localName))
 		if typ != nil {
 			typName := &xml.Name{
-				Space: typ.NamespaceURI,
+				Space: GetTargetNamespace(schemaDoc),
 				Local: typ.SelectAttr("name"),
 			}
 			return typName, nil
@@ -119,7 +119,7 @@ func (s *schemaSystem) ResolveType(qname string) (*xml.Name, error) {
 		typ = xmlquery.FindOne(schemaDoc, fmt.Sprintf("//*[local-name()='simpleType' and @name='%s']", localName))
 		if typ != nil {
 			typName := &xml.Name{
-				Space: typ.NamespaceURI,
+				Space: GetTargetNamespace(schemaDoc),
 				Local: typ.SelectAttr("name"),
 			}
 			return typName, nil

@@ -3,6 +3,7 @@ package soap
 import (
 	"encoding/xml"
 	"fmt"
+	"github.com/imposter-project/imposter-go/pkg/xsd"
 	"os"
 	"strings"
 
@@ -62,10 +63,15 @@ func generateExampleXML(element *xml.Name, parser *WSDLParser) (string, error) {
 			// Found the element, remember the path to the schema file and get its target namespace
 			elementSchemaPath = schemaPath
 
-			if schemaRoot := schemaDoc.SelectElement("schema"); schemaRoot != nil {
-				if ns := schemaRoot.SelectAttr("targetNamespace"); ns != "" {
-					targetNS = ns
-				}
+			//if schemaRoot := schemaDoc.SelectElement("schema"); schemaRoot != nil {
+			//	if ns := schemaRoot.SelectAttr("targetNamespace"); ns != "" {
+			//		targetNS = ns
+			//	}
+			//}
+
+			ns := xsd.GetTargetNamespace(schemaDoc)
+			if ns != "" {
+				targetNS = ns
 			}
 			break
 		}
