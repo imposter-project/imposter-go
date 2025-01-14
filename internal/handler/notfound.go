@@ -2,6 +2,7 @@ package handler
 
 import (
 	"fmt"
+	"github.com/imposter-project/imposter-go/internal/config"
 	"net/http"
 	"strings"
 
@@ -23,14 +24,18 @@ func handleNotFound(r *http.Request, responseState *response.ResponseState, plug
 		switch cfg.Plugin {
 		case "rest":
 			for _, resource := range cfg.Resources {
-				if resource.Method == "" {
-					resource.Method = "GET" // Default to GET if not specified
-				}
-				restResources = append(restResources, fmt.Sprintf("%s %s", resource.Method, resource.Path))
+				resInfo := describeResource(resource, "GET")
+				restResources = append(restResources, resInfo)
 			}
 		case "soap":
 			for _, resource := range cfg.Resources {
-				soapResources = append(soapResources, fmt.Sprintf("Operation: %s (Path: %s)", resource.Operation, resource.Path))
+				var resInfo string
+				if resource.Operation != "" || resource.Binding != "" {
+					resInfo = fmt.Sprintf("Operation: %s (Binding: %s)", resource.Operation, resource.Binding)
+				} else {
+					resInfo = describeResource(resource, "POST")
+				}
+				soapResources = append(soapResources, resInfo)
 			}
 		}
 	}
@@ -72,4 +77,13 @@ No resource exists for: <pre>`)
 </html>`)
 
 	responseState.Body = []byte(html.String())
+}
+
+// describeResource returns a string representation of a resource
+func describeResource(resource config.Resource, defaultMethod string) string {
+	if resource.Method == "" {
+		resource.Method = defaultMethod
+	}
+	resInfo := fmt.Sprintf("%s %s", resource.Method, resource.Path)
+	return resInfo
 }
