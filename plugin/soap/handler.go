@@ -177,7 +177,7 @@ func (h *PluginHandler) determineOperation(soapAction string, bodyHolder *Messag
 }
 
 // calculateScore calculates how well a request matches a resource or interceptor
-func (h *PluginHandler) calculateScore(reqMatcher *config.RequestMatcher, r *http.Request, body []byte, operation string, soapAction string, requestStore store.Store) (score int, isWildcard bool) {
+func (h *PluginHandler) calculateScore(reqMatcher *config.RequestMatcher, r *http.Request, body []byte, op *Operation, soapAction string, requestStore store.Store) (score int, isWildcard bool) {
 	// Get system XML namespaces
 	var systemNamespaces map[string]string
 	if h.config.System != nil {
@@ -191,7 +191,7 @@ func (h *PluginHandler) calculateScore(reqMatcher *config.RequestMatcher, r *htt
 
 	// Check SOAP-specific matches
 	if reqMatcher.Operation != "" {
-		if reqMatcher.Operation != operation {
+		if reqMatcher.Operation != op.Name {
 			return 0, false
 		}
 		score++
@@ -205,7 +205,6 @@ func (h *PluginHandler) calculateScore(reqMatcher *config.RequestMatcher, r *htt
 	}
 
 	if reqMatcher.Binding != "" {
-		op := h.wsdlParser.GetOperation(operation)
 		if op == nil {
 			return 0, false
 		}
@@ -252,7 +251,7 @@ func (h *PluginHandler) HandleRequest(r *http.Request, requestStore store.Store,
 
 	// Process interceptors first
 	for _, interceptorCfg := range h.config.Interceptors {
-		score, _ := h.calculateScore(&interceptorCfg.RequestMatcher, r, body, op.Name, soapAction, requestStore)
+		score, _ := h.calculateScore(&interceptorCfg.RequestMatcher, r, body, op, soapAction, requestStore)
 		if score > 0 {
 			logger.Infof("matched interceptor - method:%s, path:%s", r.Method, r.URL.Path)
 
@@ -266,7 +265,7 @@ func (h *PluginHandler) HandleRequest(r *http.Request, requestStore store.Store,
 	// Find matching resources
 	var matches []matcher.MatchResult
 	for _, resource := range h.config.Resources {
-		score, isWildcard := h.calculateScore(&resource.RequestMatcher, r, body, op.Name, soapAction, requestStore)
+		score, isWildcard := h.calculateScore(&resource.RequestMatcher, r, body, op, soapAction, requestStore)
 		if score > 0 {
 			matches = append(matches, matcher.MatchResult{Resource: &resource, Score: score, Wildcard: isWildcard})
 		}
