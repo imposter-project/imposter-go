@@ -136,6 +136,8 @@ func (h *PluginHandler) determineOperation(soapAction string, bodyHolder *Messag
 				return op
 			}
 		}
+		// if a SOAPAction is present, but no matching operation is found, return nil
+		return nil
 	}
 
 	// Try matching by body element
