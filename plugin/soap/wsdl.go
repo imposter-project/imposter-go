@@ -187,10 +187,11 @@ func augmentConfigWithWSDL(cfg *config.Config, parser WSDLParser) error {
 	for _, op := range ops {
 		// Generate example response XML
 		// TODO make this lazy; use a template placeholder function, such as ${soap.example('${op.Name}')}
-		exampleResponse, err := generateExampleXML(op.Output.Element, &parser)
+		exampleXml, err := generateExampleXML(op.Output.Element, &parser)
 		if err != nil {
 			return err
 		}
+		exampleResponse := wrapInEnvelope(exampleXml, parser.GetSOAPVersion())
 
 		// Create an interceptor with default RequestMatcher
 		newInterceptor := config.Interceptor{
@@ -208,7 +209,7 @@ func augmentConfigWithWSDL(cfg *config.Config, parser WSDLParser) error {
 					},
 				},
 
-				// SOAPAction header is not mandatory - don't be too strict if we can match the operation and binding
+				// SOAPAction header is not mandatory - don't be too strict if we match the operation and binding
 				//SOAPAction: op.SOAPAction,
 			},
 			Response: &config.Response{
@@ -216,10 +217,7 @@ func augmentConfigWithWSDL(cfg *config.Config, parser WSDLParser) error {
 				Headers: map[string]string{
 					"Content-Type": "application/soap+xml",
 				},
-				// Use generated example response
-				Content: `<soap:Envelope xmlns:soap="` + getNamespace(parser.GetSOAPVersion()) + `">
-  <soap:Body>` + exampleResponse + `</soap:Body>
-</soap:Envelope>`,
+				Content: exampleResponse,
 			},
 		}
 		cfg.Interceptors = append(cfg.Interceptors, newInterceptor)
@@ -245,8 +243,8 @@ func augmentConfigWithWSDL(cfg *config.Config, parser WSDLParser) error {
 	return nil
 }
 
-// getNamespace returns SOAP envelope namespace for the specified SOAP version
-func getNamespace(version SOAPVersion) string {
+// getEnvNamespace returns SOAP envelope namespace for the specified SOAP version
+func getEnvNamespace(version SOAPVersion) string {
 	if version == SOAP12 {
 		return "http://www.w3.org/2003/05/soap-envelope"
 	}
@@ -265,22 +263,6 @@ func getLocalPart(qname string) string {
 func getPrefix(qname string) string {
 	if idx := strings.Index(qname, ":"); idx != -1 {
 		return qname[:idx]
-	}
-	return ""
-}
-
-// resolveNamespace resolves a namespace prefix to its URI
-func resolveNamespace(node *xmlquery.Node, prefix string) string {
-	if prefix == "" {
-		return ""
-	}
-	for _, attr := range node.Attr {
-		if attr.Name.Space == "xmlns" && attr.Name.Local == prefix {
-			return attr.Value
-		}
-	}
-	if node.Parent != nil {
-		return resolveNamespace(node.Parent, prefix)
 	}
 	return ""
 }

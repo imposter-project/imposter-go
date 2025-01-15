@@ -119,16 +119,7 @@ func TestProcessInterceptor(t *testing.T) {
 			req.Header.Set("X-Test", "test-value")
 
 			// Run test
-			gotContinue := ProcessInterceptor(
-				responseState,
-				req,
-				[]byte("test body"),
-				tt.interceptor,
-				requestStore,
-				&config.ImposterConfig{},
-				".",
-				processor,
-			)
+			gotContinue := ProcessInterceptor(responseState, req, []byte("test body"), tt.interceptor, requestStore, &config.ImposterConfig{}, processor.ProcessResponse)
 
 			// Verify results
 			if gotContinue != tt.wantContinue {

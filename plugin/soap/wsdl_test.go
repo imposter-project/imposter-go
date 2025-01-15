@@ -153,3 +153,97 @@ func TestErrorCases(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
+
+func TestGetEnvNamespace(t *testing.T) {
+	tests := []struct {
+		name        string
+		soapVersion SOAPVersion
+		want        string
+	}{
+		{
+			name:        "SOAP 1.1 namespace",
+			soapVersion: SOAP11,
+			want:        "http://schemas.xmlsoap.org/soap/envelope/",
+		},
+		{
+			name:        "SOAP 1.2 namespace",
+			soapVersion: SOAP12,
+			want:        "http://www.w3.org/2003/05/soap-envelope",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := getEnvNamespace(tt.soapVersion)
+			if got != tt.want {
+				t.Errorf("getEnvNamespace() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestGetLocalPart(t *testing.T) {
+	tests := []struct {
+		name  string
+		qname string
+		want  string
+	}{
+		{
+			name:  "QName with prefix",
+			qname: "ns:localPart",
+			want:  "localPart",
+		},
+		{
+			name:  "QName without prefix",
+			qname: "localPart",
+			want:  "localPart",
+		},
+		{
+			name:  "Empty string",
+			qname: "",
+			want:  "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := getLocalPart(tt.qname)
+			if got != tt.want {
+				t.Errorf("getLocalPart() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestGetPrefix(t *testing.T) {
+	tests := []struct {
+		name  string
+		qname string
+		want  string
+	}{
+		{
+			name:  "QName with prefix",
+			qname: "ns:localPart",
+			want:  "ns",
+		},
+		{
+			name:  "QName without prefix",
+			qname: "localPart",
+			want:  "",
+		},
+		{
+			name:  "Empty string",
+			qname: "",
+			want:  "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := getPrefix(tt.qname)
+			if got != tt.want {
+				t.Errorf("getPrefix() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

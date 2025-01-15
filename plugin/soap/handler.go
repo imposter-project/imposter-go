@@ -249,13 +249,18 @@ func (h *PluginHandler) HandleRequest(r *http.Request, requestStore store.Store,
 		return // Let the main handler deal with no operation match
 	}
 
+	// interceptor response processor
+	interceptorResponseProc := func(rs *response.ResponseState, r *http.Request, resp config.Response, requestStore store.Store) {
+		h.processResponse(rs, r, resp, requestStore, op)
+	}
+
 	// Process interceptors first
 	for _, interceptorCfg := range h.config.Interceptors {
 		score, _ := h.calculateScore(&interceptorCfg.RequestMatcher, r, body, op, soapAction, requestStore)
 		if score > 0 {
 			logger.Infof("matched interceptor - method:%s, path:%s", r.Method, r.URL.Path)
 
-			if !commonInterceptor.ProcessInterceptor(responseState, r, body, interceptorCfg, requestStore, h.imposterConfig, h.configDir, h) {
+			if !commonInterceptor.ProcessInterceptor(responseState, r, body, interceptorCfg, requestStore, h.imposterConfig, interceptorResponseProc) {
 				responseState.Handled = true
 				return // Short-circuit if interceptor continue is false
 			}
@@ -285,50 +290,6 @@ func (h *PluginHandler) HandleRequest(r *http.Request, requestStore store.Store,
 	capture.CaptureRequestData(h.imposterConfig, best.Resource.Capture, r, body, requestStore)
 
 	// Process the response
-	h.ProcessResponse(responseState, r, best.Resource.Response, requestStore)
+	h.processResponse(responseState, r, best.Resource.Response, requestStore, op)
 	responseState.Handled = true
-}
-
-// sendSOAPFault sends a SOAP fault response
-func (h *PluginHandler) sendSOAPFault(rs *response.ResponseState, message string, statusCode int) {
-	rs.Headers["Content-Type"] = "application/soap+xml"
-	rs.StatusCode = statusCode
-
-	var faultXML string
-	if h.wsdlParser.GetSOAPVersion() == SOAP12 {
-		faultXML = fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
-<env:Envelope xmlns:env="http://www.w3.org/2003/05/soap-envelope">
-    <env:Body>
-        <env:Fault>
-            <env:Code>
-                <env:Value>env:Receiver</env:Value>
-            </env:Code>
-            <env:Reason>
-                <env:Text>%s</env:Text>
-            </env:Reason>
-        </env:Fault>
-    </env:Body>
-</env:Envelope>`, message)
-	} else {
-		faultXML = fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
-<env:Envelope xmlns:env="http://schemas.xmlsoap.org/soap/envelope/">
-    <env:Body>
-        <env:Fault>
-            <faultcode>env:Server</faultcode>
-            <faultstring>%s</faultstring>
-        </env:Fault>
-    </env:Body>
-</env:Envelope>`, message)
-	}
-
-	rs.Body = []byte(faultXML)
-}
-
-// ProcessResponse processes and sends the SOAP response
-func (h *PluginHandler) ProcessResponse(rs *response.ResponseState, r *http.Request, resp config.Response, requestStore store.Store) {
-	// Set content type for SOAP response
-	rs.Headers["Content-Type"] = "application/soap+xml"
-
-	// Process the response using common handler
-	response.ProcessResponse(rs, r, resp, h.configDir, requestStore, h.imposterConfig)
 }

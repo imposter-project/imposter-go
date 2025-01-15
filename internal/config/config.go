@@ -20,6 +20,7 @@ type Response struct {
 	Delay      Delay             `yaml:"delay"`
 	Headers    map[string]string `yaml:"headers"`
 	Template   bool              `yaml:"template"`
+	SoapFault  bool              `yaml:"soapFault"`
 }
 
 // Delay represents the delay configuration for a response
