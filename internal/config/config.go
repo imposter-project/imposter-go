@@ -179,7 +179,7 @@ type Config struct {
 	WSDLFile string `yaml:"wsdlFile,omitempty"`
 }
 
-// Application-wide configuration
+// ImposterConfig holds application-wide configuration
 type ImposterConfig struct {
 	ServerPort string
 }
@@ -249,8 +249,8 @@ func LoadConfig(configDir string) []Config {
 				return err
 			}
 
-			// Handle REST resources
 			for i := range fileConfig.Resources {
+				// Resolve response file path relative to config file
 				if fileConfig.Resources[i].Response.File != "" && relDir != "." {
 					fileConfig.Resources[i].Response.File = filepath.Join(relDir, fileConfig.Resources[i].Response.File)
 				}
@@ -260,21 +260,10 @@ func LoadConfig(configDir string) []Config {
 				}
 			}
 
-			// Handle SOAP resources
 			if fileConfig.Plugin == "soap" {
 				// Resolve WSDL file path relative to config file
 				if fileConfig.WSDLFile != "" && !filepath.IsAbs(fileConfig.WSDLFile) {
 					fileConfig.WSDLFile = filepath.Join(relDir, fileConfig.WSDLFile)
-				}
-
-				for i := range fileConfig.Resources {
-					if fileConfig.Resources[i].Response.File != "" && relDir != "." {
-						fileConfig.Resources[i].Response.File = filepath.Join(relDir, fileConfig.Resources[i].Response.File)
-					}
-					// Prefix paths with basePath
-					if fileConfig.BasePath != "" {
-						fileConfig.Resources[i].Path = filepath.Join(fileConfig.BasePath, fileConfig.Resources[i].Path)
-					}
 				}
 			}
 
