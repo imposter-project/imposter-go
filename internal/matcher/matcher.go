@@ -105,8 +105,8 @@ func CalculateMatchScore(matcher *config.RequestMatcher, r *http.Request, body [
 	}
 
 	// Request body match
-	if matcher.RequestBody.Value != "" || matcher.RequestBody.JSONPath != "" || matcher.RequestBody.XPath != "" {
-		if !matchBodyCondition(body, matcher.RequestBody.BodyMatchCondition, systemNamespaces) {
+	if hasSingleBodyMatcher(matcher) {
+		if !matchBodyCondition(body, *matcher.RequestBody.BodyMatchCondition, systemNamespaces) {
 			return 0, false
 		}
 		score++
@@ -167,6 +167,12 @@ func CalculateMatchScore(matcher *config.RequestMatcher, r *http.Request, body [
 
 	// Return the score and wildcard status for path-based matches
 	return score, isWildcard
+}
+
+// hasSingleBodyMatcher checks if a request matcher has a single body matcher
+func hasSingleBodyMatcher(matcher *config.RequestMatcher) bool {
+	return matcher.RequestBody.BodyMatchCondition != nil &&
+		(matcher.RequestBody.Value != "" || matcher.RequestBody.JSONPath != "" || matcher.RequestBody.XPath != "")
 }
 
 // evaluateExpression evaluates a template expression in the context of the request

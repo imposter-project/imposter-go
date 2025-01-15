@@ -44,7 +44,7 @@ func TestSOAPHandler_HandleRequest(t *testing.T) {
 					Operation:  "getPetById",
 					SOAPAction: "getPetById",
 					RequestBody: config.RequestBody{
-						BodyMatchCondition: config.BodyMatchCondition{
+						BodyMatchCondition: &config.BodyMatchCondition{
 							MatchCondition: config.MatchCondition{
 								Value: "3",
 							},

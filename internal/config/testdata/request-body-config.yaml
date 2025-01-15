@@ -1,0 +1,46 @@
+plugin: rest
+resources:
+  - path: /simple-match
+    requestBody:
+      value: "test content"
+      operator: EqualTo
+    response:
+      statusCode: 200
+
+  - path: /json-match
+    requestBody:
+      jsonPath: "$.user.id"
+      value: "123"
+      operator: EqualTo
+    response:
+      statusCode: 200
+
+  - path: /xml-match
+    requestBody:
+      xPath: "//user/id"
+      value: "456"
+      operator: Contains
+      xmlNamespaces:
+        ns1: "http://example.com/ns1"
+        ns2: "http://example.com/ns2"
+    response:
+      statusCode: 200
+
+  - path: /multiple-conditions
+    requestBody:
+      allOf:
+        - jsonPath: "$.type"
+          value: "user"
+          operator: EqualTo
+        - xPath: "//status"
+          value: "active"
+          operator: EqualTo
+      anyOf:
+        - jsonPath: "$.role"
+          value: "admin"
+          operator: EqualTo
+        - jsonPath: "$.permissions"
+          value: "write"
+          operator: Contains
+    response:
+      statusCode: 200 

@@ -321,7 +321,7 @@ func TestHandler_HandleRequest_WithRequestBody(t *testing.T) {
 					Method: "POST",
 					Path:   "/test",
 					RequestBody: config.RequestBody{
-						BodyMatchCondition: config.BodyMatchCondition{
+						BodyMatchCondition: &config.BodyMatchCondition{
 							MatchCondition: config.MatchCondition{
 								Value:    "test body",
 								Operator: "EqualTo",
@@ -388,7 +388,7 @@ func TestHandler_HandleRequest_WithXMLNamespaces(t *testing.T) {
 					Method: "POST",
 					Path:   "/test",
 					RequestBody: config.RequestBody{
-						BodyMatchCondition: config.BodyMatchCondition{
+						BodyMatchCondition: &config.BodyMatchCondition{
 							MatchCondition: config.MatchCondition{
 								Value: "Grace",
 							},

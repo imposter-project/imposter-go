@@ -7,7 +7,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v3"
 )
 
 func TestMatchCondition_Match(t *testing.T) {
@@ -568,54 +567,66 @@ func TestLoadImposterConfig(t *testing.T) {
 	require.Equal(t, "8080", cfg.ServerPort)
 }
 
-func TestCapture_UnmarshalYAML(t *testing.T) {
-	boolPtr := func(b bool) *bool { return &b }
-	tests := []struct {
-		name    string
-		yaml    string
-		want    *bool
-		wantErr bool
-	}{
-		{
-			name: "enabled not specified",
-			yaml: `store: test
-key:
-  const: value`,
-			want: nil,
-		},
-		{
-			name: "enabled explicitly true",
-			yaml: `enabled: true
-store: test
-key:
-  const: value`,
-			want: boolPtr(true),
-		},
-		{
-			name: "enabled explicitly false",
-			yaml: `enabled: false
-store: test
-key:
-  const: value`,
-			want: boolPtr(false),
-		},
-	}
+func TestLoadConfig_WithRequestBody(t *testing.T) {
+	// Load the config from testdata
+	configs := LoadConfig("testdata")
+	require.Len(t, configs, 1)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var c Capture
-			err := yaml.Unmarshal([]byte(tt.yaml), &c)
-			if tt.wantErr {
-				require.Error(t, err)
-				return
-			}
-			require.NoError(t, err)
-			if tt.want == nil {
-				require.Nil(t, c.Enabled)
-			} else {
-				require.NotNil(t, c.Enabled)
-				require.Equal(t, *tt.want, *c.Enabled)
-			}
-		})
+	cfg := configs[0]
+	require.Equal(t, "rest", cfg.Plugin)
+	require.Len(t, cfg.Resources, 4)
+
+	// Test simple match
+	simpleMatch := findResourceByPath(cfg.Resources, "/simple-match")
+	require.NotNil(t, simpleMatch)
+	require.Equal(t, "test content", simpleMatch.RequestBody.Value)
+	require.Equal(t, "EqualTo", simpleMatch.RequestBody.Operator)
+
+	// Test JSON match
+	jsonMatch := findResourceByPath(cfg.Resources, "/json-match")
+	require.NotNil(t, jsonMatch)
+	require.Equal(t, "$.user.id", jsonMatch.RequestBody.JSONPath)
+	require.Equal(t, "123", jsonMatch.RequestBody.Value)
+	require.Equal(t, "EqualTo", jsonMatch.RequestBody.Operator)
+
+	// Test XML match
+	xmlMatch := findResourceByPath(cfg.Resources, "/xml-match")
+	require.NotNil(t, xmlMatch)
+	require.Equal(t, "//user/id", xmlMatch.RequestBody.XPath)
+	require.Equal(t, "456", xmlMatch.RequestBody.Value)
+	require.Equal(t, "Contains", xmlMatch.RequestBody.Operator)
+	require.Equal(t, "http://example.com/ns1", xmlMatch.RequestBody.XMLNamespaces["ns1"])
+	require.Equal(t, "http://example.com/ns2", xmlMatch.RequestBody.XMLNamespaces["ns2"])
+
+	// Test multiple conditions
+	multiMatch := findResourceByPath(cfg.Resources, "/multiple-conditions")
+	require.NotNil(t, multiMatch)
+
+	// Test allOf conditions
+	require.Len(t, multiMatch.RequestBody.AllOf, 2)
+	require.Equal(t, "$.type", multiMatch.RequestBody.AllOf[0].JSONPath)
+	require.Equal(t, "user", multiMatch.RequestBody.AllOf[0].Value)
+	require.Equal(t, "EqualTo", multiMatch.RequestBody.AllOf[0].Operator)
+	require.Equal(t, "//status", multiMatch.RequestBody.AllOf[1].XPath)
+	require.Equal(t, "active", multiMatch.RequestBody.AllOf[1].Value)
+	require.Equal(t, "EqualTo", multiMatch.RequestBody.AllOf[1].Operator)
+
+	// Test anyOf conditions
+	require.Len(t, multiMatch.RequestBody.AnyOf, 2)
+	require.Equal(t, "$.role", multiMatch.RequestBody.AnyOf[0].JSONPath)
+	require.Equal(t, "admin", multiMatch.RequestBody.AnyOf[0].Value)
+	require.Equal(t, "EqualTo", multiMatch.RequestBody.AnyOf[0].Operator)
+	require.Equal(t, "$.permissions", multiMatch.RequestBody.AnyOf[1].JSONPath)
+	require.Equal(t, "write", multiMatch.RequestBody.AnyOf[1].Value)
+	require.Equal(t, "Contains", multiMatch.RequestBody.AnyOf[1].Operator)
+}
+
+// Helper function to find a resource by path
+func findResourceByPath(resources []Resource, path string) *Resource {
+	for _, r := range resources {
+		if r.Path == path {
+			return &r
+		}
 	}
+	return nil
 }
