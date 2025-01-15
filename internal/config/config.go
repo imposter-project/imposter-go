@@ -406,16 +406,3 @@ func (mu *MatcherUnmarshaler) UnmarshalYAML(unmarshal func(interface{}) error) e
 
 	return fmt.Errorf("failed to unmarshal as either string or MatchCondition")
 }
-
-// SOAPRequestMatcher contains SOAP-specific fields for matching requests
-type SOAPRequestMatcher struct {
-	RequestMatcher `yaml:",inline"`
-	Operation      string `yaml:"operation,omitempty"`
-	SOAPAction     string `yaml:"soapAction,omitempty"`
-}
-
-// SOAPResource represents a SOAP resource with its request matcher and response
-type SOAPResource struct {
-	SOAPRequestMatcher `yaml:",inline"`
-	Response           Response `yaml:"response"`
-}
