@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 )
@@ -220,4 +221,28 @@ type Config struct {
 // ImposterConfig holds application-wide configuration
 type ImposterConfig struct {
 	ServerPort string
+}
+
+// MatcherUnmarshaler is a helper type for unmarshaling Matcher from YAML
+type MatcherUnmarshaler struct {
+	Matcher Matcher
+}
+
+// UnmarshalYAML implements the yaml.Unmarshaler interface for MatcherUnmarshaler
+func (mu *MatcherUnmarshaler) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	// First try to unmarshal as a simple string
+	var str string
+	if err := unmarshal(&str); err == nil {
+		mu.Matcher = StringMatcher(str)
+		return nil
+	}
+
+	// If that fails, try to unmarshal as a MatchCondition
+	var mc MatchCondition
+	if err := unmarshal(&mc); err == nil {
+		mu.Matcher = mc
+		return nil
+	}
+
+	return fmt.Errorf("failed to unmarshal as either string or MatchCondition")
 }
