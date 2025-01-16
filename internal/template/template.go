@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/imposter-project/imposter-go/internal/query"
 	"io"
 	"net/http"
 	"regexp"
@@ -249,12 +250,12 @@ func getStoreValue(storeName, key string, requestStore store.Store) (interface{}
 	return store.GetValue(storeName, key)
 }
 
-// extractDefaultFromExpr extracts the default value from an expression, where
-// the expression is of the form ${expr:-default}.
-// Both the default value and the expression without the default value are returned.
-func extractDefaultFromExpr(expr string) (defaultVal string, plainExpr string) {
+// extractTrailerFromExpr extracts the trailer from an expression, where
+// the expression is of the form ${expr:trailer}.
+// Both the trailer and the bare expression, without ${} or the trailer, are returned.
+func extractTrailerFromExpr(expr string) (defaultVal string, plainExpr string) {
 	inner := strings.Trim(expr, "${}")
-	parts := strings.Split(inner, ":-")
+	parts := strings.Split(inner, ":")
 	if len(parts) == 2 {
 		return parts[1], "${" + parts[0] + "}"
 	}
@@ -263,13 +264,30 @@ func extractDefaultFromExpr(expr string) (defaultVal string, plainExpr string) {
 
 // replaceOrUseDefault replaces an expression in a template with a value, or a default value if the value is empty.
 func replaceOrUseDefault(template string, expr string, repl func(plainExpr string) string) string {
-	defaultVal, plainExpr := extractDefaultFromExpr(expr)
+	trailer, plainExpr := extractTrailerFromExpr(expr)
 	actualVal := repl(plainExpr)
+
 	var replacement string
 	if actualVal == "" {
-		replacement = defaultVal
+		// trailer was a default value in the form ${expr:-default}
+		if strings.HasPrefix(trailer, "-") {
+			replacement = strings.TrimPrefix("-", trailer)
+		}
 	} else {
 		replacement = actualVal
+	}
+
+	// process query expressions
+	if strings.HasPrefix(trailer, "$") {
+		// jsonPath was provided in the form ${expr:jsonPath}
+		result, _ := query.JsonPathQuery([]byte(actualVal), trailer)
+		if result != nil {
+			replacement = fmt.Sprintf("%v", result)
+		}
+	} else if strings.HasPrefix(trailer, "/") {
+		// xPath was provided in the form ${expr:xPath}
+		result, _ := query.XPathQuery([]byte(actualVal), trailer, nil)
+		replacement = result
 	}
 	return strings.ReplaceAll(template, expr, replacement)
 }

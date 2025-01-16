@@ -1,13 +1,10 @@
 package capture
 
 import (
-	"bytes"
-	"encoding/json"
+	"fmt"
+	"github.com/imposter-project/imposter-go/internal/query"
 	"net/http"
 
-	"github.com/PaesslerAG/jsonpath"
-	"github.com/antchfx/xmlquery"
-	"github.com/antchfx/xpath"
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/store"
 	"github.com/imposter-project/imposter-go/internal/template"
@@ -60,35 +57,18 @@ func getValueFromCaptureKey(key config.CaptureConfig, defaultKey string, r *http
 
 // extractJSONPath extracts a value from the JSON body using a JSONPath expression.
 func extractJSONPath(body []byte, jsonPathExpr string) string {
-	var jsonData interface{}
-	if err := json.Unmarshal(body, &jsonData); err != nil {
+	result, success := query.JsonPathQuery(body, jsonPathExpr)
+	if !success {
 		return ""
 	}
-
-	result, err := jsonpath.Get(jsonPathExpr, jsonData)
-	if err != nil {
-		return ""
-	}
-
-	return result.(string)
+	return fmt.Sprintf("%v", result)
 }
 
 // extractXPath extracts a value from the XML body using an XPath expression.
 func extractXPath(body []byte, xPath string, namespaces map[string]string) string {
-	doc, err := xmlquery.Parse(bytes.NewReader(body))
-	if err != nil {
+	result, success := query.XPathQuery(body, xPath, namespaces)
+	if !success {
 		return ""
 	}
-
-	expr, err := xpath.CompileWithNS(xPath, namespaces)
-	if err != nil {
-		return ""
-	}
-
-	result := xmlquery.QuerySelector(doc, expr)
-	if result == nil {
-		return ""
-	}
-
-	return result.InnerText()
+	return result
 }

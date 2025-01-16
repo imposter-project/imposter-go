@@ -2,15 +2,12 @@ package matcher
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
+	"github.com/imposter-project/imposter-go/internal/query"
 	"io"
 	"net/http"
 	"strings"
 
-	"github.com/PaesslerAG/jsonpath"
-	"github.com/antchfx/xmlquery"
-	"github.com/antchfx/xpath"
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/store"
 	"github.com/imposter-project/imposter-go/internal/template"
@@ -230,11 +227,6 @@ func GetRequestBody(r *http.Request) ([]byte, error) {
 
 // MatchXPath matches XML body content using XPath query
 func MatchXPath(body []byte, condition config.BodyMatchCondition, systemNamespaces map[string]string) bool {
-	doc, err := xmlquery.Parse(bytes.NewReader(body))
-	if err != nil {
-		return false
-	}
-
 	// Merge system namespaces with condition namespaces, giving precedence to condition namespaces
 	namespaces := make(map[string]string)
 	for k, v := range systemNamespaces {
@@ -244,39 +236,22 @@ func MatchXPath(body []byte, condition config.BodyMatchCondition, systemNamespac
 		namespaces[k] = v
 	}
 
-	// Compile an XPath expression with namespace bindings.
-	// The map keys are the prefixes (e.g. "ns1"), and the values are the namespace URIs.
-	expr, err := xpath.CompileWithNS(
-		condition.XPath,
-		namespaces,
-	)
-	if err != nil {
-		panic(err)
+	result, success := query.XPathQuery(body, condition.XPath, namespaces)
+	if !success {
+		return false
 	}
-
-	// Select the node using the compiled expression.
-	result := xmlquery.QuerySelector(doc, expr)
-	if result == nil {
-		return condition.Match("")
-	}
-
-	return condition.Match(result.InnerText())
+	return condition.Match(result)
 }
 
 // MatchJSONPath matches JSON body content using JSONPath query
 func MatchJSONPath(body []byte, condition config.BodyMatchCondition) bool {
-	var jsonData interface{}
-	if err := json.Unmarshal(body, &jsonData); err != nil {
-		return false
-	}
-
-	results, err := jsonpath.Get(condition.JSONPath, jsonData)
-	if err != nil {
+	result, success := query.JsonPathQuery(body, condition.JSONPath)
+	if !success {
 		return false
 	}
 
 	// Handle different result types
-	switch v := results.(type) {
+	switch v := result.(type) {
 	case string:
 		return condition.Match(v)
 	case []interface{}:
