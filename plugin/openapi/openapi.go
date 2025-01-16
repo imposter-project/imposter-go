@@ -5,7 +5,9 @@ import (
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/logger"
 	"github.com/pb33f/libopenapi"
+	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 	"os"
+	"strconv"
 )
 
 // OpenAPIVersion represents the version of OpenAPI being used
@@ -17,12 +19,18 @@ const (
 	OpenAPI31
 )
 
+type Response struct {
+	ContentType string
+
+	// TODO don't use libopenapi types directly
+	MediaType *v3.MediaType
+}
+
 type Operation struct {
-	Name                string
-	Method              string
-	Path                string
-	ResponseContentType string
-	ResponseSchema      interface{}
+	Name      string
+	Method    string
+	Path      string
+	Responses map[string]Response
 }
 
 type openAPIParser struct {
@@ -70,6 +78,30 @@ func newOpenAPIParser(specFile string) (OpenAPIParser, error) {
 
 	parser := openAPIParser{}
 
+	for path, pathItem := range v3Model.Model.Paths.PathItems.FromOldest() {
+		operations := pathItem.GetOperations()
+		for method, operation := range operations.FromOldest() {
+			operationName := fmt.Sprintf("%s %s", method, path)
+			op := Operation{
+				Name:      operationName,
+				Path:      path,
+				Method:    method,
+				Responses: make(map[string]Response),
+			}
+
+			for code, resp := range operation.Responses.Codes.FromOldest() {
+				for mediaType, content := range resp.Content.FromOldest() {
+					op.Responses[code] = Response{
+						ContentType: mediaType,
+						MediaType:   content,
+					}
+				}
+			}
+
+			parser.operations = append(parser.operations, op)
+		}
+	}
+
 	return parser, nil
 }
 
@@ -77,38 +109,51 @@ func newOpenAPIParser(specFile string) (OpenAPIParser, error) {
 func augmentConfigWithOpenApiSpec(cfg *config.Config, parser OpenAPIParser) error {
 	ops := parser.GetOperations()
 	for _, op := range ops {
-		// Generate example response JSON
-		// TODO make this lazy; use a template placeholder function, such as ${soap.example('${op.Name}')}
-		exampleResponse, err := generateExampleJSON(op.ResponseSchema, &parser)
-		if err != nil {
-			return err
-		}
+		for code, resp := range op.Responses {
+			// Generate example response JSON
+			// TODO make this lazy; use a template placeholder function, such as ${soap.example('${op.Name}')}
+			exampleResponse, err := generateExampleJSON(op.Responses, &parser)
+			if err != nil {
+				return err
+			}
 
-		// Create an interceptor with default RequestMatcher
-		newInterceptor := config.Interceptor{
-			Continue: true,
-			RequestMatcher: config.RequestMatcher{
-				Method: op.Method,
-				Path:   op.Path,
-				Capture: map[string]config.Capture{
-					"_matched-openapi-operation": {
-						Store: "request",
-						CaptureConfig: config.CaptureConfig{
-							Const: "true",
+			statusCode, _ := strconv.Atoi(code)
+
+			// Create an interceptor with default RequestMatcher
+			newInterceptor := config.Interceptor{
+				Continue: true,
+				RequestMatcher: config.RequestMatcher{
+					Method: op.Method,
+					Path:   op.Path,
+					Capture: map[string]config.Capture{
+						"_matched-openapi-operation": {
+							Store: "request",
+							CaptureConfig: config.CaptureConfig{
+								Const: "true",
+							},
 						},
 					},
+					RequestHeaders: map[string]config.MatcherUnmarshaler{
+						"Accept": {
+							Matcher: config.MatchCondition{
+								Value:    resp.ContentType,
+								Operator: "Contains",
+							},
+						},
+					},
+					// TODO add request headers, query params, etc.
 				},
-				// TODO add headers, query params, etc.
-			},
-			Response: &config.Response{
-				StatusCode: 200,
-				Headers: map[string]string{
-					"Content-Type": op.ResponseContentType,
+				Response: &config.Response{
+					StatusCode: statusCode,
+					Headers: map[string]string{
+						"Content-Type": resp.ContentType,
+					},
+					Content: exampleResponse,
+					// TODO add response headers
 				},
-				Content: exampleResponse,
-			},
+			}
+			cfg.Interceptors = append(cfg.Interceptors, newInterceptor)
 		}
-		cfg.Interceptors = append(cfg.Interceptors, newInterceptor)
 	}
 
 	// Add a default resource to handle unmatched requests
