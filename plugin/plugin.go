@@ -7,6 +7,7 @@ import (
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/response"
 	"github.com/imposter-project/imposter-go/internal/store"
+	"github.com/imposter-project/imposter-go/plugin/openapi"
 	"github.com/imposter-project/imposter-go/plugin/rest"
 	"github.com/imposter-project/imposter-go/plugin/soap"
 )
@@ -26,6 +27,8 @@ func LoadPlugins(configs []config.Config, configDir string, imposterConfig *conf
 		var plugin Plugin
 
 		switch cfg.Plugin {
+		case "openapi":
+			plugin, err = openapi.NewPluginHandler(&cfg, configDir, imposterConfig)
 		case "rest":
 			plugin, err = rest.NewPluginHandler(&cfg, configDir, imposterConfig)
 		case "soap":

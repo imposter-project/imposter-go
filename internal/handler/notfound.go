@@ -22,7 +22,7 @@ func handleNotFound(r *http.Request, responseState *response.ResponseState, plug
 	for _, plg := range plugins {
 		cfg := plg.GetConfig()
 		switch cfg.Plugin {
-		case "rest":
+		case "openapi", "rest":
 			for _, resource := range cfg.Resources {
 				resInfo := describeResource(resource, "GET")
 				restResources = append(restResources, resInfo)

@@ -105,7 +105,7 @@ func LoadConfig(configDir string) []Config {
 	// Validate plugin types
 	for _, cfg := range configs {
 		switch cfg.Plugin {
-		case "rest", "soap":
+		case "openapi", "rest", "soap":
 			// Valid plugins
 		default:
 			panic("Unsupported plugin type: " + cfg.Plugin)
