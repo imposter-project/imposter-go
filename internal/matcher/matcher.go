@@ -25,7 +25,7 @@ type MatchResult struct {
 func CalculateMatchScore(matcher *config.RequestMatcher, r *http.Request, body []byte, systemNamespaces map[string]string, imposterConfig *config.ImposterConfig, requestStore store.Store) (score int, isWildcard bool) {
 	// Method match
 	if matcher.Method != "" {
-		if matcher.Method != r.Method {
+		if !strings.EqualFold(matcher.Method, r.Method) {
 			return 0, false
 		}
 		score++
