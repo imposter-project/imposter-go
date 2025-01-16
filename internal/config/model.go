@@ -216,6 +216,9 @@ type Config struct {
 
 	// SOAP-specific fields
 	WSDLFile string `yaml:"wsdlFile,omitempty"`
+
+	// OpenAPI-specific fields
+	SpecFile string `yaml:"specFile,omitempty"`
 }
 
 // ImposterConfig holds application-wide configuration
