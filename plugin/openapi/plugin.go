@@ -14,7 +14,7 @@ import (
 type PluginHandler struct {
 	config         *config.Config
 	configDir      string
-	openApiParser  *OpenAPIParser
+	openApiParser  OpenAPIParser
 	imposterConfig *config.ImposterConfig
 }
 
@@ -32,7 +32,7 @@ func NewPluginHandler(cfg *config.Config, configDir string, imposterConfig *conf
 	}
 
 	// Augment existing config with generated interceptors based on the OpenAPI spec
-	if err := augmentConfigWithOpenApiSpec(cfg, *parser); err != nil {
+	if err := augmentConfigWithOpenApiSpec(cfg, parser); err != nil {
 		return nil, fmt.Errorf("failed to augment config with OpenAPI spec: %w", err)
 	}
 

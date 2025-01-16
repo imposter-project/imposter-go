@@ -1,6 +1,12 @@
 package openapi
 
-import "github.com/imposter-project/imposter-go/internal/config"
+import (
+	"fmt"
+	"github.com/imposter-project/imposter-go/internal/config"
+	"github.com/imposter-project/imposter-go/internal/logger"
+	"github.com/pb33f/libopenapi"
+	"os"
+)
 
 // OpenAPIVersion represents the version of OpenAPI being used
 type OpenAPIVersion int
@@ -19,13 +25,52 @@ type Operation struct {
 	ResponseSchema      interface{}
 }
 
+type openAPIParser struct {
+	version    OpenAPIVersion
+	operations []Operation
+}
+
 type OpenAPIParser interface {
 	GetVersion() OpenAPIVersion
 	GetOperations() []Operation
 }
 
-func newOpenAPIParser(specFile string) (*OpenAPIParser, error) {
-	return nil, nil
+func (p openAPIParser) GetVersion() OpenAPIVersion {
+	return p.version
+}
+
+func (p openAPIParser) GetOperations() []Operation {
+	return p.operations
+}
+
+func newOpenAPIParser(specFile string) (OpenAPIParser, error) {
+	petstore, _ := os.ReadFile(specFile)
+	document, err := libopenapi.NewDocument(petstore)
+	if err != nil {
+		return nil, fmt.Errorf("cannot create new document: %e", err)
+	}
+
+	// TODO determine OpenAPI version
+	v3Model, errors := document.BuildV3Model()
+
+	if len(errors) > 0 {
+		var errorMessages string
+		for i := range errors {
+			errorMessages += fmt.Sprintf("error: %e\n", errors[i])
+		}
+		return nil, fmt.Errorf("cannot create v3 model from document: %d errors reported: %v", len(errors), errorMessages)
+	}
+
+	// get a count of the number of paths and schemas.
+	paths := v3Model.Model.Paths.PathItems.Len()
+	schemas := v3Model.Model.Components.Schemas.Len()
+
+	// print the number of paths and schemas in the document
+	logger.Debugf("there are %d paths and %d schemas in the document", paths, schemas)
+
+	parser := openAPIParser{}
+
+	return parser, nil
 }
 
 // augmentConfigWithOpenApiSpec enriches the configuration with auto-generated interceptors for each OpenAPI operation.
