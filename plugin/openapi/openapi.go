@@ -6,7 +6,9 @@ import (
 	"github.com/imposter-project/imposter-go/internal/logger"
 	"github.com/pb33f/libopenapi"
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
+	"net/http"
 	"os"
+	"sort"
 	"strconv"
 )
 
@@ -30,7 +32,7 @@ type Operation struct {
 	Name      string
 	Method    string
 	Path      string
-	Responses map[string]Response
+	Responses map[int][]Response
 }
 
 type openAPIParser struct {
@@ -74,7 +76,7 @@ func newOpenAPIParser(specFile string) (OpenAPIParser, error) {
 	schemas := v3Model.Model.Components.Schemas.Len()
 
 	// print the number of paths and schemas in the document
-	logger.Debugf("there are %d paths and %d schemas in the document", paths, schemas)
+	logger.Debugf("found %d paths and %d schemas in the document", paths, schemas)
 
 	parser := openAPIParser{}
 
@@ -86,16 +88,17 @@ func newOpenAPIParser(specFile string) (OpenAPIParser, error) {
 				Name:      operationName,
 				Path:      path,
 				Method:    method,
-				Responses: make(map[string]Response),
+				Responses: make(map[int][]Response),
+			}
+
+			if operation.Responses.Default != nil {
+				// note: this might be overwritten by a more specific 200 response
+				op.Responses[http.StatusOK] = processResponse(http.StatusOK, operation.Responses.Default)
 			}
 
 			for code, resp := range operation.Responses.Codes.FromOldest() {
-				for mediaType, content := range resp.Content.FromOldest() {
-					op.Responses[code] = Response{
-						ContentType: mediaType,
-						MediaType:   content,
-					}
-				}
+				statusCode, _ := strconv.Atoi(code)
+				op.Responses[statusCode] = processResponse(statusCode, resp)
 			}
 
 			parser.operations = append(parser.operations, op)
@@ -105,19 +108,41 @@ func newOpenAPIParser(specFile string) (OpenAPIParser, error) {
 	return parser, nil
 }
 
+func processResponse(statusCode int, resp *v3.Response) []Response {
+	responses := make([]Response, 0)
+	if resp.Content == nil || resp.Content.Len() == 0 {
+		responses = []Response{
+			{
+				ContentType: "",
+				MediaType:   nil,
+			},
+		}
+	} else {
+		for mediaType, content := range resp.Content.FromOldest() {
+			response := Response{
+				ContentType: mediaType,
+				MediaType:   content,
+			}
+			responses = append(responses, response)
+		}
+	}
+	return responses
+}
+
 // augmentConfigWithOpenApiSpec enriches the configuration with auto-generated interceptors for each OpenAPI operation.
 func augmentConfigWithOpenApiSpec(cfg *config.Config, parser OpenAPIParser) error {
 	ops := parser.GetOperations()
 	for _, op := range ops {
-		for code, resp := range op.Responses {
+		responseCode := getDefaultResponseCode(op)
+		responses := op.Responses[responseCode]
+
+		for _, resp := range responses {
 			// Generate example response JSON
 			// TODO make this lazy; use a template placeholder function, such as ${soap.example('${op.Name}')}
-			exampleResponse, err := generateExampleJSON(op.Responses, &parser)
+			exampleResponse, err := generateExampleJSON(resp, &parser)
 			if err != nil {
 				return err
 			}
-
-			statusCode, _ := strconv.Atoi(code)
 
 			// Create an interceptor with default RequestMatcher
 			newInterceptor := config.Interceptor{
@@ -125,14 +150,6 @@ func augmentConfigWithOpenApiSpec(cfg *config.Config, parser OpenAPIParser) erro
 				RequestMatcher: config.RequestMatcher{
 					Method: op.Method,
 					Path:   op.Path,
-					Capture: map[string]config.Capture{
-						"_matched-openapi-operation": {
-							Store: "request",
-							CaptureConfig: config.CaptureConfig{
-								Const: "true",
-							},
-						},
-					},
 					RequestHeaders: map[string]config.MatcherUnmarshaler{
 						"Accept": {
 							Matcher: config.MatchCondition{
@@ -141,10 +158,18 @@ func augmentConfigWithOpenApiSpec(cfg *config.Config, parser OpenAPIParser) erro
 							},
 						},
 					},
+					Capture: map[string]config.Capture{
+						"_matched-openapi-operation": {
+							Store: "request",
+							CaptureConfig: config.CaptureConfig{
+								Const: op.Name,
+							},
+						},
+					},
 					// TODO add request headers, query params, etc.
 				},
 				Response: &config.Response{
-					StatusCode: statusCode,
+					StatusCode: responseCode,
 					Headers: map[string]string{
 						"Content-Type": resp.ContentType,
 					},
@@ -152,6 +177,7 @@ func augmentConfigWithOpenApiSpec(cfg *config.Config, parser OpenAPIParser) erro
 					// TODO add response headers
 				},
 			}
+			logger.Tracef("adding interceptor for operation %s at %s %s", op.Name, op.Method, op.Path)
 			cfg.Interceptors = append(cfg.Interceptors, newInterceptor)
 		}
 	}
@@ -163,8 +189,7 @@ func augmentConfigWithOpenApiSpec(cfg *config.Config, parser OpenAPIParser) erro
 				{
 					Expression: "${stores.request._matched-openapi-operation}",
 					MatchCondition: config.MatchCondition{
-						Operator: "EqualTo",
-						Value:    "true",
+						Operator: "Exists",
 					},
 				},
 			},
@@ -174,4 +199,28 @@ func augmentConfigWithOpenApiSpec(cfg *config.Config, parser OpenAPIParser) erro
 	cfg.Resources = append(cfg.Resources, defaultResource)
 
 	return nil
+}
+
+// getDefaultResponseCode guesses the default response code for an operation
+func getDefaultResponseCode(op Operation) int {
+	var codes []int
+	for code := range op.Responses {
+		codes = append(codes, code)
+	}
+	sort.Ints(codes)
+
+	var responseCode int
+	for _, code := range codes {
+		if code == 200 {
+			responseCode = code
+			break
+		} else if code > 200 {
+			responseCode = code
+			break
+		}
+	}
+	if responseCode == 0 {
+		responseCode = codes[0]
+	}
+	return responseCode
 }
