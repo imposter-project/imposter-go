@@ -44,7 +44,10 @@ func (p *openAPI2Parser) GetOperations() []Operation {
 // parseOperations extracts operations from the OpenAPI 2 document
 func (p *openAPI2Parser) parseOperations(v2Model *libopenapi.DocumentModel[v2.Swagger]) error {
 	paths := v2Model.Model.Paths.PathItems.Len()
-	definitions := v2Model.Model.Definitions.Definitions.Len()
+	var definitions int
+	if v2Model.Model.Definitions != nil {
+		definitions = v2Model.Model.Definitions.Definitions.Len()
+	}
 	logger.Debugf("found %d paths and %d definitions in the specification", paths, definitions)
 
 	for path, pathItem := range v2Model.Model.Paths.PathItems.FromOldest() {

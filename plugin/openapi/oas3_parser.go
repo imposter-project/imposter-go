@@ -54,7 +54,10 @@ func (p *openAPI3Parser) GetOperations() []Operation {
 // parseOperations extracts operations from the OpenAPI 3 document
 func (p *openAPI3Parser) parseOperations(v3Model *libopenapi.DocumentModel[v3.Document]) error {
 	paths := v3Model.Model.Paths.PathItems.Len()
-	schemas := v3Model.Model.Components.Schemas.Len()
+	var schemas int
+	if v3Model.Model.Components != nil && v3Model.Model.Components.Schemas != nil {
+		schemas = v3Model.Model.Components.Schemas.Len()
+	}
 	logger.Debugf("found %d paths and %d schemas in the specification", paths, schemas)
 
 	for path, pathItem := range v3Model.Model.Paths.PathItems.FromOldest() {
