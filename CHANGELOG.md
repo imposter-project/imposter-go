@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.0] - 2025-01-17
+### Added
+- feat(openapi): adds OAS parser.
+- feat(openapi): augment config from OpenAPI spec.
+- feat(openapi): prepopulates responses for status codes and matching media types.
+- feat(openapi): supports OAS2 and OAS3.
+- feat: adds boilerplate for openapi plugin.
+- feat: skeleton for OpenAPI parser.
+
+### Changed
+- refactor(soap): improves augmentation logging.
+
+### Other
+- fixup! feat: adds boilerplate for openapi plugin.
+
 ## [0.11.1] - 2025-01-16
 ### Changed
 - build: adds fmt target.
