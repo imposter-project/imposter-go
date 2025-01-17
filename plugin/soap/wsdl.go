@@ -3,6 +3,7 @@ package soap
 import (
 	"encoding/xml"
 	"fmt"
+	"github.com/imposter-project/imposter-go/internal/logger"
 	"github.com/imposter-project/imposter-go/pkg/xsd"
 	"os"
 	"strings"
@@ -185,6 +186,8 @@ func newWSDLParser(wsdlPath string) (WSDLParser, error) {
 func augmentConfigWithWSDL(cfg *config.Config, parser WSDLParser) error {
 	ops := parser.GetOperations()
 	for _, op := range ops {
+		logger.Debugf("adding interceptor for operation %s with binding %s", op.Name, op.Binding)
+
 		// Generate example response XML
 		// TODO make this lazy; use a template placeholder function, such as ${soap.example('${op.Name}')}
 		exampleXml, err := generateExampleXML(op.Output.Element, &parser)
