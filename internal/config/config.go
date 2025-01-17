@@ -94,6 +94,15 @@ func LoadConfig(configDir string) []Config {
 				}
 			}
 
+			if fileConfig.System != nil {
+				// Resolve preload file paths relative to config file
+				for _, definition := range fileConfig.System.Stores {
+					if definition.PreloadFile != "" && !filepath.IsAbs(definition.PreloadFile) {
+						definition.PreloadFile = filepath.Join(relDir, definition.PreloadFile)
+					}
+				}
+			}
+
 			configs = append(configs, *fileConfig)
 		}
 		return nil
