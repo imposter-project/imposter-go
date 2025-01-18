@@ -64,8 +64,16 @@ func generateExample(schemaProxy *base.SchemaProxy) (interface{}, error) {
 		return generateExample(schema.AnyOf[0]) // Pick first schema
 	}
 
-	// Handle different types
-	switch getSchemaType(schema) {
+	schemaType := getSchemaType(schema)
+
+	// if schemaType is empty, try to infer it from other schema properties
+	if schemaType == "" && schema.Properties != nil {
+		schemaType = "object"
+	} else if schemaType == "" && schema.Items != nil {
+		schemaType = "array"
+	}
+
+	switch schemaType {
 	case "string":
 		return generateStringExample(schema)
 	case "integer", "number":

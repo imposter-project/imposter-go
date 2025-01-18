@@ -128,6 +128,7 @@ func (p *openAPI2Parser) processResponse(produces []string, resp *v2.Response) [
 		responses = []Response{
 			{
 				ContentType: "",
+				Schema:      resp.Schema,
 			},
 		}
 	}
