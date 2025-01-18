@@ -29,7 +29,7 @@ func TestOpenAPIHandlerEndToEnd(t *testing.T) {
 			name:      "OpenAPI 3.0 - Get Pet by ID",
 			configDir: "testdata/v30",
 			request: func() *http.Request {
-				req := httptest.NewRequest(http.MethodGet, "/pet/123", nil)
+				req := httptest.NewRequest(http.MethodGet, "/v3/pet/123", nil)
 				req.Header.Set("Accept", "application/json")
 				return req
 			}(),
@@ -58,7 +58,7 @@ func TestOpenAPIHandlerEndToEnd(t *testing.T) {
 			configDir: "testdata/v30",
 			request: func() *http.Request {
 				body := strings.NewReader(`{"id": 999, "name": "TestPet", "status": "available"}`)
-				req := httptest.NewRequest(http.MethodPost, "/pet", body)
+				req := httptest.NewRequest(http.MethodPost, "/v3/pet", body)
 				req.Header.Set("Content-Type", "application/json")
 				req.Header.Set("Accept", "application/json")
 				return req
@@ -87,7 +87,7 @@ func TestOpenAPIHandlerEndToEnd(t *testing.T) {
 			name:      "OpenAPI 3.0 - Invalid Pet ID",
 			configDir: "testdata/v30",
 			request: func() *http.Request {
-				return httptest.NewRequest(http.MethodGet, "/pet/invalid", nil)
+				return httptest.NewRequest(http.MethodGet, "/v3/pet/invalid", nil)
 			}(),
 			wantStatus:    http.StatusBadRequest,
 			wantBodyJson:  false,
@@ -97,7 +97,7 @@ func TestOpenAPIHandlerEndToEnd(t *testing.T) {
 			name:      "OpenAPI 3.0 - Pet Not Found",
 			configDir: "testdata/v30",
 			request: func() *http.Request {
-				return httptest.NewRequest(http.MethodGet, "/pet/99999", nil)
+				return httptest.NewRequest(http.MethodGet, "/v3/pet/99999", nil)
 			}(),
 			wantStatus:    http.StatusNotFound,
 			wantBodyJson:  false,
@@ -108,7 +108,7 @@ func TestOpenAPIHandlerEndToEnd(t *testing.T) {
 			name:      "OpenAPI 2.0 - Get Pet by ID",
 			configDir: "testdata/v20",
 			request: func() *http.Request {
-				req := httptest.NewRequest(http.MethodGet, "/pet/123", nil)
+				req := httptest.NewRequest(http.MethodGet, "/v2/pet/123", nil)
 				req.Header.Set("Accept", "application/json")
 				return req
 			}(),
@@ -146,7 +146,7 @@ func TestOpenAPIHandlerEndToEnd(t *testing.T) {
 					"status": "available",
 					"photoUrls": ["http://example.com/photo.jpg"]
 				}`)
-				req := httptest.NewRequest(http.MethodPost, "/pet", body)
+				req := httptest.NewRequest(http.MethodPost, "/v2/pet", body)
 				req.Header.Set("Content-Type", "application/json")
 				req.Header.Set("Accept", "application/json")
 				return req
@@ -162,7 +162,7 @@ func TestOpenAPIHandlerEndToEnd(t *testing.T) {
 			name:      "OpenAPI 2.0 - Invalid Pet ID",
 			configDir: "testdata/v20",
 			request: func() *http.Request {
-				return httptest.NewRequest(http.MethodGet, "/pet/invalid", nil)
+				return httptest.NewRequest(http.MethodGet, "/v2/pet/invalid", nil)
 			}(),
 			wantStatus:    http.StatusBadRequest,
 			wantBodyJson:  false,
@@ -172,7 +172,7 @@ func TestOpenAPIHandlerEndToEnd(t *testing.T) {
 			name:      "OpenAPI 2.0 - Pet Not Found",
 			configDir: "testdata/v20",
 			request: func() *http.Request {
-				return httptest.NewRequest(http.MethodGet, "/pet/99999", nil)
+				return httptest.NewRequest(http.MethodGet, "/v2/pet/99999", nil)
 			}(),
 			wantStatus:    http.StatusNotFound,
 			wantBodyJson:  true,
@@ -188,7 +188,7 @@ Content-Type: image/jpeg
 
 <binary data here>
 --boundary--`)
-				req := httptest.NewRequest(http.MethodPost, "/pet/123/uploadImage", body)
+				req := httptest.NewRequest(http.MethodPost, "/v2/pet/123/uploadImage", body)
 				req.Header.Set("Content-Type", "multipart/form-data; boundary=boundary")
 				req.Header.Set("Accept", "application/json")
 				return req

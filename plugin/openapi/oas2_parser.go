@@ -14,7 +14,7 @@ type openAPI2Parser struct {
 }
 
 // newOpenAPI2Parser creates a new OpenAPIParser for OpenAPI 2 documents
-func newOpenAPI2Parser(document libopenapi.Document) (*openAPI2Parser, error) {
+func newOpenAPI2Parser(document libopenapi.Document, opts parserOptions) (*openAPI2Parser, error) {
 	logger.Debugf("creating OpenAPI 2 parser")
 	v2Model, errors := document.BuildV2Model()
 
@@ -27,7 +27,7 @@ func newOpenAPI2Parser(document libopenapi.Document) (*openAPI2Parser, error) {
 	}
 
 	parser := &openAPI2Parser{}
-	if err := parser.parseOperations(v2Model); err != nil {
+	if err := parser.parseOperations(v2Model, opts); err != nil {
 		return nil, fmt.Errorf("cannot parse operations: %e", err)
 	}
 	return parser, nil
@@ -42,7 +42,7 @@ func (p *openAPI2Parser) GetOperations() []Operation {
 }
 
 // parseOperations extracts operations from the OpenAPI 2 document
-func (p *openAPI2Parser) parseOperations(v2Model *libopenapi.DocumentModel[v2.Swagger]) error {
+func (p *openAPI2Parser) parseOperations(v2Model *libopenapi.DocumentModel[v2.Swagger], opts parserOptions) error {
 	paths := v2Model.Model.Paths.PathItems.Len()
 	var definitions int
 	if v2Model.Model.Definitions != nil {
@@ -51,12 +51,14 @@ func (p *openAPI2Parser) parseOperations(v2Model *libopenapi.DocumentModel[v2.Sw
 	logger.Debugf("found %d paths and %d definitions in the specification", paths, definitions)
 
 	for path, pathItem := range v2Model.Model.Paths.PathItems.FromOldest() {
+		finalPath := p.getFinalPath(v2Model.Model.BasePath, opts.stripServerPath, path)
+
 		operations := pathItem.GetOperations()
 		for method, operation := range operations.FromOldest() {
-			operationName := fmt.Sprintf("%s %s", method, path)
+			operationName := fmt.Sprintf("%s %s", method, finalPath)
 			op := Operation{
 				Name:      operationName,
-				Path:      path,
+				Path:      finalPath,
 				Method:    method,
 				Responses: make(map[int][]Response),
 			}
@@ -103,4 +105,11 @@ func (p *openAPI2Parser) processResponse(produces []string, resp *v2.Response) [
 		}
 	}
 	return responses
+}
+
+func (p *openAPI2Parser) getFinalPath(specBasePath string, stripServerPath bool, path string) string {
+	if stripServerPath {
+		return path
+	}
+	return fmt.Sprintf("%s%s", specBasePath, path)
 }

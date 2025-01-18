@@ -6,6 +6,7 @@ import (
 	"github.com/pb33f/libopenapi"
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 )
@@ -16,7 +17,7 @@ type openAPI3Parser struct {
 }
 
 // newOpenAPI3Parser creates a new OpenAPIParser for OpenAPI 3 documents
-func newOpenAPI3Parser(document libopenapi.Document) (*openAPI3Parser, error) {
+func newOpenAPI3Parser(document libopenapi.Document, opts parserOptions) (*openAPI3Parser, error) {
 	logger.Debugf("creating OpenAPI 3 parser")
 	v3Model, errors := document.BuildV3Model()
 
@@ -37,7 +38,7 @@ func newOpenAPI3Parser(document libopenapi.Document) (*openAPI3Parser, error) {
 	parser := &openAPI3Parser{
 		version: version,
 	}
-	if err := parser.parseOperations(v3Model); err != nil {
+	if err := parser.parseOperations(v3Model, opts); err != nil {
 		return nil, fmt.Errorf("cannot parse operations: %e", err)
 	}
 	return parser, nil
@@ -52,7 +53,7 @@ func (p *openAPI3Parser) GetOperations() []Operation {
 }
 
 // parseOperations extracts operations from the OpenAPI 3 document
-func (p *openAPI3Parser) parseOperations(v3Model *libopenapi.DocumentModel[v3.Document]) error {
+func (p *openAPI3Parser) parseOperations(v3Model *libopenapi.DocumentModel[v3.Document], opts parserOptions) error {
 	paths := v3Model.Model.Paths.PathItems.Len()
 	var schemas int
 	if v3Model.Model.Components != nil && v3Model.Model.Components.Schemas != nil {
@@ -61,12 +62,14 @@ func (p *openAPI3Parser) parseOperations(v3Model *libopenapi.DocumentModel[v3.Do
 	logger.Debugf("found %d paths and %d schemas in the specification", paths, schemas)
 
 	for path, pathItem := range v3Model.Model.Paths.PathItems.FromOldest() {
+		finalPath := p.getFinalPath(v3Model.Model.Servers, opts.stripServerPath, path)
+
 		operations := pathItem.GetOperations()
 		for method, operation := range operations.FromOldest() {
-			operationName := fmt.Sprintf("%s %s", method, path)
+			operationName := fmt.Sprintf("%s %s", method, finalPath)
 			op := Operation{
 				Name:      operationName,
-				Path:      path,
+				Path:      finalPath,
 				Method:    method,
 				Responses: make(map[int][]Response),
 			}
@@ -115,4 +118,25 @@ func (p *openAPI3Parser) processResponse(resp *v3.Response) []Response {
 		}
 	}
 	return responses
+}
+
+func (p *openAPI3Parser) getFinalPath(servers []*v3.Server, stripServerPath bool, path string) string {
+	if stripServerPath {
+		return path
+	}
+	if len(servers) == 0 {
+		return path
+	}
+	server := servers[0]
+
+	// extract the path portion of server.URL
+	var serverPath string
+	serverUrl, err := url.Parse(server.URL)
+	if err != nil {
+		logger.Warnf("failed to parse server URL: %s", server.URL)
+		serverPath = ""
+	} else {
+		serverPath = serverUrl.Path
+	}
+	return fmt.Sprintf("%s%s", serverPath, path)
 }

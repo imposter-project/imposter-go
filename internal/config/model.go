@@ -218,7 +218,8 @@ type Config struct {
 	WSDLFile string `yaml:"wsdlFile,omitempty"`
 
 	// OpenAPI-specific fields
-	SpecFile string `yaml:"specFile,omitempty"`
+	SpecFile        string `yaml:"specFile,omitempty"`
+	StripServerPath bool   `yaml:"stripServerPath,omitempty"`
 }
 
 // ImposterConfig holds application-wide configuration

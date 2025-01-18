@@ -2,12 +2,12 @@ plugin: openapi
 specFile: petstore30.yaml
 
 resources:
-  - path: /pet/invalid
+  - path: /v3/pet/invalid
     method: GET
     response:
       statusCode: 400
 
-  - path: /pet/99999
+  - path: /v3/pet/99999
     method: GET
     response:
       statusCode: 404

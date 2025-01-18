@@ -33,12 +33,16 @@ type Operation struct {
 	Responses map[int][]Response
 }
 
+type parserOptions struct {
+	stripServerPath bool
+}
+
 type OpenAPIParser interface {
 	GetVersion() OpenAPIVersion
 	GetOperations() []Operation
 }
 
-func newOpenAPIParser(specFile string) (OpenAPIParser, error) {
+func newOpenAPIParser(specFile string, opts parserOptions) (OpenAPIParser, error) {
 	spec, _ := os.ReadFile(specFile)
 	document, err := libopenapi.NewDocument(spec)
 	if err != nil {
@@ -46,10 +50,10 @@ func newOpenAPIParser(specFile string) (OpenAPIParser, error) {
 	}
 
 	if strings.HasPrefix(document.GetSpecInfo().Version, "3") {
-		return newOpenAPI3Parser(document)
+		return newOpenAPI3Parser(document, opts)
 	} else {
 		logger.Tracef("assuming document version is Swagger/OpenAPI 2")
-		return newOpenAPI2Parser(document)
+		return newOpenAPI2Parser(document, opts)
 	}
 }
 
