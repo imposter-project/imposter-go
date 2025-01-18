@@ -2,6 +2,7 @@ package adapter
 
 import (
 	"os"
+	"strings"
 
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/logger"
@@ -10,30 +11,40 @@ import (
 )
 
 // InitialiseImposter performs common initialisation tasks for all adapters
-func InitialiseImposter(configDirArg string) (*config.ImposterConfig, string, []plugin.Plugin) {
+func InitialiseImposter(configDirArg string) (*config.ImposterConfig, []plugin.Plugin) {
 	logger.Infoln("starting imposter-go...")
 
 	imposterConfig := config.LoadImposterConfig()
+	configDirs := getConfigDirs(configDirArg)
 
-	var configDir string
+	store.InitStoreProvider()
+
+	var plugins []plugin.Plugin
+	for _, configDir := range configDirs {
+		if info, err := os.Stat(configDir); os.IsNotExist(err) || !info.IsDir() {
+			panic("Specified path is not a valid directory")
+		}
+
+		cfgs := config.LoadConfig(configDir)
+		plgs := plugin.LoadPlugins(cfgs, configDir, imposterConfig)
+
+		store.PreloadStores(configDir, cfgs)
+
+		plugins = append(plugins, plgs...)
+	}
+	return imposterConfig, plugins
+}
+
+func getConfigDirs(configDirArg string) []string {
+	var configDirRaw string
 	if configDirArg != "" {
-		configDir = configDirArg
+		configDirRaw = configDirArg
 	} else {
-		configDir = os.Getenv("IMPOSTER_CONFIG_DIR")
-		if configDir == "" {
+		configDirRaw = os.Getenv("IMPOSTER_CONFIG_DIR")
+		if configDirRaw == "" {
 			panic("Config directory path must be provided either as an argument or via IMPOSTER_CONFIG_DIR environment variable")
 		}
 	}
-
-	if info, err := os.Stat(configDir); os.IsNotExist(err) || !info.IsDir() {
-		panic("Specified path is not a valid directory")
-	}
-
-	configs := config.LoadConfig(configDir)
-	plugins := plugin.LoadPlugins(configs, configDir, imposterConfig)
-
-	store.InitStoreProvider()
-	store.PreloadStores(configDir, configs)
-
-	return imposterConfig, configDir, plugins
+	configDirs := strings.Split(configDirRaw, ",")
+	return configDirs
 }

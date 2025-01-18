@@ -38,7 +38,7 @@ resources:
 
 	// Start the server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		handler.HandleRequest(w, r, tempDir, plugins, imposterConfig)
+		handler.HandleRequest(w, r, plugins)
 	}))
 	defer server.Close()
 
@@ -79,7 +79,7 @@ resources:
 
 	// Start the server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		handler.HandleRequest(w, r, tempDir, plugins, imposterConfig)
+		handler.HandleRequest(w, r, plugins)
 	}))
 	defer server.Close()
 
@@ -145,7 +145,7 @@ func TestInterceptors_ShortCircuit(t *testing.T) {
 
 	rec := httptest.NewRecorder()
 
-	handler.HandleRequest(rec, req, "", plugins, imposterConfig)
+	handler.HandleRequest(rec, req, plugins)
 
 	if status := rec.Code; status != http.StatusBadRequest {
 		t.Errorf("Expected status code %d, got %d", http.StatusBadRequest, status)
@@ -159,7 +159,7 @@ func TestInterceptors_ShortCircuit(t *testing.T) {
 	// Test with valid user agent
 	req.Header.Set("User-Agent", "Some-User-Agent")
 	rec = httptest.NewRecorder()
-	handler.HandleRequest(rec, req, "", plugins, imposterConfig)
+	handler.HandleRequest(rec, req, plugins)
 
 	if status := rec.Code; status != http.StatusOK {
 		t.Errorf("Expected status code %d, got %d", http.StatusOK, status)
@@ -208,7 +208,7 @@ func TestInterceptors_Passthrough(t *testing.T) {
 	req.Header.Set("User-Agent", "Test-Agent")
 
 	rec := httptest.NewRecorder()
-	handler.HandleRequest(rec, req, "", plugins, imposterConfig)
+	handler.HandleRequest(rec, req, plugins)
 
 	if status := rec.Code; status != http.StatusOK {
 		t.Errorf("Expected status code %d, got %d", http.StatusOK, status)

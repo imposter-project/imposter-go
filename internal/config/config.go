@@ -25,6 +25,7 @@ func LoadImposterConfig() *ImposterConfig {
 
 // LoadConfig loads all config files in the specified directory
 func LoadConfig(configDir string) []Config {
+	logger.Debugf("loading config files from %s", configDir)
 	var configs []Config
 
 	scanRecursive := (os.Getenv("IMPOSTER_CONFIG_SCAN_RECURSIVE") == "true")

@@ -9,7 +9,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/handler"
 	"github.com/imposter-project/imposter-go/internal/store"
 	"github.com/imposter-project/imposter-go/plugin"
@@ -22,7 +21,7 @@ func TestSystemStore(t *testing.T) {
 
 	// Start test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		handler.HandleRequest(w, r, "", []plugin.Plugin{}, &config.ImposterConfig{})
+		handler.HandleRequest(w, r, []plugin.Plugin{})
 	}))
 	defer server.Close()
 

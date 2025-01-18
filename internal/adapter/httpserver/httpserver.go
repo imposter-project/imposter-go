@@ -28,27 +28,25 @@ func (a *HTTPAdapter) Start() {
 		configDirArg = os.Args[1]
 	}
 
-	imposterConfig, configDir, configs := adapter.InitialiseImposter(configDirArg)
+	imposterConfig, configs := adapter.InitialiseImposter(configDirArg)
 
 	// Initialise and start the server with multiple configs
-	srv := newServer(imposterConfig, configDir, configs)
+	srv := newServer(imposterConfig, configs)
 	logger.Infof("startup completed in %v", time.Since(startTime))
 	srv.start(imposterConfig)
 }
 
 // httpServer represents the HTTP server configuration.
 type httpServer struct {
-	Addr      string
-	ConfigDir string
-	Plugins   []plugin.Plugin
+	Addr    string
+	Plugins []plugin.Plugin
 }
 
 // newServer creates a new instance of httpServer.
-func newServer(imposterConfig *config.ImposterConfig, configDir string, plugins []plugin.Plugin) *httpServer {
+func newServer(imposterConfig *config.ImposterConfig, plugins []plugin.Plugin) *httpServer {
 	return &httpServer{
-		Addr:      ":" + imposterConfig.ServerPort,
-		ConfigDir: configDir,
-		Plugins:   plugins,
+		Addr:    ":" + imposterConfig.ServerPort,
+		Plugins: plugins,
 	}
 }
 
@@ -57,7 +55,7 @@ func (s *httpServer) start(imposterConfig *config.ImposterConfig) {
 	logger.Infof("server is listening on %s...", s.Addr)
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		handler.HandleRequest(w, r, s.ConfigDir, s.Plugins, imposterConfig)
+		handler.HandleRequest(w, r, s.Plugins)
 	})
 
 	if err := http.ListenAndServe(s.Addr, nil); err != nil {

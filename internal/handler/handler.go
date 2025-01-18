@@ -5,14 +5,13 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/response"
 	"github.com/imposter-project/imposter-go/internal/store"
 	"github.com/imposter-project/imposter-go/plugin"
 )
 
 // HandleRequest processes incoming HTTP requests and routes them to the appropriate handler
-func HandleRequest(w http.ResponseWriter, req *http.Request, configDir string, plugins []plugin.Plugin, imposterConfig *config.ImposterConfig) {
+func HandleRequest(w http.ResponseWriter, req *http.Request, plugins []plugin.Plugin) {
 	// Initialise request-scoped store and response state
 	requestStore := make(store.Store)
 	responseState := response.NewResponseState()

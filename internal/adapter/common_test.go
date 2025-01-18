@@ -38,13 +38,12 @@ system:
 	require.NoError(t, err)
 
 	tests := []struct {
-		name           string
-		configDirArg   string
-		envConfigDir   string
-		envPort        string
-		wantPanic      bool
-		panicContains  string
-		checkConfigDir bool
+		name          string
+		configDirArg  string
+		envConfigDir  string
+		envPort       string
+		wantPanic     bool
+		panicContains string
 	}{
 		{
 			name:         "config dir from argument",
@@ -68,9 +67,8 @@ system:
 			panicContains: "Specified path is not a valid directory",
 		},
 		{
-			name:           "default port",
-			configDirArg:   tmpDir,
-			checkConfigDir: true,
+			name:         "default port",
+			configDirArg: tmpDir,
 		},
 	}
 
@@ -96,7 +94,7 @@ system:
 			}
 
 			// Run initialisation
-			imposterConfig, configDir, plugins := InitialiseImposter(tt.configDirArg)
+			imposterConfig, plugins := InitialiseImposter(tt.configDirArg)
 			assert.NotEmpty(t, plugins)
 
 			configs := []*config.Config{}
@@ -110,14 +108,6 @@ system:
 				assert.Equal(t, tt.envPort, imposterConfig.ServerPort)
 			} else {
 				assert.Equal(t, "8080", imposterConfig.ServerPort) // Default port
-			}
-
-			if tt.checkConfigDir {
-				if tt.configDirArg != "" {
-					assert.Equal(t, tt.configDirArg, configDir)
-				} else {
-					assert.Equal(t, tt.envConfigDir, configDir)
-				}
 			}
 
 			assert.NotEmpty(t, configs)
@@ -165,7 +155,7 @@ system:
 	require.NoError(t, err)
 
 	// Run initialisation
-	_, _, _ = InitialiseImposter(tmpDir)
+	_, _ = InitialiseImposter(tmpDir)
 
 	// Verify store initialisation
 	// Note: Since store is a global singleton, we can verify its state here
@@ -197,7 +187,7 @@ resources:
 	require.NoError(t, err)
 
 	// Run initialisation - it should not panic on invalid config
-	imposterConfig, configDir, plugins := InitialiseImposter(tmpDir)
+	imposterConfig, plugins := InitialiseImposter(tmpDir)
 	assert.NotEmpty(t, plugins)
 
 	configs := []*config.Config{}
@@ -207,7 +197,6 @@ resources:
 
 	// Verify results
 	assert.NotNil(t, imposterConfig)
-	assert.Equal(t, tmpDir, configDir)
 	assert.NotEmpty(t, configs)
 	// The invalid config should still be loaded, but might be partially populated
 	assert.Len(t, configs, 1)

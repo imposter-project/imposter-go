@@ -43,6 +43,8 @@ type OpenAPIParser interface {
 }
 
 func newOpenAPIParser(specFile string, opts parserOptions) (OpenAPIParser, error) {
+	logger.Tracef("loading OpenAPI spec %s", specFile)
+
 	spec, _ := os.ReadFile(specFile)
 	document, err := libopenapi.NewDocument(spec)
 	if err != nil {

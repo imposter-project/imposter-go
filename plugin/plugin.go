@@ -19,7 +19,7 @@ type Plugin interface {
 
 // LoadPlugins loads plugins from the provided configs
 func LoadPlugins(configs []config.Config, configDir string, imposterConfig *config.ImposterConfig) []Plugin {
-	plugins := []Plugin{}
+	var plugins []Plugin
 
 	// Process each config
 	for _, cfg := range configs {
