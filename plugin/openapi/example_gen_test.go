@@ -69,7 +69,7 @@ func TestGenerateExampleJSON(t *testing.T) {
 			response: Response{
 				Schema: createSchemaProxyWithEnum([]string{"string"}, "", []interface{}{"one", "two", "three"}),
 			},
-			want: `"one"`, // Since we seed the random generator in init()
+			want: `"one"`,
 		},
 		{
 			name: "with date-time format",
@@ -77,6 +77,40 @@ func TestGenerateExampleJSON(t *testing.T) {
 				Schema: createSchemaProxy([]string{"string"}, "date-time", nil, nil, nil),
 			},
 			want: `"` + time.Now().UTC().Format(time.RFC3339) + `"`,
+		},
+		{
+			name: "with allOf",
+			response: Response{
+				Schema: createSchemaProxyWithAllOf([]*base.SchemaProxy{
+					createSchemaProxy([]string{"object"}, "", map[string]*base.SchemaProxy{
+						"name": createSchemaProxy([]string{"string"}, "", nil, nil, nil),
+					}, nil, nil),
+					createSchemaProxy([]string{"object"}, "", map[string]*base.SchemaProxy{
+						"age": createSchemaProxy([]string{"integer"}, "", nil, nil, nil),
+					}, nil, nil),
+				}),
+			},
+			want: `{"age":42,"name":"example"}`,
+		},
+		{
+			name: "with oneOf",
+			response: Response{
+				Schema: createSchemaProxyWithOneOf([]*base.SchemaProxy{
+					createSchemaProxy([]string{"string"}, "", nil, nil, nil),
+					createSchemaProxy([]string{"integer"}, "", nil, nil, nil),
+				}),
+			},
+			want: `"example"`,
+		},
+		{
+			name: "with anyOf",
+			response: Response{
+				Schema: createSchemaProxyWithAnyOf([]*base.SchemaProxy{
+					createSchemaProxy([]string{"string"}, "", nil, nil, nil),
+					createSchemaProxy([]string{"integer"}, "", nil, nil, nil),
+				}),
+			},
+			want: `"example"`,
 		},
 	}
 
@@ -130,8 +164,7 @@ func createSchemaProxy(schemaType []string, format string, properties map[string
 		}
 	}
 
-	proxy := base.CreateSchemaProxy(schema)
-	return proxy
+	return base.CreateSchemaProxy(schema)
 }
 
 // Helper function to create a SchemaProxy with enum values for testing
@@ -150,6 +183,29 @@ func createSchemaProxyWithEnum(schemaType []string, format string, enumValues []
 		}
 	}
 
-	proxy := base.CreateSchemaProxy(schema)
-	return proxy
+	return base.CreateSchemaProxy(schema)
+}
+
+// Helper function to create a SchemaProxy with allOf for testing
+func createSchemaProxyWithAllOf(schemas []*base.SchemaProxy) *base.SchemaProxy {
+	schema := &base.Schema{
+		AllOf: schemas,
+	}
+	return base.CreateSchemaProxy(schema)
+}
+
+// Helper function to create a SchemaProxy with oneOf for testing
+func createSchemaProxyWithOneOf(schemas []*base.SchemaProxy) *base.SchemaProxy {
+	schema := &base.Schema{
+		OneOf: schemas,
+	}
+	return base.CreateSchemaProxy(schema)
+}
+
+// Helper function to create a SchemaProxy with anyOf for testing
+func createSchemaProxyWithAnyOf(schemas []*base.SchemaProxy) *base.SchemaProxy {
+	schema := &base.Schema{
+		AnyOf: schemas,
+	}
+	return base.CreateSchemaProxy(schema)
 }

@@ -53,6 +53,17 @@ func generateExample(schemaProxy *base.SchemaProxy) (interface{}, error) {
 		return enumNode.Value, nil
 	}
 
+	// Handle composition keywords
+	if schema.AllOf != nil && len(schema.AllOf) > 0 {
+		return generateAllOfExample(schema.AllOf)
+	}
+	if schema.OneOf != nil && len(schema.OneOf) > 0 {
+		return generateExample(schema.OneOf[0]) // Pick first schema
+	}
+	if schema.AnyOf != nil && len(schema.AnyOf) > 0 {
+		return generateExample(schema.AnyOf[0]) // Pick first schema
+	}
+
 	// Handle different types
 	switch getSchemaType(schema) {
 	case "string":
@@ -62,12 +73,33 @@ func generateExample(schemaProxy *base.SchemaProxy) (interface{}, error) {
 	case "boolean":
 		return generateBooleanExample()
 	case "array":
-		return generateArrayExample(schemaProxy)
+		return generateArrayExample(schema)
 	case "object":
-		return generateObjectExample(schemaProxy)
+		return generateObjectExample(schema)
 	default:
 		return nil, fmt.Errorf("unsupported schema type: %v", schema.Type)
 	}
+}
+
+// generateAllOfExample merges examples from all schemas in allOf
+func generateAllOfExample(schemas []*base.SchemaProxy) (interface{}, error) {
+	result := make(map[string]interface{})
+
+	for _, schema := range schemas {
+		example, err := generateExample(schema)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate allOf example: %w", err)
+		}
+
+		// If example is a map, merge it with result
+		if exampleMap, ok := example.(map[string]interface{}); ok {
+			for k, v := range exampleMap {
+				result[k] = v
+			}
+		}
+	}
+
+	return result, nil
 }
 
 func generateStringExample(schema *base.Schema) (string, error) {
@@ -103,8 +135,7 @@ func generateBooleanExample() (bool, error) {
 	return true, nil
 }
 
-func generateArrayExample(schemaProxy *base.SchemaProxy) ([]interface{}, error) {
-	schema := schemaProxy.Schema()
+func generateArrayExample(schema *base.Schema) ([]interface{}, error) {
 	if schema.Items == nil {
 		return nil, fmt.Errorf("array schema missing items")
 	}
@@ -121,8 +152,7 @@ func generateArrayExample(schemaProxy *base.SchemaProxy) ([]interface{}, error) 
 	return []interface{}{item}, nil
 }
 
-func generateObjectExample(schemaProxy *base.SchemaProxy) (map[string]interface{}, error) {
-	schema := schemaProxy.Schema()
+func generateObjectExample(schema *base.Schema) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 
 	// Handle properties from OrderedMap
