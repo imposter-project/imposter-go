@@ -3,6 +3,7 @@ package openapi
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/imposter-project/imposter-go/internal/logger"
@@ -41,10 +42,12 @@ func getSchemaType(schema *base.Schema) string {
 // generateExample generates an example value based on the schema
 func generateExample(schemaProxy *base.SchemaProxy) (interface{}, error) {
 	schema := schemaProxy.Schema()
+	schemaType := getSchemaType(schema)
 
 	// If schema has an example, use it
 	if schema.Example != nil {
-		return schema.Example.Value, nil
+		schemaExample := yamlNodeToString(schema.Example)
+		return renderExampleAsType(schemaExample, schemaType), nil
 	}
 
 	// If schema has an enum, use the first value
@@ -64,8 +67,6 @@ func generateExample(schemaProxy *base.SchemaProxy) (interface{}, error) {
 		return generateExample(schema.AnyOf[0]) // Pick first schema
 	}
 
-	schemaType := getSchemaType(schema)
-
 	// if schemaType is empty, try to infer it from other schema properties
 	if schemaType == "" && schema.Properties != nil {
 		schemaType = "object"
@@ -80,12 +81,31 @@ func generateExample(schemaProxy *base.SchemaProxy) (interface{}, error) {
 		return generateNumberExample(schema)
 	case "boolean":
 		return generateBooleanExample()
+	case "null":
+		return nil, nil
 	case "array":
 		return generateArrayExample(schema)
 	case "object":
 		return generateObjectExample(schema)
 	default:
 		return nil, fmt.Errorf("unsupported schema type: %v", schema.Type)
+	}
+}
+
+func renderExampleAsType(exampleValue string, schemaType string) interface{} {
+	switch schemaType {
+	case "integer":
+		n, _ := strconv.Atoi(exampleValue)
+		return n
+	case "number":
+		n, _ := strconv.ParseFloat(exampleValue, 32)
+		return n
+	case "boolean":
+		return exampleValue == "true"
+	case "null":
+		return nil
+	default:
+		return exampleValue
 	}
 }
 
@@ -113,20 +133,27 @@ func generateAllOfExample(schemas []*base.SchemaProxy) (interface{}, error) {
 func generateStringExample(schema *base.Schema) (string, error) {
 	if schema.Format != "" {
 		switch schema.Format {
+		case "byte":
+			// base64 encoded string
+			return "SW1wb3N0ZXI0bGlmZQo=", nil
 		case "date-time":
 			return time.Now().UTC().Format(time.RFC3339), nil
 		case "date":
 			return time.Now().UTC().Format("2006-01-02"), nil
 		case "email":
-			return "user@example.com", nil
+			return "test@example.com", nil
+		case "password":
+			return "changeme", nil
 		case "uuid":
 			return "123e4567-e89b-12d3-a456-426614174000", nil
 		}
+		// TODO implement other formats per https://swagger.io/docs/specification/v3_0/data-models/data-types/#strings
 	}
 	return "example", nil
 }
 
 func generateNumberExample(schema *base.Schema) (interface{}, error) {
+	// TODO consider min/max
 	if schema.Format == "int64" {
 		return int64(42), nil
 	}
@@ -140,7 +167,7 @@ func generateNumberExample(schema *base.Schema) (interface{}, error) {
 }
 
 func generateBooleanExample() (bool, error) {
-	return true, nil
+	return false, nil
 }
 
 func generateArrayExample(schema *base.Schema) ([]interface{}, error) {
