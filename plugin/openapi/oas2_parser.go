@@ -7,6 +7,7 @@ import (
 	v2 "github.com/pb33f/libopenapi/datamodel/high/v2"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 type openAPI2Parser struct {
@@ -82,29 +83,64 @@ func (p *openAPI2Parser) parseOperations(v2Model *libopenapi.DocumentModel[v2.Sw
 // processResponse converts an OpenAPI 2 response into a list of Response objects
 func (p *openAPI2Parser) processResponse(produces []string, resp *v2.Response) []Response {
 	responses := make([]Response, 0)
-	if len(produces) == 0 {
-		responses = []Response{
-			{
-				ContentType: "",
-			},
-		}
-	} else {
+
+	// check the produces list first, but it's not mandatory
+	for _, mediaType := range produces {
 		var example string
-		if resp.Examples != nil && resp.Examples.Values.Len() > 0 {
-			ex := resp.Examples.Values.Oldest().Value
+		if resp.Examples != nil {
+			// get the example for the specific media type, or the first one
+			ex, present := resp.Examples.Values.Get(mediaType)
+			if !present {
+				ex = resp.Examples.Values.Oldest().Value
+			}
 			example = ex.Value
 		}
 
-		for _, mediaType := range produces {
+		response := Response{
+			ContentType: mediaType,
+			Example:     example,
+			Schema:      resp.Schema,
+		}
+		responses = append(responses, response)
+	}
+
+	// derive from response example names
+	if resp.Examples != nil {
+		for exampleName, ex := range resp.Examples.Values.FromOldest() {
+			if !strings.Contains(exampleName, "/") {
+				// skip example names that are not media types
+				continue
+			}
+			if doesResponseWithContentTypeExist(responses, exampleName) {
+				// skip examples that are already in the produces list
+				continue
+			}
 			response := Response{
-				ContentType: mediaType,
-				Example:     example,
+				ContentType: exampleName,
+				Example:     ex.Value,
 				Schema:      resp.Schema,
 			}
 			responses = append(responses, response)
 		}
 	}
+	if len(responses) == 0 {
+		responses = []Response{
+			{
+				ContentType: "",
+			},
+		}
+	}
 	return responses
+}
+
+// doesResponseWithContentTypeExist checks if a response with the given content type already exists in the list
+func doesResponseWithContentTypeExist(responses []Response, contentType string) bool {
+	for _, response := range responses {
+		if response.ContentType == contentType {
+			return true
+		}
+	}
+	return false
 }
 
 func (p *openAPI2Parser) getFinalPath(specBasePath string, stripServerPath bool, path string) string {
