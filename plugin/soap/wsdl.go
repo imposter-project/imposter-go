@@ -142,6 +142,8 @@ func (p *BaseWSDLParser) GetNamespaceByPrefix(prefix string) string {
 
 // newWSDLParser creates a new version-aware WSDL parser instance
 func newWSDLParser(wsdlPath string) (WSDLParser, error) {
+	logger.Tracef("loading WSDL file %s", wsdlPath)
+
 	// Read and parse the WSDL file
 	file, err := os.Open(wsdlPath)
 	if err != nil {
