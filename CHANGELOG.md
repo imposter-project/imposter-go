@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.0] - 2025-01-18
+### Added
+- feat(openapi): gather more media types from swagger examples.
+- feat(openapi): implements schema example generator.
+- feat(openapi): supports OAS3 server paths and swagger basepath.
+- feat: adds schema support for anyOf, oneOf and allOf.
+- feat: support multiple config dirs.
+
+### Changed
+- docs: removes old schema.
+- docs: removes some completed items.
+- refactor(openapi): be defensive around schemas/components in specs.
+- refactor(soap): improves WSDL parser logging.
+- refactor: improves example YAML node marshalling.
+- refactor: infer schema type from properties if unset.
+- refactor: remove unused script.
+- test: improves coverage of OAS2 handler.
+- test: improves coverage of OAS3 handler.
+
 ## [0.12.1] - 2025-01-17
 ### Fixed
 - fix: Resolve preload file paths relative to config file.
