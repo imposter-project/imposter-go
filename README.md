@@ -8,13 +8,15 @@ A Go implementation of the [Imposter Mock Engine](https://www.imposter.sh).
 - 🚀 Run in AWS Lambda: low latency, high throughput, ~15ms cold start
 - ✅ [REST/HTTP API mock](https://docs.imposter.sh/rest_plugin/) support
 - ✅ [SOAP/WSDL mock](https://docs.imposter.sh/soap_plugin/) support
-- ✅ [OpenAPI](https://docs.imposter.sh/openapi_plugin/) support
+- ✅ [OpenAPI/Swagger mock](https://docs.imposter.sh/openapi_plugin/) support
 
 ## ⚠️ Limitations
 
 - No support for [scripting](https://docs.imposter.sh/scripting/)
 - No support for [steps](https://docs.imposter.sh/steps/)
-- No support (yet) for directory responses
+- No support (yet) for directory responses (https://github.com/imposter-project/imposter-go/issues/12)
+- No support (yet) for some SOAP styles (https://github.com/imposter-project/imposter-go/issues/7, https://github.com/imposter-project/imposter-go/issues/8, https://github.com/imposter-project/imposter-go/issues/9)
+- No support (yet) for selecting OAS example name (https://github.com/imposter-project/imposter-go/issues/11)
 
 ## Installation
 
