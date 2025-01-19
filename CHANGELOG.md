@@ -40,9 +40,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - refactor(soap): improves augmentation logging.
 
-### Other
-- fixup! feat: adds boilerplate for openapi plugin.
-
 ## [0.11.1] - 2025-01-16
 ### Changed
 - build: adds fmt target.
