@@ -4,20 +4,17 @@ A Go implementation of the [Imposter Mock Engine](https://www.imposter.sh).
 
 ## Features
 
-- Local: Lightweight local HTTP mock server
-- AWS Lambda: low latency, high throughput, ~15ms cold start
-- [REST/HTTP API mock](https://docs.imposter.sh/rest_plugin/) support
-- [SOAP/WSDL mock](https://docs.imposter.sh/soap_plugin/) support
+- 💻 Run locally: Lightweight local HTTP mock server
+- 🚀 Run in AWS Lambda: low latency, high throughput, ~15ms cold start
+- ✅ [REST/HTTP API mock](https://docs.imposter.sh/rest_plugin/) support
+- ✅ [SOAP/WSDL mock](https://docs.imposter.sh/soap_plugin/) support
+- ✅ [OpenAPI](https://docs.imposter.sh/openapi_plugin/) support
 
 ## ⚠️ Limitations
 
 - No support for [scripting](https://docs.imposter.sh/scripting/)
-- No support (yet) for [OpenAPI](https://docs.imposter.sh/openapi_plugin/) mocks
-
-## Requirements
-
-- Go 1.23 or later (earlier versions may work but are not tested)
-- Make (for building)
+- No support for [steps](https://docs.imposter.sh/steps/)
+- No support (yet) for directory responses
 
 ## Installation
 
@@ -55,7 +52,67 @@ sudo mv imposter-go /usr/local/bin/
 2. Extract the `imposter-go_Windows_x86_64.zip` file
 3. Add the extracted `imposter-go.exe` to your PATH or move it to a directory in your PATH
 
-### Building from Source
+## Usage
+
+Run the server with a configuration file:
+
+```bash
+imposter-go ./examples/rest/simple
+```
+
+Visit `http://localhost:8080/hello` in your browser or use `curl`:
+
+```bash
+curl http://localhost:8080/hello
+```
+
+#### Examples
+
+The repository includes several examples demonstrating different features:
+
+- [Simple REST API](examples/rest/simple) - Basic REST API mocking
+- [SOAP Web Service](examples/soap/simple) - SOAP/WSDL-based service mocking
+- [OpenAPI service](examples/openapi/v30) - OpenAPI-based service mocking
+- [AWS Lambda](examples/lambda) - Running Imposter in AWS Lambda
+
+---
+
+## Configuration
+
+A subset of the Imposter [environment variables](https://docs.imposter.sh/environment_variables/) are supported. For example:
+
+Set the `IMPOSTER_PORT` environment variable to change the default port:
+```bash
+export IMPOSTER_PORT=9090
+```
+
+Enable recursive directory scanning for configuration files:
+```bash
+export IMPOSTER_CONFIG_SCAN_RECURSIVE=true
+```
+
+Set the `IMPOSTER_LOG_LEVEL` environment variable to control logging verbosity:
+```bash
+export IMPOSTER_LOG_LEVEL=DEBUG  # Available levels: TRACE, DEBUG, INFO, WARN, ERROR
+```
+
+The default log level is DEBUG. Log levels are processed in order of severity:
+- TRACE - Most verbose, logs all messages
+- DEBUG - Detailed information for debugging
+- INFO - General operational messages
+- WARN - Warning messages for potentially harmful situations
+- ERROR - Error messages for serious problems
+
+---
+
+## Building from Source
+
+### Requirements
+
+- Go 1.23 or later (earlier versions may work but are not tested)
+- Make (for building)
+
+### Build Steps
 
 1. Clone the repository:
    ```bash
@@ -77,25 +134,6 @@ sudo mv imposter-go /usr/local/bin/
    ```bash
    curl http://localhost:8080/system/status
    ```
-
-## Configuration
-
-Set the `IMPOSTER_PORT` environment variable to change the default port:
-```bash
-export IMPOSTER_PORT=9090
-```
-
-Set the `IMPOSTER_LOG_LEVEL` environment variable to control logging verbosity:
-```bash
-export IMPOSTER_LOG_LEVEL=DEBUG  # Available levels: TRACE, DEBUG, INFO, WARN, ERROR
-```
-
-The default log level is DEBUG. Log levels are processed in order of severity:
-- TRACE - Most verbose, logs all messages
-- DEBUG - Detailed information for debugging
-- INFO - General operational messages
-- WARN - Warning messages for potentially harmful situations
-- ERROR - Error messages for serious problems
 
 ## Development
 
@@ -122,14 +160,6 @@ The version information is automatically derived from git tags. When building fr
 - Development builds will show the git commit hash
 - If no git information is available, it will show "dev"
 
-## Examples
-
-The repository includes several examples demonstrating different features:
-
-- [Simple REST API](examples/rest/simple) - Basic REST API mocking
-- [SOAP Web Service](examples/soap/simple) - SOAP/WSDL-based service mocking
-- [AWS Lambda](examples/lambda) - Running Imposter in AWS Lambda
-
 ## Testing
 
 Run the test suite using:
@@ -138,6 +168,8 @@ make test
 ```
 
 This will run all tests with verbose output, showing the progress of each test case.
+
+---
 
 ## Releasing
 
