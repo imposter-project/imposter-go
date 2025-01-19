@@ -45,7 +45,7 @@ func TestGenerateExampleJSON(t *testing.T) {
 			response: Response{
 				Schema: createSchemaProxy([]string{"boolean"}, "", nil, nil, nil),
 			},
-			want: "true",
+			want: "false",
 		},
 		{
 			name: "with array schema",

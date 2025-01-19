@@ -46,8 +46,8 @@ func generateExample(schemaProxy *base.SchemaProxy) (interface{}, error) {
 
 	// If schema has an example, use it
 	if schema.Example != nil {
-		schemaExample := yamlNodeToString(schema.Example)
-		return renderExampleAsType(schemaExample, schemaType), nil
+		schemaExample := yamlNodeToObj(schema.Example)
+		return schemaExample, nil
 	}
 
 	// If schema has an enum, use the first value

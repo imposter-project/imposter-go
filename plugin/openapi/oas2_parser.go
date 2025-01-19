@@ -115,7 +115,7 @@ func (p *openAPI2Parser) processResponse(produces []string, resp *v2.Response) [
 				// skip examples that are already in the produces list
 				continue
 			}
-			example := yamlNodeToString(ex)
+			example := yamlNodeToJson(ex)
 			response := Response{
 				ContentType: exampleName,
 				Example:     example,

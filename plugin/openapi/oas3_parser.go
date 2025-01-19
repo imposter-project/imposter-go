@@ -106,7 +106,7 @@ func (p *openAPI3Parser) processResponse(resp *v3.Response) []Response {
 				example = content.Example.Value
 			} else if content.Examples != nil && content.Examples.Len() > 0 {
 				ex := content.Examples.Oldest().Value
-				example = yamlNodeToString(ex.Value)
+				example = yamlNodeToJson(ex.Value)
 			}
 
 			response := Response{
