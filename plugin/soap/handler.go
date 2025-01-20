@@ -23,6 +23,12 @@ const (
 	soap12ContentType  = "application/soap+xml"
 )
 
+// MessageBodyHolder represents a parsed SOAP message
+type MessageBodyHolder struct {
+	BodyRootElement *xmlquery.Node
+	EnvNamespace    string
+}
+
 // getSoapAction extracts the SOAPAction from headers
 func (h *PluginHandler) getSoapAction(r *http.Request) string {
 	// Try SOAPAction header first
@@ -43,12 +49,6 @@ func (h *PluginHandler) getSoapAction(r *http.Request) string {
 	}
 
 	return ""
-}
-
-// MessageBodyHolder represents a parsed SOAP message
-type MessageBodyHolder struct {
-	BodyRootElement *xmlquery.Node
-	EnvNamespace    string
 }
 
 // parseBody parses the SOAP body based on configuration
@@ -250,8 +250,8 @@ func (h *PluginHandler) HandleRequest(r *http.Request, requestStore store.Store,
 	}
 
 	// interceptor response processor
-	interceptorResponseProc := func(rs *response.ResponseState, r *http.Request, resp config.Response, requestStore store.Store) {
-		h.processResponse(rs, r, resp, requestStore, op)
+	interceptorResponseProc := func(reqMatcher *config.RequestMatcher, rs *response.ResponseState, r *http.Request, resp config.Response, requestStore store.Store) {
+		h.processResponse(reqMatcher, rs, r, resp, requestStore, op)
 	}
 
 	// Process interceptors first
@@ -260,7 +260,7 @@ func (h *PluginHandler) HandleRequest(r *http.Request, requestStore store.Store,
 		if score > 0 {
 			logger.Infof("matched interceptor - method:%s, path:%s", r.Method, r.URL.Path)
 
-			if !commonInterceptor.ProcessInterceptor(responseState, r, body, interceptorCfg, requestStore, h.imposterConfig, interceptorResponseProc) {
+			if !commonInterceptor.ProcessInterceptor(&interceptorCfg.RequestMatcher, responseState, r, body, interceptorCfg, requestStore, h.imposterConfig, interceptorResponseProc) {
 				responseState.Handled = true
 				return // Short-circuit if interceptor continue is false
 			}
@@ -290,6 +290,6 @@ func (h *PluginHandler) HandleRequest(r *http.Request, requestStore store.Store,
 	capture.CaptureRequestData(h.imposterConfig, best.Resource.Capture, r, body, requestStore)
 
 	// Process the response
-	h.processResponse(responseState, r, best.Resource.Response, requestStore, op)
+	h.processResponse(&best.Resource.RequestMatcher, responseState, r, best.Resource.Response, requestStore, op)
 	responseState.Handled = true
 }

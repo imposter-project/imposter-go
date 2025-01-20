@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/imposter-project/imposter-go/internal/config"
@@ -22,6 +23,8 @@ type ResponseState struct {
 	Stopped    bool // indicates if the response has been stopped (e.g., connection closed)
 	Handled    bool // indicates if a handler has handled the request
 }
+
+const defaultIndexFile = "index.html"
 
 // NewResponseState creates a new ResponseState with default values
 func NewResponseState() *ResponseState {
@@ -87,7 +90,7 @@ func SimulateFailure(rs *ResponseState, failureType string, r *http.Request) boo
 }
 
 // ProcessResponse handles common response processing logic
-func ProcessResponse(rs *ResponseState, req *http.Request, resp config.Response, configDir string, requestStore store.Store, imposterConfig *config.ImposterConfig) {
+func ProcessResponse(reqMatcher *config.RequestMatcher, rs *ResponseState, req *http.Request, resp config.Response, configDir string, requestStore store.Store, imposterConfig *config.ImposterConfig) {
 	// Handle delay if specified
 	SimulateDelay(resp.Delay, req)
 
@@ -108,6 +111,26 @@ func ProcessResponse(rs *ResponseState, req *http.Request, resp config.Response,
 		}
 	}
 
+	// Handle directory-based responses with wildcards
+	if resp.Dir != "" {
+		if reqMatcher == nil || !strings.HasSuffix(reqMatcher.Path, "/*") {
+			logger.Errorf("directory response requires a wildcard path - method:%s, path:%s", req.Method, req.URL.Path)
+			rs.StatusCode = http.StatusInternalServerError
+			rs.Body = []byte("Directory response requires a wildcard path")
+			return
+		}
+		basePath := strings.TrimSuffix(reqMatcher.Path, "*")
+		requestSpecificPath := strings.TrimPrefix(req.URL.Path, basePath)
+
+		if strings.HasSuffix(requestSpecificPath, "/") || requestSpecificPath == "" {
+			requestSpecificPath += defaultIndexFile
+		}
+
+		// Set the response file path relative to the config directory
+		resp.File = filepath.Join(resp.Dir, requestSpecificPath)
+		logger.Debugf("using directory-based response file: %s", resp.File)
+	}
+
 	// Only override response content if specified, as it may have been set by an interceptor
 	if resp.File != "" || resp.Content != "" {
 		var responseContent string
@@ -115,8 +138,9 @@ func ProcessResponse(rs *ResponseState, req *http.Request, resp config.Response,
 			filePath := filepath.Join(configDir, resp.File)
 			data, err := os.ReadFile(filePath)
 			if err != nil {
+				logger.Errorf("failed to read response file: %s", filePath)
 				rs.StatusCode = http.StatusInternalServerError
-				rs.Body = []byte("Failed to read file")
+				rs.Body = []byte("Failed to read response file")
 				return
 			}
 			responseContent = string(data)
@@ -142,7 +166,7 @@ func ProcessResponse(rs *ResponseState, req *http.Request, resp config.Response,
 				contentType = "application/octet-stream"
 			}
 			rs.Headers["Content-Type"] = contentType
-			logger.Infof("inferred Content-Type %s from file extension %s", contentType, ext)
+			logger.Debugf("inferred Content-Type %s from file extension %s", contentType, ext)
 		} else {
 			// If no file specified, assume JSON
 			logger.Infoln("no file extension available - assuming JSON content type")
@@ -150,6 +174,6 @@ func ProcessResponse(rs *ResponseState, req *http.Request, resp config.Response,
 		}
 	}
 
-	logger.Debugf("configured response - method:%s, path:%s, status:%d, length:%d",
+	logger.Debugf("updated response state - method:%s, path:%s, status:%d, length:%d",
 		req.Method, req.URL.Path, rs.StatusCode, len(rs.Body))
 }

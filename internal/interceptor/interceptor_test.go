@@ -16,7 +16,7 @@ type mockProcessor struct {
 	processedResponses []config.Response
 }
 
-func (m *mockProcessor) ProcessResponse(rs *response.ResponseState, r *http.Request, resp config.Response, requestStore store.Store) {
+func (m *mockProcessor) ProcessResponse(reqMatcher *config.RequestMatcher, rs *response.ResponseState, r *http.Request, resp config.Response, requestStore store.Store) {
 	m.processedResponses = append(m.processedResponses, resp)
 	rs.StatusCode = resp.StatusCode
 	rs.Body = []byte(resp.Content)
@@ -119,7 +119,7 @@ func TestProcessInterceptor(t *testing.T) {
 			req.Header.Set("X-Test", "test-value")
 
 			// Run test
-			gotContinue := ProcessInterceptor(responseState, req, []byte("test body"), tt.interceptor, requestStore, &config.ImposterConfig{}, processor.ProcessResponse)
+			gotContinue := ProcessInterceptor(&tt.interceptor.RequestMatcher, responseState, req, []byte("test body"), tt.interceptor, requestStore, &config.ImposterConfig{}, processor.ProcessResponse)
 
 			// Verify results
 			if gotContinue != tt.wantContinue {

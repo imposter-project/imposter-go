@@ -10,6 +10,7 @@ import (
 type Response struct {
 	Content    string            `yaml:"content"`
 	StatusCode int               `yaml:"statusCode"`
+	Dir        string            `yaml:"dir"`
 	File       string            `yaml:"file"`
 	Fail       string            `yaml:"fail"`
 	Delay      Delay             `yaml:"delay"`

@@ -36,7 +36,7 @@ func (h *PluginHandler) sendSOAPFault(rs *response.ResponseState, message string
 }
 
 // processResponse processes and sends the SOAP response
-func (h *PluginHandler) processResponse(rs *response.ResponseState, r *http.Request, resp config.Response, requestStore store.Store, op *Operation) {
+func (h *PluginHandler) processResponse(reqMatcher *config.RequestMatcher, rs *response.ResponseState, r *http.Request, resp config.Response, requestStore store.Store, op *Operation) {
 	// Set content type for SOAP response
 	rs.Headers["Content-Type"] = "application/soap+xml"
 
@@ -63,7 +63,7 @@ func (h *PluginHandler) processResponse(rs *response.ResponseState, r *http.Requ
 	}
 
 	// Process the response using common handler
-	response.ProcessResponse(rs, r, finalResp, h.configDir, requestStore, h.imposterConfig)
+	response.ProcessResponse(reqMatcher, rs, r, finalResp, h.configDir, requestStore, h.imposterConfig)
 }
 
 // wrapInEnvelope wraps the given XML content in a SOAP envelope,

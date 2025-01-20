@@ -12,6 +12,11 @@ import (
 	"github.com/imposter-project/imposter-go/internal/store"
 )
 
+// processResponse handles preparing the response state
+func (h *PluginHandler) processResponse(reqMatcher *config.RequestMatcher, rs *response.ResponseState, r *http.Request, resp config.Response, requestStore store.Store) {
+	response.ProcessResponse(reqMatcher, rs, r, resp, h.configDir, requestStore, h.imposterConfig)
+}
+
 // HandleRequest processes incoming REST API requests
 func (h *PluginHandler) HandleRequest(r *http.Request, requestStore store.Store, responseState *response.ResponseState) {
 	body, err := matcher.GetRequestBody(r)
@@ -34,7 +39,7 @@ func (h *PluginHandler) HandleRequest(r *http.Request, requestStore store.Store,
 		if score > 0 {
 			logger.Infof("matched interceptor - method:%s, path:%s", r.Method, r.URL.Path)
 
-			if !commonInterceptor.ProcessInterceptor(responseState, r, body, interceptorCfg, requestStore, h.imposterConfig, h.processResponse) {
+			if !commonInterceptor.ProcessInterceptor(&interceptorCfg.RequestMatcher, responseState, r, body, interceptorCfg, requestStore, h.imposterConfig, h.processResponse) {
 				responseState.Handled = true
 				return // Short-circuit if interceptor continue is false
 			}
@@ -63,11 +68,6 @@ func (h *PluginHandler) HandleRequest(r *http.Request, requestStore store.Store,
 	capture.CaptureRequestData(h.imposterConfig, best.Resource.Capture, r, body, requestStore)
 
 	// Process the response
-	h.processResponse(responseState, r, best.Resource.Response, requestStore)
+	h.processResponse(&best.Resource.RequestMatcher, responseState, r, best.Resource.Response, requestStore)
 	responseState.Handled = true
-}
-
-// processResponse handles preparing the response state
-func (h *PluginHandler) processResponse(rs *response.ResponseState, r *http.Request, resp config.Response, requestStore store.Store) {
-	response.ProcessResponse(rs, r, resp, h.configDir, requestStore, h.imposterConfig)
 }
