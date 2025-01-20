@@ -77,7 +77,7 @@ CloudWatch Logs Insights query to calculate the maximum init duration:
 ```
 filter @type = "REPORT"
 | parse @message /Init Duration: (?<initDuration>.*?) ms/
-| stats avg(initDuration) as avgInitDuration, max(initDuration) as maxInitDuration, avg(@duration) as avgDuration, max(@duration) as maxDuration
+| stats avg(initDuration) as avgInitDuration, max(initDuration) as maxInitDuration, avg(@duration) as avgDuration, max(@duration) as maxDuration, pct(@duration, 95) as p95duration, pct(@duration, 99) as p99duration, pct(@initDuration, 95) as p95initDuration, pct(@initDuration, 99) as p99initDuration
 ```
 
 ### Observations
@@ -85,8 +85,8 @@ filter @type = "REPORT"
 Client-side:
 - 26,300 requests were processed in 10 seconds (2,617 requests per second)
 - All requests returned a 200 status code
-- The average response time is 19 ms (P95: 29.6 ms, P99: 40.2 ms)
+- The average response time was 19 ms (P95: 29.6 ms, P99: 40.2 ms)
 
 Server-side:
-- In AWS CloudWatch, the average Lambda response time was 10.8 ms
-- In AWS CloudWatch, the maximum Lambda init duration was 140 ms, which includes the cold start time
+- In AWS CloudWatch, the average Lambda response time was 10.8 ms (P95: 15 ms, P99: 17 ms)
+- In AWS CloudWatch, the average Lambda init duration, i.e. cold start, was 124 ms (P95: 138 ms, P99: 139 ms)
