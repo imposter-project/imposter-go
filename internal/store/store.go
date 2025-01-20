@@ -2,8 +2,9 @@ package store
 
 import (
 	"encoding/json"
+	"fmt"
+	"github.com/imposter-project/imposter-go/pkg/utils"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/imposter-project/imposter-go/internal/config"
@@ -42,8 +43,11 @@ func PreloadStores(configDir string, configs []config.Config) {
 		if cfg.System != nil && cfg.System.Stores != nil {
 			for storeName, definition := range cfg.System.Stores {
 				if definition.PreloadFile != "" {
-					path := filepath.Join(configDir, definition.PreloadFile)
-					preloadFromFile(storeName, path)
+					filePath, err := utils.ValidatePath(definition.PreloadFile, configDir)
+					if err != nil {
+						panic(fmt.Errorf("invalid preload file path: %s", definition.PreloadFile))
+					}
+					preloadFromFile(storeName, filePath)
 				}
 				if len(definition.PreloadData) > 0 {
 					preloadFromInline(storeName, definition.PreloadData)

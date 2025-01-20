@@ -1,6 +1,7 @@
 package response
 
 import (
+	"github.com/imposter-project/imposter-go/pkg/utils"
 	"math/rand"
 	"mime"
 	"net/http"
@@ -116,7 +117,7 @@ func ProcessResponse(reqMatcher *config.RequestMatcher, rs *ResponseState, req *
 		if reqMatcher == nil || !strings.HasSuffix(reqMatcher.Path, "/*") {
 			logger.Errorf("directory response requires a wildcard path - method:%s, path:%s", req.Method, req.URL.Path)
 			rs.StatusCode = http.StatusInternalServerError
-			rs.Body = []byte("Directory response requires a wildcard path")
+			rs.Body = []byte("Invalid directory")
 			return
 		}
 		basePath := strings.TrimSuffix(reqMatcher.Path, "*")
@@ -135,13 +136,25 @@ func ProcessResponse(reqMatcher *config.RequestMatcher, rs *ResponseState, req *
 	if resp.File != "" || resp.Content != "" {
 		var responseContent string
 		if resp.File != "" {
-			filePath := filepath.Join(configDir, resp.File)
+			filePath, err := utils.ValidatePath(resp.File, configDir)
+			if err != nil {
+				rs.StatusCode = http.StatusInternalServerError
+				rs.Body = []byte("Invalid file path")
+				return
+			}
+
 			data, err := os.ReadFile(filePath)
 			if err != nil {
-				logger.Errorf("failed to read response file: %s", filePath)
-				rs.StatusCode = http.StatusInternalServerError
-				rs.Body = []byte("Failed to read response file")
-				return
+				if os.IsNotExist(err) {
+					logger.Errorf("response file not found: %s", filePath)
+					rs.StatusCode = http.StatusNotFound
+					return
+				} else {
+					logger.Errorf("error reading response file: %s", filePath)
+					rs.StatusCode = http.StatusInternalServerError
+					rs.Body = []byte("Failed to read response file")
+					return
+				}
 			}
 			responseContent = string(data)
 		} else if resp.Content != "" {

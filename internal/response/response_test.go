@@ -173,13 +173,13 @@ func TestProcessResponse(t *testing.T) {
 	testDirPath := "responses"
 	err = os.Mkdir(tmpDir+"/"+testDirPath, 0755)
 	assert.NoError(t, err)
-	err = os.WriteFile(tmpDir+"/"+testDirPath+"/specific.json", []byte(`{"specific":"response"}`), 0644)
+	err = os.WriteFile(tmpDir+"/"+testDirPath+"/index.html", []byte("index file content"), 0644)
 	assert.NoError(t, err)
 
 	// Create a subdirectory with an index.html file
 	err = os.MkdirAll(tmpDir+"/"+testDirPath+"/subdir", 0755)
 	assert.NoError(t, err)
-	err = os.WriteFile(tmpDir+"/"+testDirPath+"/subdir/index.html", []byte("index file content"), 0644)
+	err = os.WriteFile(tmpDir+"/"+testDirPath+"/subdir/specific.json", []byte(`{"specific":"response"}`), 0644)
 	assert.NoError(t, err)
 
 	tests := []struct {
@@ -235,7 +235,7 @@ func TestProcessResponse(t *testing.T) {
 			expectedStatus: http.StatusOK,
 			expectedBody:   `{"specific":"response"}`,
 			expectedHeader: map[string]string{"Content-Type": "application/json"},
-			requestPath:    "/api/responses/specific.json",
+			requestPath:    "/api/responses/subdir/specific.json",
 			requestMatcher: &config.RequestMatcher{
 				Path: "/api/responses/*",
 			},
@@ -246,10 +246,56 @@ func TestProcessResponse(t *testing.T) {
 				Dir: testDirPath,
 			},
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   "",
+			expectedBody:   "Invalid directory",
 			requestPath:    "/api/responses/specific.json",
 			requestMatcher: &config.RequestMatcher{
 				Path: "/api/responses/",
+			},
+		},
+		{
+			name: "directory-based response with nil request matcher",
+			response: config.Response{
+				Dir: testDirPath,
+			},
+			expectedStatus: http.StatusInternalServerError,
+			expectedBody:   "Invalid directory",
+			requestPath:    "/api/responses/specific.json",
+		},
+		{
+			name: "directory-based response with empty request path",
+			response: config.Response{
+				Dir: testDirPath,
+			},
+			expectedStatus: http.StatusOK,
+			expectedBody:   "index file content",
+			expectedHeader: map[string]string{"Content-Type": "text/html; charset=utf-8"},
+			requestPath:    "/api/responses/",
+			requestMatcher: &config.RequestMatcher{
+				Path: "/api/responses/*",
+			},
+		},
+		{
+			name: "directory-based response with non-existent file",
+			response: config.Response{
+				Dir: testDirPath,
+			},
+			expectedStatus: http.StatusNotFound,
+			expectedBody:   "",
+			requestPath:    "/api/responses/nonexistent.json",
+			requestMatcher: &config.RequestMatcher{
+				Path: "/api/responses/*",
+			},
+		},
+		{
+			name: "directory-based response with non-existent directory",
+			response: config.Response{
+				Dir: "nonexistent",
+			},
+			expectedStatus: http.StatusNotFound,
+			expectedBody:   "",
+			requestPath:    "/api/responses/specific.json",
+			requestMatcher: &config.RequestMatcher{
+				Path: "/api/responses/*",
 			},
 		},
 		{
@@ -260,7 +306,39 @@ func TestProcessResponse(t *testing.T) {
 			expectedStatus: http.StatusOK,
 			expectedBody:   "index file content",
 			expectedHeader: map[string]string{"Content-Type": "text/html; charset=utf-8"},
-			requestPath:    "/api/responses/subdir/",
+			requestPath:    "/api/responses/",
+			requestMatcher: &config.RequestMatcher{
+				Path: "/api/responses/*",
+			},
+		},
+		{
+			name: "path traversal attempt is blocked",
+			response: config.Response{
+				File: "../../../etc/passwd",
+			},
+			expectedStatus: http.StatusInternalServerError,
+			expectedBody:   "Invalid file path",
+		},
+		{
+			name: "directory traversal attempt in dir response is blocked",
+			response: config.Response{
+				Dir: testDirPath,
+			},
+			expectedStatus: http.StatusInternalServerError,
+			expectedBody:   "Invalid file path",
+			requestPath:    "/api/responses/../../../etc/passwd",
+			requestMatcher: &config.RequestMatcher{
+				Path: "/api/responses/*",
+			},
+		},
+		{
+			name: "directory traversal attempt with encoded characters is blocked",
+			response: config.Response{
+				Dir: testDirPath,
+			},
+			expectedStatus: http.StatusInternalServerError,
+			expectedBody:   "Invalid file path",
+			requestPath:    "/api/responses/%2E%2E%2F%2E%2E%2F%2E%2E%2Fetc%2Fpasswd",
 			requestMatcher: &config.RequestMatcher{
 				Path: "/api/responses/*",
 			},
