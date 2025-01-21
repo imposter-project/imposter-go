@@ -616,156 +616,22 @@ func TestSOAPHandler_HandleRequest_MissingBody(t *testing.T) {
 	}
 }
 
-func TestSOAPHandler_SOAP11Fault(t *testing.T) {
+func TestSOAPHandler_SOAPFault(t *testing.T) {
 	tests := []struct {
-		name        string
-		wsdlPath    string
-		envelopeNS  string
-		contentType string
+		name            string
+		wsdlPath        string
+		envelopeNS      string
+		contentType     string
+		responseContent string
+		expectedFault   string
+		expectedReason  string
 	}{
 		{
 			name:        "WSDL 2.0 SOAP 1.2",
 			wsdlPath:    filepath.Join("testdata", "wsdl2-soap12/service.wsdl"),
 			envelopeNS:  "http://www.w3.org/2003/05/soap-envelope",
 			contentType: "application/soap+xml",
-		},
-		{
-			name:        "WSDL 1.1 SOAP 1.2",
-			wsdlPath:    filepath.Join("testdata", "wsdl1-soap12/service.wsdl"),
-			envelopeNS:  "http://www.w3.org/2003/05/soap-envelope",
-			contentType: "application/soap+xml",
-		},
-		{
-			name:        "WSDL 1.1 SOAP 1.1",
-			wsdlPath:    filepath.Join("testdata", "wsdl1-soap11/service.wsdl"),
-			envelopeNS:  "http://schemas.xmlsoap.org/soap/envelope/",
-			contentType: "text/xml",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Create test configuration with SOAP 1.1 WSDL
-			cfg := &config.Config{
-				Plugin:   "soap",
-				WSDLFile: tt.wsdlPath,
-				Resources: []config.Resource{
-					{
-						RequestMatcher: config.RequestMatcher{
-							Path:       "/pets/",
-							Operation:  "getPetById",
-							SOAPAction: "getPetById",
-						},
-						Response: config.Response{
-							Content: fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
-<env:Envelope xmlns:env="%s">
-   <env:Body>
-      <env:Fault>
-         <faultcode>env:Client</faultcode>
-         <faultstring>Invalid pet ID</faultstring>
-         <detail>
-            <pet:getPetByIdFault xmlns:pet="urn:com:example:petstore">
-                <pet:message>Pet ID must be a positive integer</pet:message>
-            </pet:getPetByIdFault>
-         </detail>
-      </env:Fault>
-   </env:Body>
-</env:Envelope>`, tt.envelopeNS),
-							StatusCode: http.StatusBadRequest,
-						},
-					},
-				},
-			}
-
-			// Create handler
-			handler, err := NewPluginHandler(cfg, ".", &config.ImposterConfig{})
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			// Create test request
-			soapRequest := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
-<env:Envelope xmlns:env="%s">
-   <env:Body>
-      <pet:getPetByIdRequest xmlns:pet="urn:com:example:petstore">
-         <pet:id>invalid</pet:id>
-      </pet:getPetByIdRequest>
-   </env:Body>
-</env:Envelope>`, tt.envelopeNS)
-
-			req := httptest.NewRequest(http.MethodPost, "/pets/", strings.NewReader(soapRequest))
-			req.Header.Set("Content-Type", tt.contentType)
-			req.Header.Set("SOAPAction", "getPetById")
-
-			// Initialise store and response state
-			requestStore := make(store.Store)
-			responseState := response.NewResponseState()
-
-			// Handle request
-			handler.HandleRequest(req, requestStore, responseState)
-
-			// Check response
-			if !responseState.Handled {
-				t.Error("Expected response to be handled")
-			}
-
-			if responseState.StatusCode != http.StatusBadRequest {
-				t.Errorf("Expected status code %d, got %d", http.StatusBadRequest, responseState.StatusCode)
-			}
-
-			responseBody := string(responseState.Body)
-			if !strings.Contains(responseBody, "<env:Fault>") {
-				t.Errorf("Expected response to contain SOAP 1.1 fault, got %s", responseBody)
-			}
-			if !strings.Contains(responseBody, "<faultstring>Invalid pet ID</faultstring>") {
-				t.Errorf("Expected fault to contain error message, got %s", responseBody)
-			}
-		})
-	}
-}
-
-func TestSOAPHandler_SOAP12Fault(t *testing.T) {
-	tests := []struct {
-		name        string
-		wsdlPath    string
-		envelopeNS  string
-		contentType string
-	}{
-		{
-			name:        "WSDL 2.0 SOAP 1.2",
-			wsdlPath:    filepath.Join("testdata", "wsdl2-soap12/service.wsdl"),
-			envelopeNS:  "http://www.w3.org/2003/05/soap-envelope",
-			contentType: "application/soap+xml",
-		},
-		{
-			name:        "WSDL 1.1 SOAP 1.2",
-			wsdlPath:    filepath.Join("testdata", "wsdl1-soap12/service.wsdl"),
-			envelopeNS:  "http://www.w3.org/2003/05/soap-envelope",
-			contentType: "application/soap+xml",
-		},
-		{
-			name:        "WSDL 1.1 SOAP 1.1",
-			wsdlPath:    filepath.Join("testdata", "wsdl1-soap11/service.wsdl"),
-			envelopeNS:  "http://schemas.xmlsoap.org/soap/envelope/",
-			contentType: "text/xml",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Create test configuration
-			cfg := &config.Config{
-				Plugin:   "soap",
-				WSDLFile: tt.wsdlPath,
-				Resources: []config.Resource{
-					{
-						RequestMatcher: config.RequestMatcher{
-							Path:       "/pets/",
-							Operation:  "getPetById",
-							SOAPAction: "getPetById",
-						},
-						Response: config.Response{
-							Content: fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
+			responseContent: `<?xml version="1.0" encoding="UTF-8"?>
 <env:Envelope xmlns:env="%s">
    <env:Body>
       <env:Fault>
@@ -785,7 +651,78 @@ func TestSOAPHandler_SOAP12Fault(t *testing.T) {
          </env:Detail>
       </env:Fault>
    </env:Body>
-</env:Envelope>`, tt.envelopeNS),
+</env:Envelope>`,
+			expectedFault:  "<env:Value>env:Sender</env:Value>",
+			expectedReason: "<env:Text xml:lang=\"en\">Invalid pet ID</env:Text>",
+		},
+		{
+			name:        "WSDL 1.1 SOAP 1.2",
+			wsdlPath:    filepath.Join("testdata", "wsdl1-soap12/service.wsdl"),
+			envelopeNS:  "http://www.w3.org/2003/05/soap-envelope",
+			contentType: "application/soap+xml",
+			responseContent: `<?xml version="1.0" encoding="UTF-8"?>
+<env:Envelope xmlns:env="%s">
+   <env:Body>
+      <env:Fault>
+         <env:Code>
+            <env:Value>env:Sender</env:Value>
+            <env:Subcode>
+               <env:Value>pet:InvalidId</env:Value>
+            </env:Subcode>
+         </env:Code>
+         <env:Reason>
+            <env:Text xml:lang="en">Invalid pet ID</env:Text>
+         </env:Reason>
+         <env:Detail>
+            <pet:getPetByIdFault xmlns:pet="urn:com:example:petstore">
+                <pet:message>Pet ID must be a positive integer</pet:message>
+            </pet:getPetByIdFault>
+         </env:Detail>
+      </env:Fault>
+   </env:Body>
+</env:Envelope>`,
+			expectedFault:  "<env:Value>env:Sender</env:Value>",
+			expectedReason: "<env:Text xml:lang=\"en\">Invalid pet ID</env:Text>",
+		},
+		{
+			name:        "WSDL 1.1 SOAP 1.1",
+			wsdlPath:    filepath.Join("testdata", "wsdl1-soap11/service.wsdl"),
+			envelopeNS:  "http://schemas.xmlsoap.org/soap/envelope/",
+			contentType: "text/xml",
+			responseContent: `<?xml version="1.0" encoding="UTF-8"?>
+<env:Envelope xmlns:env="%s">
+   <env:Body>
+      <env:Fault>
+         <faultcode>env:Client</faultcode>
+         <faultstring>Invalid pet ID</faultstring>
+         <detail>
+            <pet:getPetByIdFault xmlns:pet="urn:com:example:petstore">
+                <pet:message>Pet ID must be a positive integer</pet:message>
+            </pet:getPetByIdFault>
+         </detail>
+      </env:Fault>
+   </env:Body>
+</env:Envelope>`,
+			expectedFault:  "<faultcode>env:Client</faultcode>",
+			expectedReason: "<faultstring>Invalid pet ID</faultstring>",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create test configuration
+			cfg := &config.Config{
+				Plugin:   "soap",
+				WSDLFile: tt.wsdlPath,
+				Resources: []config.Resource{
+					{
+						RequestMatcher: config.RequestMatcher{
+							Path:       "/pets/",
+							Operation:  "getPetById",
+							SOAPAction: "getPetById",
+						},
+						Response: config.Response{
+							Content:    fmt.Sprintf(tt.responseContent, tt.envelopeNS),
 							StatusCode: http.StatusBadRequest,
 						},
 					},
@@ -830,13 +767,13 @@ func TestSOAPHandler_SOAP12Fault(t *testing.T) {
 
 			responseBody := string(responseState.Body)
 			if !strings.Contains(responseBody, "<env:Fault>") {
-				t.Errorf("Expected response to contain SOAP 1.2 fault, got %s", responseBody)
+				t.Errorf("Expected response to contain SOAP fault, got %s", responseBody)
 			}
-			if !strings.Contains(responseBody, "<env:Value>env:Sender</env:Value>") {
-				t.Errorf("Expected fault to contain error code, got %s", responseBody)
+			if !strings.Contains(responseBody, tt.expectedFault) {
+				t.Errorf("Expected fault to contain error code %s, got %s", tt.expectedFault, responseBody)
 			}
-			if !strings.Contains(responseBody, "<env:Text xml:lang=\"en\">Invalid pet ID</env:Text>") {
-				t.Errorf("Expected fault to contain error message, got %s", responseBody)
+			if !strings.Contains(responseBody, tt.expectedReason) {
+				t.Errorf("Expected fault to contain error message %s, got %s", tt.expectedReason, responseBody)
 			}
 		})
 	}
