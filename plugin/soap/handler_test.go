@@ -2,6 +2,7 @@ package soap
 
 import (
 	"fmt"
+	"github.com/imposter-project/imposter-go/internal/query"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -17,28 +18,68 @@ import (
 
 func TestSOAPHandler_HandleRequest(t *testing.T) {
 	tests := []struct {
-		name        string
-		wsdlPath    string
-		envelopeNS  string
-		contentType string
+		name            string
+		wsdlPath        string
+		envelopeNS      string
+		contentType     string
+		responseContent string
 	}{
 		{
 			name:        "WSDL 2.0 SOAP 1.2",
 			wsdlPath:    "testdata/wsdl2-soap12/service.wsdl",
 			envelopeNS:  "http://www.w3.org/2003/05/soap-envelope",
 			contentType: "application/soap+xml",
+			responseContent: `<?xml version="1.0" encoding="UTF-8"?>
+<env:Envelope xmlns:env="%s">
+    <env:Header/>
+    <env:Body>
+        <pet:getPetByIdResponse xmlns:pet="urn:com:example:petstore">
+            <pet:id>3</pet:id>
+            <pet:name>Test Pet</pet:name>
+        </pet:getPetByIdResponse>
+    </env:Body>
+</env:Envelope>`,
 		},
 		{
 			name:        "WSDL 1.1 SOAP 1.2",
 			wsdlPath:    "testdata/wsdl1-soap12/service.wsdl",
 			envelopeNS:  "http://www.w3.org/2003/05/soap-envelope",
 			contentType: "application/soap+xml",
+			responseContent: `<?xml version="1.0" encoding="UTF-8"?>
+<env:Envelope xmlns:env="%s">
+    <env:Header/>
+    <env:Body>
+        <pet:getPetByIdResponse xmlns:pet="urn:com:example:petstore">
+            <pet:id>3</pet:id>
+            <pet:name>Test Pet</pet:name>
+        </pet:getPetByIdResponse>
+    </env:Body>
+</env:Envelope>`,
 		},
 		{
 			name:        "WSDL 1.1 SOAP 1.1",
 			wsdlPath:    "testdata/wsdl1-soap11/service.wsdl",
 			envelopeNS:  "http://schemas.xmlsoap.org/soap/envelope/",
 			contentType: "text/xml",
+			responseContent: `<?xml version="1.0" encoding="UTF-8"?>
+<env:Envelope xmlns:env="%s">
+    <env:Header/>
+    <env:Body>
+        <pet:getPetByIdResponse xmlns:pet="urn:com:example:petstore">
+            <pet:id>3</pet:id>
+            <pet:name>Test Pet</pet:name>
+        </pet:getPetByIdResponse>
+    </env:Body>
+</env:Envelope>`,
+		},
+		{
+			name:        "WSDL 1.1 SOAP 1.1 with Message Part Filter",
+			wsdlPath:    "testdata/wsdl1-soap11-filter-message-parts/service.wsdl",
+			envelopeNS:  "http://schemas.xmlsoap.org/soap/envelope/",
+			contentType: "text/xml",
+
+			// expect a generated response based on the WSDL schema
+			responseContent: "",
 		},
 	}
 
@@ -82,20 +123,14 @@ func TestSOAPHandler_HandleRequest(t *testing.T) {
 							},
 						},
 						Response: config.Response{
-							Content: fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
-<env:Envelope xmlns:env="%s">
-    <env:Header/>
-    <env:Body>
-        <pet:getPetByIdResponse xmlns:pet="urn:com:example:petstore">
-            <pet:id>3</pet:id>
-            <pet:name>Test Pet</pet:name>
-        </pet:getPetByIdResponse>
-    </env:Body>
-</env:Envelope>`, tt.envelopeNS),
 							StatusCode: 200,
 						},
 					},
 				},
+			}
+
+			if tt.responseContent != "" {
+				cfg.Resources[0].Response.Content = fmt.Sprintf(tt.responseContent, tt.envelopeNS)
 			}
 
 			// Create handler
@@ -140,11 +175,22 @@ func TestSOAPHandler_HandleRequest(t *testing.T) {
 			}
 
 			responseBody := string(responseState.Body)
-			if !strings.Contains(responseBody, "<pet:getPetByIdResponse") {
-				t.Errorf("Expected response to contain getPetByIdResponse, got %s", responseBody)
+			ns := map[string]string{"env": tt.envelopeNS, "pet": "urn:com:example:petstore"}
+
+			result, success := query.XPathQuery(responseState.Body, "//pet:getPetByIdResponse", ns)
+			if !success {
+				t.Errorf("Failed to query response body: %s", responseBody)
 			}
-			if !strings.Contains(responseBody, "<pet:name>Test Pet</pet:name>") {
-				t.Errorf("Expected response to contain Test Pet, got %s", responseBody)
+			if result == "" {
+				t.Errorf("Expected response to contain getPetByIdResponse: %s", responseBody)
+			}
+
+			result, success = query.XPathQuery(responseState.Body, "//pet:getPetByIdResponse/pet:name", ns)
+			if !success {
+				t.Errorf("Failed to query response body: %s", responseBody)
+			}
+			if result == "" {
+				t.Errorf("Expected response to contain <pet:name>: %s", responseBody)
 			}
 		})
 	}
@@ -166,6 +212,10 @@ func TestSOAPHandler_HandleRequest_InvalidMethod(t *testing.T) {
 		{
 			name:     "WSDL 1.1 SOAP 1.1",
 			wsdlPath: filepath.Join("testdata", "wsdl1-soap11/service.wsdl"),
+		},
+		{
+			name:     "WSDL 1.1 SOAP 1.1 with Message Part Filter",
+			wsdlPath: filepath.Join("testdata", "wsdl1-soap11-filter-message-parts/service.wsdl"),
 		},
 	}
 
@@ -236,6 +286,12 @@ func TestSOAPHandler_HandleRequest_NoMatchingOperation(t *testing.T) {
 		{
 			name:        "WSDL 1.1 SOAP 1.1",
 			wsdlPath:    filepath.Join("testdata", "wsdl1-soap11/service.wsdl"),
+			envelopeNS:  "http://schemas.xmlsoap.org/soap/envelope/",
+			contentType: "text/xml",
+		},
+		{
+			name:        "WSDL 1.1 SOAP 1.1 with Message Part Filter",
+			wsdlPath:    filepath.Join("testdata", "wsdl1-soap11-filter-message-parts/service.wsdl"),
 			envelopeNS:  "http://schemas.xmlsoap.org/soap/envelope/",
 			contentType: "text/xml",
 		},
@@ -494,6 +550,10 @@ func TestSOAPHandler_HandleRequest_InvalidXML(t *testing.T) {
 			name:     "WSDL 1.1 SOAP 1.1",
 			wsdlPath: filepath.Join("testdata", "wsdl1-soap11/service.wsdl"),
 		},
+		{
+			name:     "WSDL 1.1 SOAP 1.1 with Message Part Filter",
+			wsdlPath: filepath.Join("testdata", "wsdl1-soap11-filter-message-parts/service.wsdl"),
+		},
 	}
 
 	for _, tt := range tests {
@@ -563,6 +623,10 @@ func TestSOAPHandler_HandleRequest_MissingBody(t *testing.T) {
 		{
 			name:     "WSDL 1.1 SOAP 1.1",
 			wsdlPath: filepath.Join("testdata", "wsdl1-soap11/service.wsdl"),
+		},
+		{
+			name:     "WSDL 1.1 SOAP 1.1 with Message Part Filter",
+			wsdlPath: filepath.Join("testdata", "wsdl1-soap11-filter-message-parts/service.wsdl"),
 		},
 	}
 
@@ -706,6 +770,28 @@ func TestSOAPHandler_SOAPFault(t *testing.T) {
 			expectedFault:  "<faultcode>env:Client</faultcode>",
 			expectedReason: "<faultstring>Invalid pet ID</faultstring>",
 		},
+		{
+			name:        "WSDL 1.1 SOAP 1.1 with Message Part Filter",
+			wsdlPath:    filepath.Join("testdata", "wsdl1-soap11-filter-message-parts/service.wsdl"),
+			envelopeNS:  "http://schemas.xmlsoap.org/soap/envelope/",
+			contentType: "text/xml",
+			responseContent: `<?xml version="1.0" encoding="UTF-8"?>
+<env:Envelope xmlns:env="%s">
+   <env:Body>
+      <env:Fault>
+         <faultcode>env:Client</faultcode>
+         <faultstring>Invalid pet ID</faultstring>
+         <detail>
+            <pet:getPetByIdFault xmlns:pet="urn:com:example:petstore">
+                <pet:message>Pet ID must be a positive integer</pet:message>
+            </pet:getPetByIdFault>
+         </detail>
+      </env:Fault>
+   </env:Body>
+</env:Envelope>`,
+			expectedFault:  "<faultcode>env:Client</faultcode>",
+			expectedReason: "<faultstring>Invalid pet ID</faultstring>",
+		},
 	}
 
 	for _, tt := range tests {
@@ -801,6 +887,12 @@ func TestSOAPHandler_InvalidSOAPVersion(t *testing.T) {
 		{
 			name:        "WSDL 1.1 SOAP 1.1",
 			wsdlPath:    filepath.Join("testdata", "wsdl1-soap11/service.wsdl"),
+			envelopeNS:  "http://schemas.xmlsoap.org/soap/envelope/",
+			contentType: "text/xml",
+		},
+		{
+			name:        "WSDL 1.1 SOAP 1.1 with Message Part Filter",
+			wsdlPath:    filepath.Join("testdata", "wsdl1-soap11-filter-message-parts/service.wsdl"),
 			envelopeNS:  "http://schemas.xmlsoap.org/soap/envelope/",
 			contentType: "text/xml",
 		},

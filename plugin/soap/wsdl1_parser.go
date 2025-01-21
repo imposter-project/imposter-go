@@ -2,6 +2,7 @@ package soap // WSDL 1.1 Parser
 
 import (
 	"fmt"
+	"github.com/imposter-project/imposter-go/internal/logger"
 	"github.com/imposter-project/imposter-go/pkg/xsd"
 	"strings"
 
@@ -89,15 +90,27 @@ func (p *wsdl1Parser) parseOperations() error {
 	return nil
 }
 
-func (p *wsdl1Parser) parseOperation(opNode *xmlquery.Node, portTypeName string, bindingName ...string) error {
+func (p *wsdl1Parser) parseOperation(opNode *xmlquery.Node, portTypeName string) error {
 	opName := opNode.SelectAttr("name")
 	op := &Operation{
 		Name: opName,
 	}
 
+	// Find corresponding binding operation to get SOAPAction, binding name and message parts (optional)
+	bindingOp := p.findBindingOperation(portTypeName, opName)
+	if bindingOp != nil {
+		if soapActionNode := xmlquery.FindOne(bindingOp, "./soap:operation|./soap12:operation"); soapActionNode != nil {
+			op.SOAPAction = soapActionNode.SelectAttr("soapAction")
+		}
+		// Get binding name from parent binding node
+		if bindingNode := xmlquery.FindOne(bindingOp, "ancestor::wsdl:binding|ancestor::binding"); bindingNode != nil {
+			op.Binding = bindingNode.SelectAttr("name")
+		}
+	}
+
 	// Parse input message
 	if inputNode := xmlquery.FindOne(opNode, "./wsdl:input|./input"); inputNode != nil {
-		if msg, err := p.getMessage(inputNode); err != nil {
+		if msg, err := p.getMessage(inputNode, "input", bindingOp); err != nil {
 			return fmt.Errorf("failed to parse input message: %w", err)
 		} else if msg != nil {
 			op.Input = msg
@@ -106,7 +119,7 @@ func (p *wsdl1Parser) parseOperation(opNode *xmlquery.Node, portTypeName string,
 
 	// Parse output message
 	if outputNode := xmlquery.FindOne(opNode, "./wsdl:output|./output"); outputNode != nil {
-		if msg, err := p.getMessage(outputNode); err != nil {
+		if msg, err := p.getMessage(outputNode, "output", bindingOp); err != nil {
 			return fmt.Errorf("failed to parse output message: %w", err)
 		} else if msg != nil {
 			op.Output = msg
@@ -115,31 +128,10 @@ func (p *wsdl1Parser) parseOperation(opNode *xmlquery.Node, portTypeName string,
 
 	// Parse fault message
 	if faultNode := xmlquery.FindOne(opNode, "./wsdl:fault|./fault"); faultNode != nil {
-		if msg, err := p.getMessage(faultNode); err != nil {
+		if msg, err := p.getMessage(faultNode, "fault", bindingOp); err != nil {
 			return fmt.Errorf("failed to parse fault message: %w", err)
 		} else if msg != nil {
 			op.Fault = msg
-		}
-	}
-
-	// If we have a binding name passed in, use it directly
-	if len(bindingName) > 0 && bindingName[0] != "" {
-		op.Binding = bindingName[0]
-		// Look for SOAPAction in the current node
-		if soapActionNode := xmlquery.FindOne(opNode, "./soap:operation|./soap12:operation"); soapActionNode != nil {
-			op.SOAPAction = soapActionNode.SelectAttr("soapAction")
-		}
-	} else {
-		// Find corresponding binding operation to get SOAPAction and binding name
-		bindingOp := p.findBindingOperation(portTypeName, opName)
-		if bindingOp != nil {
-			if soapActionNode := xmlquery.FindOne(bindingOp, "./soap:operation|./soap12:operation"); soapActionNode != nil {
-				op.SOAPAction = soapActionNode.SelectAttr("soapAction")
-			}
-			// Get binding name from parent binding node
-			if bindingNode := xmlquery.FindOne(bindingOp, "ancestor::wsdl:binding|ancestor::binding"); bindingNode != nil {
-				op.Binding = bindingNode.SelectAttr("name")
-			}
 		}
 	}
 
@@ -162,7 +154,16 @@ func (p *wsdl1Parser) findBindingOperation(portTypeName, opName string) *xmlquer
 }
 
 // getMessage extracts message details from a WSDL message reference
-func (p *wsdl1Parser) getMessage(msgNode *xmlquery.Node) (*Message, error) {
+func (p *wsdl1Parser) getMessage(msgNode *xmlquery.Node, messageType string, bindingOp *xmlquery.Node) (*Message, error) {
+	var partFilter *[]string
+	bindingOpSoapBodyNode := xmlquery.FindOne(bindingOp, fmt.Sprintf("./wsdl:%[1]s/soap:body|./wsdl:%[1]s/soap12:body", messageType))
+	if bindingOpSoapBodyNode == nil {
+		logger.Warnf("no soap:body found in binding operation: %s", bindingOp.Data)
+	} else {
+		msgParts := strings.Split(bindingOpSoapBodyNode.SelectAttr("parts"), " ")
+		partFilter = &msgParts
+	}
+
 	// Get the message QName (e.g. "tns:GetPetByNameRequest")
 	msgQName := msgNode.SelectAttr("message")
 	if msgQName == "" {
@@ -189,8 +190,20 @@ func (p *wsdl1Parser) getMessage(msgNode *xmlquery.Node) (*Message, error) {
 		return nil, fmt.Errorf("no parts found in message: %s", msgQName)
 	}
 
+	if partFilter != nil {
+		var filteredParts []*xmlquery.Node
+		for i := 0; i < len(parts); i++ {
+			for _, partName := range *partFilter {
+				if partName == parts[i].SelectAttr("name") {
+					filteredParts = append(filteredParts, parts[i])
+				}
+			}
+		}
+		logger.Tracef("filtered parts: %v", filteredParts)
+		parts = filteredParts
+	}
+
 	// For now, we'll use the first part's element or type
-	// TODO add part filter
 	part := parts[0]
 	msg := &Message{}
 
