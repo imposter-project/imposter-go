@@ -6,6 +6,7 @@
 
     <documentation>
         This is a sample WSDL 2.0 document describing the pet service.
+        It has SOAP 1.2 bindings.
     </documentation>
 
     <types>

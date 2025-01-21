@@ -5,6 +5,11 @@
              xmlns:xsd="http://www.w3.org/2001/XMLSchema"
              targetNamespace="urn:com:example:petstore">
 
+    <documentation>
+        This is a sample WSDL 1.1 document describing the pet service.
+        It has SOAP 1.1 bindings.
+    </documentation>
+
     <types>
         <xsd:schema targetNamespace="urn:com:example:petstore">
             <xsd:element name="getPetByIdRequest">

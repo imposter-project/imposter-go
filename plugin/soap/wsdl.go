@@ -220,7 +220,7 @@ func augmentConfigWithWSDL(cfg *config.Config, parser WSDLParser) error {
 			Response: &config.Response{
 				StatusCode: 200,
 				Headers: map[string]string{
-					"Content-Type": "application/soap+xml",
+					"Content-Type": getResponseContentType(parser.GetSOAPVersion()),
 				},
 				Content: exampleResponse,
 			},

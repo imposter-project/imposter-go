@@ -11,7 +11,7 @@ import (
 
 // sendSOAPFault sends a SOAP fault response
 func (h *PluginHandler) sendSOAPFault(rs *response.ResponseState, message string, statusCode int) {
-	rs.Headers["Content-Type"] = "application/soap+xml"
+	rs.Headers["Content-Type"] = getResponseContentType(h.wsdlParser.GetSOAPVersion())
 	rs.StatusCode = statusCode
 
 	var faultXML string
@@ -38,7 +38,7 @@ func (h *PluginHandler) sendSOAPFault(rs *response.ResponseState, message string
 // processResponse processes and sends the SOAP response
 func (h *PluginHandler) processResponse(reqMatcher *config.RequestMatcher, rs *response.ResponseState, r *http.Request, resp config.Response, requestStore store.Store, op *Operation) {
 	// Set content type for SOAP response
-	rs.Headers["Content-Type"] = "application/soap+xml"
+	rs.Headers["Content-Type"] = getResponseContentType(h.wsdlParser.GetSOAPVersion())
 
 	// Handle SOAP faults from config
 	var finalResp config.Response
@@ -74,4 +74,15 @@ func wrapInEnvelope(content string, version SOAPVersion) string {
 <env:Envelope xmlns:env="%s">
   <env:Body>%s</env:Body>
 </env:Envelope>`, getEnvNamespace(version), content)
+}
+
+// getResponseContentType returns the content type for the SOAP response
+// based on the SOAP version
+func getResponseContentType(soapVersion SOAPVersion) string {
+	switch {
+	case soapVersion == SOAP12:
+		return "application/soap+xml"
+	default:
+		return "text/xml"
+	}
 }
