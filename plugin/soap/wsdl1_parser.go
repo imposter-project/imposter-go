@@ -3,6 +3,7 @@ package soap // WSDL 1.1 Parser
 import (
 	"fmt"
 	"github.com/imposter-project/imposter-go/internal/logger"
+	"github.com/imposter-project/imposter-go/pkg/utils"
 	"github.com/imposter-project/imposter-go/pkg/xsd"
 	"strings"
 
@@ -155,15 +156,6 @@ func (p *wsdl1Parser) findBindingOperation(portTypeName, opName string) *xmlquer
 
 // getMessage extracts message details from a WSDL message reference
 func (p *wsdl1Parser) getMessage(msgNode *xmlquery.Node, messageType string, bindingOp *xmlquery.Node) (*Message, error) {
-	var partFilter *[]string
-	bindingOpSoapBodyNode := xmlquery.FindOne(bindingOp, fmt.Sprintf("./wsdl:%[1]s/soap:body|./wsdl:%[1]s/soap12:body", messageType))
-	if bindingOpSoapBodyNode == nil {
-		logger.Warnf("no soap:body found in binding operation: %s", bindingOp.Data)
-	} else {
-		msgParts := strings.Split(bindingOpSoapBodyNode.SelectAttr("parts"), " ")
-		partFilter = &msgParts
-	}
-
 	// Get the message QName (e.g. "tns:GetPetByNameRequest")
 	msgQName := msgNode.SelectAttr("message")
 	if msgQName == "" {
@@ -185,69 +177,91 @@ func (p *wsdl1Parser) getMessage(msgNode *xmlquery.Node, messageType string, bin
 	}
 
 	// Get the message parts
-	parts := xmlquery.Find(msgDef, "./wsdl:part|./part")
-	if len(parts) == 0 {
+	partNodes := xmlquery.Find(msgDef, "./wsdl:part|./part")
+	if len(partNodes) == 0 {
 		return nil, fmt.Errorf("no parts found in message: %s", msgQName)
+	}
+
+	// Filter parts based on soap:body parts attribute
+	partNodes = p.filterParts(bindingOp, messageType, partNodes)
+
+	parts, err := p.parseParts(partNodes, msgQName)
+	if err != nil {
+		return nil, err
+	}
+	switch len(parts) {
+	case 0:
+		return nil, fmt.Errorf("message part must have either element or type attribute: %s", msgQName)
+	case 1:
+		return &parts[0], nil
+	default:
+		var composite Message = &CompositeMessage{Parts: &parts, MessageName: localPart}
+		return &composite, nil
+	}
+}
+
+// filterParts filters message parts based on the soap:body parts attribute
+func (p *wsdl1Parser) filterParts(
+	bindingOp *xmlquery.Node,
+	messageType string,
+	partNodes []*xmlquery.Node,
+) []*xmlquery.Node {
+	var partFilter *[]string
+
+	bindingOpSoapBodyNode := xmlquery.FindOne(bindingOp, fmt.Sprintf("./wsdl:%[1]s/soap:body|./wsdl:%[1]s/soap12:body", messageType))
+	if bindingOpSoapBodyNode == nil {
+		logger.Warnf("no soap:body found in binding operation: %s", bindingOp.Data)
+	} else {
+		msgParts := strings.Split(bindingOpSoapBodyNode.SelectAttr("parts"), " ")
+		partFilter = &msgParts
 	}
 
 	if partFilter != nil {
 		var filteredParts []*xmlquery.Node
-		for i := 0; i < len(parts); i++ {
-			for _, partName := range *partFilter {
-				if partName == parts[i].SelectAttr("name") {
-					filteredParts = append(filteredParts, parts[i])
-				}
+		for _, partNode := range partNodes {
+			partNodeName := partNode.SelectAttr("name")
+			if utils.StringSliceContainsElement(partFilter, partNodeName) {
+				filteredParts = append(filteredParts, partNode)
 			}
 		}
 		logger.Tracef("filtered parts: %v", filteredParts)
-		parts = filteredParts
+		partNodes = filteredParts
 	}
+	return partNodes
+}
 
-	// For now, we'll use the first part's element or type
-	part := parts[0]
-	msg := &Message{}
-
+// parseParts parses message parts from a list of part nodes
+func (p *wsdl1Parser) parseParts(
+	partNodes []*xmlquery.Node,
+	msgQName string,
+) ([]Message, error) {
 	schemas := *p.schemas
 
-	// Check for element reference
-	if element := part.SelectAttr("element"); element != "" {
-		// If the element reference is not qualified and we have a target namespace, qualify it
-		// TODO check if this should be the targetNamespace from the element's schema
-		if !strings.Contains(element, ":") {
-			tns := p.GetTargetNamespace()
-			if tns != "" {
-				element = "tns:" + element
+	var parts []Message
+	for _, part := range partNodes {
+		partName := part.SelectAttr("name")
+
+		if element := part.SelectAttr("element"); element != "" {
+			element = p.toQName(element)
+			elementNode, err := schemas.ResolveElement(element)
+			if err != nil {
+				return nil, fmt.Errorf("failed to resolve element %s: %w", element, err)
 			}
-		}
+			part := &ElementMessage{Element: elementNode}
+			parts = append(parts, part)
 
-		elementNode, err := schemas.ResolveElement(element)
-		if err != nil {
-			return nil, fmt.Errorf("failed to resolve element %s: %w", element, err)
-		}
-		msg.Element = elementNode
-
-		return msg, nil
-	}
-
-	// Check for type reference
-	if typeRef := part.SelectAttr("type"); typeRef != "" {
-		// If the type reference is not qualified, and we have a target namespace, qualify it
-		// TODO check if this should be the targetNamespace from the element's schema
-		if !strings.Contains(typeRef, ":") {
-			tns := p.GetTargetNamespace()
-			if tns != "" {
-				typeRef = "tns:" + typeRef
+		} else if typeRef := part.SelectAttr("type"); typeRef != "" {
+			typeRef = p.toQName(typeRef)
+			typeNode, err := schemas.ResolveType(typeRef)
+			if err != nil {
+				return nil, fmt.Errorf("failed to resolve type %s: %w", typeRef, err)
 			}
-		}
+			part := &TypeMessage{Type: typeNode, PartName: partName}
+			parts = append(parts, part)
 
-		typeNode, err := schemas.ResolveType(typeRef)
-		if err != nil {
-			return nil, fmt.Errorf("failed to resolve type %s: %w", typeRef, err)
+		} else {
+			return nil, fmt.Errorf("message part must have either element or type attribute: %s", msgQName)
 		}
-		msg.Type = typeNode
-
-		return msg, nil
 	}
-
-	return nil, fmt.Errorf("message part must have either element or type attribute: %s", msgQName)
+	return parts, nil
 }

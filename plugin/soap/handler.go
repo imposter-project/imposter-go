@@ -146,26 +146,33 @@ func (h *PluginHandler) determineOperation(soapAction string, bodyHolder *Messag
 		return nil
 	}
 
-	namespace := bodyElement.NamespaceURI
-	localName := bodyElement.Data
+	bodyRootElementNs := bodyElement.NamespaceURI
+	bodyRootElementLocal := bodyElement.Data
 
 	// Match operations based on input message
 	var matchedOps []*Operation
 	for _, op := range h.wsdlParser.GetOperations() {
 		if op.Input != nil {
-			// Match by element
-			if op.Input.Element != nil {
-				// inputNS, inputName := splitQName(op.Input.Element)
-				inputNS, inputName := op.Input.Element.Space, op.Input.Element.Local
-				if inputNS == namespace && inputName == localName {
+			inputMsg := *op.Input
+
+			switch inputMsg.GetMessageType() {
+			case ElementMessageType:
+				// Match by element
+				elementMsg := inputMsg.(*ElementMessage)
+				inputNS, inputName := elementMsg.Element.Space, elementMsg.Element.Local
+				if inputNS == bodyRootElementNs && inputName == bodyRootElementLocal {
 					matchedOps = append(matchedOps, op)
 				}
-			}
-
-			// Match by type
-			if op.Input.Type != nil {
-				// TODO: implement type matching
-				//matchedOps = append(matchedOps, op)
+			case TypeMessageType:
+				// Match by type
+				// TODO consider matching on body child element names against part names
+				if bodyRootElementLocal == op.Name {
+					matchedOps = append(matchedOps, op)
+				}
+			case CompositeMessageType:
+				if inputMsg.(*CompositeMessage).MessageName == bodyRootElementLocal {
+					matchedOps = append(matchedOps, op)
+				}
 			}
 		}
 	}

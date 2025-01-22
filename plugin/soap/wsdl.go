@@ -1,7 +1,6 @@
 package soap
 
 import (
-	"encoding/xml"
 	"fmt"
 	"github.com/imposter-project/imposter-go/internal/logger"
 	"github.com/imposter-project/imposter-go/pkg/xsd"
@@ -56,32 +55,16 @@ type WSDLParser interface {
 	GetTargetNamespace() string
 }
 
-func (w *BaseWSDLParser) GetWSDLPath() string {
-	return w.wsdlPath
-}
-
-// Operation represents a WSDL operation
-type Operation struct {
-	Name       string
-	SOAPAction string
-	Input      *Message
-	Output     *Message
-	Fault      *Message
-	Binding    string
-}
-
-// Message represents a WSDL message
-type Message struct {
-	Element *xml.Name
-	Type    *xml.Name
-}
-
 // BaseWSDLParser provides common functionality for WSDL parsers
 type BaseWSDLParser struct {
 	wsdlPath   string
 	doc        *xmlquery.Node
 	operations map[string]*Operation
 	schemas    *xsd.SchemaSystem
+}
+
+func (p *BaseWSDLParser) GetWSDLPath() string {
+	return p.wsdlPath
 }
 
 // GetBindingName returns the binding name for the given operation
@@ -140,6 +123,18 @@ func (p *BaseWSDLParser) GetNamespaceByPrefix(prefix string) string {
 	return ""
 }
 
+// toQName qualifies a node if it is not already qualified, and a targetNamespace is present
+func (p *BaseWSDLParser) toQName(node string) string {
+	// TODO check if this should be the targetNamespace from the element's schema
+	if !strings.Contains(node, ":") {
+		tns := p.GetTargetNamespace()
+		if tns != "" {
+			node = "tns:" + node
+		}
+	}
+	return node
+}
+
 // newWSDLParser creates a new version-aware WSDL parser instance
 func newWSDLParser(wsdlPath string) (WSDLParser, error) {
 	logger.Tracef("loading WSDL file %s", wsdlPath)
@@ -192,7 +187,7 @@ func augmentConfigWithWSDL(cfg *config.Config, parser WSDLParser) error {
 
 		// Generate example response XML
 		// TODO make this lazy; use a template placeholder function, such as ${soap.example('${op.Name}')}
-		exampleXml, err := generateExampleXML(op.Output.Element, &parser)
+		exampleXml, err := generateExampleXML(op.Output, parser.GetSchemaSystem())
 		if err != nil {
 			return err
 		}

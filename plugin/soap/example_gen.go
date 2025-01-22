@@ -13,38 +13,27 @@ import (
 )
 
 // generateExampleXML generates example XML based on the WSDL schema
-func generateExampleXML(element *xml.Name, parser *WSDLParser) (string, error) {
-	var targetNS string
+func generateExampleXML(message *Message, schemaSystem *xsd.SchemaSystem) (string, error) {
+	var element *xml.Name
+	switch (*message).GetMessageType() {
+	case ElementMessageType:
+		element = (*message).(*ElementMessage).Element
+	case TypeMessageType:
+		// TODO generate synthetic element schema using the type
+		return "", fmt.Errorf("type message not supported")
+	default:
+		return "", fmt.Errorf("unsupported message type: %T", *message)
+	}
 
-	//// Get target namespace from first schema (or root if not found)
-	//for _, schemaNode := range schemas {
-	//	if ns := schemaNode.SelectAttr("targetNamespace"); ns != "" {
-	//		targetNS = ns
-	//		break
-	//	}
-	//}
-	//if targetNS == "" {
-	//	// Try to get from root element as fallback
-	//	if root := doc.SelectElement("*"); root != nil {
-	//		targetNS = root.SelectAttr("targetNamespace")
-	//	}
-	//}
-
-	schemas := (*((*parser).GetSchemaSystem())).GetSchemas()
-
-	// Extract local part of element QName
-
-	// localPart := getLocalPart(element)
 	localPart := element.Local
-
-	// prefix := getPrefix(element)
-	prefix := "tns"
-
 	elementExpr := fmt.Sprintf("//*[local-name()='element' and @name='%s']", localPart)
 
 	// the path to the schema file that contains the element
 	var elementSchemaPath string
 
+	var targetNS string
+
+	schemas := (*schemaSystem).GetSchemas()
 	for _, schemaPath := range schemas {
 		schemaContent, err := os.ReadFile(schemaPath)
 		if err != nil {
@@ -63,12 +52,6 @@ func generateExampleXML(element *xml.Name, parser *WSDLParser) (string, error) {
 			// Found the element, remember the path to the schema file and get its target namespace
 			elementSchemaPath = schemaPath
 
-			//if schemaRoot := schemaDoc.SelectElement("schema"); schemaRoot != nil {
-			//	if ns := schemaRoot.SelectAttr("targetNamespace"); ns != "" {
-			//		targetNS = ns
-			//	}
-			//}
-
 			ns := xsd.GetTargetNamespace(schemaDoc)
 			if ns != "" {
 				targetNS = ns
@@ -81,9 +64,9 @@ func generateExampleXML(element *xml.Name, parser *WSDLParser) (string, error) {
 		return "", fmt.Errorf("element definition not found: %s (searched in WSDL and %d schema files)", element, len(schemas))
 	}
 
-	logger.Debugf("generating example for element [localPart: %s, prefix: %s, target namespace: %s]", localPart, prefix, targetNS)
+	logger.Debugf("generating example for element [localPart: %s, target namespace: %s]", localPart, targetNS)
 
-	example, err := examplegen.GenerateWithNs(elementSchemaPath, localPart, targetNS, prefix)
+	example, err := examplegen.GenerateWithNs(elementSchemaPath, localPart, targetNS, "tns")
 	if err != nil {
 		return "", fmt.Errorf("failed to generate XML: %w", err)
 	}

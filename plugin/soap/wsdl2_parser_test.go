@@ -77,9 +77,9 @@ func TestWSDL2Operations(t *testing.T) {
 	assert.Equal(t, "TestOperation", op.Name)
 
 	// Test operation messages
-	assert.Equal(t, &xml.Name{Space: "urn:com:example:petstore", Local: "TestRequest"}, op.Input.Element)
-	assert.Equal(t, &xml.Name{Space: "urn:com:example:petstore", Local: "TestResponse"}, op.Output.Element)
-	assert.Equal(t, &xml.Name{Space: "urn:com:example:petstore", Local: "TestFault"}, op.Fault.Element)
+	assert.Equal(t, &xml.Name{Space: "urn:com:example:petstore", Local: "TestRequest"}, (*op.Input).(*ElementMessage).Element)
+	assert.Equal(t, &xml.Name{Space: "urn:com:example:petstore", Local: "TestResponse"}, (*op.Output).(*ElementMessage).Element)
+	assert.Equal(t, &xml.Name{Space: "urn:com:example:petstore", Local: "TestFault"}, (*op.Fault).(*ElementMessage).Element)
 
 	// Test GetBindingName
 	assert.Equal(t, "TestBinding", parser.GetBindingName(op))

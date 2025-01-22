@@ -52,7 +52,7 @@ func (h *PluginHandler) processResponse(reqMatcher *config.RequestMatcher, rs *r
 			finalResp.File = resp.File
 		} else {
 			// TODO handle fault types as well as elements
-			faultXml, err := generateExampleXML(op.Fault.Element, &h.wsdlParser)
+			faultXml, err := generateExampleXML(op.Fault, h.wsdlParser.GetSchemaSystem())
 			if err != nil {
 				logger.Errorf("failed to generate example XML for fault: %v", err)
 			}

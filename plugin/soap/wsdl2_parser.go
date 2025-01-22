@@ -2,10 +2,8 @@ package soap
 
 import (
 	"fmt"
-	"github.com/imposter-project/imposter-go/pkg/xsd"
-	"strings"
-
 	"github.com/antchfx/xmlquery"
+	"github.com/imposter-project/imposter-go/pkg/xsd"
 )
 
 // WSDL 2.0 Parser
@@ -172,20 +170,20 @@ func (p *wsdl2Parser) getMessage(context *xmlquery.Node, expression string, requ
 		return nil, nil
 	}
 
-	// If the element reference is not qualified and we have a target namespace, qualify it
-	if !strings.Contains(element, ":") {
-		tns := p.GetTargetNamespace()
-		if tns != "" {
-			element = "tns:" + element
-		}
-	}
+	//// If the element reference is not qualified, and we have a target namespace, qualify it
+	//if !strings.Contains(element, ":") {
+	//	tns := p.GetTargetNamespace()
+	//	if tns != "" {
+	//		element = "tns:" + element
+	//	}
+	//}
+	element = p.toQName(element)
 
 	elementNode, err := (*p.schemas).ResolveElement(element)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve element %s: %w", element, err)
 	}
 
-	return &Message{
-		Element: elementNode,
-	}, nil
+	var message Message = &ElementMessage{Element: elementNode}
+	return &message, nil
 }
