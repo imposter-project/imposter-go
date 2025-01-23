@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.1] - 2025-01-23
+### Changed
+- docs: adds CLI instructions.
+- docs: describes recommended approach.
+- docs: fully qualify releases URL.
+- docs: improves usage instructions.
+- docs: indicate version is required when using the CLI.
+- docs: provides example for version argument.
+- test: moves model tests to separate file.
+
+### Fixed
+- fix: resolve preloaded store file paths relative to config file.
+
 ## [0.15.0] - 2025-01-22
 ### Added
 - feat(soap): adds message part filtering.
