@@ -2,7 +2,6 @@ package soap
 
 import (
 	"fmt"
-	"github.com/imposter-project/imposter-go/internal/query"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -10,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/imposter-project/imposter-go/internal/query"
 	"github.com/imposter-project/imposter-go/internal/response"
 
 	"github.com/imposter-project/imposter-go/internal/config"
@@ -23,6 +23,7 @@ func TestSOAPHandler_HandleRequest(t *testing.T) {
 		envelopeNS      string
 		contentType     string
 		responseContent string
+		xpathQueries    []string
 	}{
 		{
 			name:        "WSDL 2.0 SOAP 1.2",
@@ -39,6 +40,10 @@ func TestSOAPHandler_HandleRequest(t *testing.T) {
         </pet:getPetByIdResponse>
     </env:Body>
 </env:Envelope>`,
+			xpathQueries: []string{
+				"//pet:getPetByIdResponse[pet:id/text()='3']",
+				"//pet:getPetByIdResponse[pet:name/text()='Test Pet']",
+			},
 		},
 		{
 			name:        "WSDL 1.1 SOAP 1.2",
@@ -55,6 +60,10 @@ func TestSOAPHandler_HandleRequest(t *testing.T) {
         </pet:getPetByIdResponse>
     </env:Body>
 </env:Envelope>`,
+			xpathQueries: []string{
+				"//pet:getPetByIdResponse[pet:id/text()='3']",
+				"//pet:getPetByIdResponse[pet:name/text()='Test Pet']",
+			},
 		},
 		{
 			name:        "WSDL 1.1 SOAP 1.1",
@@ -71,15 +80,20 @@ func TestSOAPHandler_HandleRequest(t *testing.T) {
         </pet:getPetByIdResponse>
     </env:Body>
 </env:Envelope>`,
+			xpathQueries: []string{
+				"//pet:getPetByIdResponse[pet:id/text()='3']",
+				"//pet:getPetByIdResponse[pet:name/text()='Test Pet']",
+			},
 		},
 		{
-			name:        "WSDL 1.1 SOAP 1.1 with Message Part Filter",
-			wsdlPath:    "testdata/wsdl1-soap11-filter-message-parts/service.wsdl",
-			envelopeNS:  "http://schemas.xmlsoap.org/soap/envelope/",
-			contentType: "text/xml",
-
-			// expect a generated response based on the WSDL schema
+			name:            "WSDL 1.1 SOAP 1.1 with Message Part Filter",
+			wsdlPath:        "testdata/wsdl1-soap11-filter-message-parts/service.wsdl",
+			envelopeNS:      "http://schemas.xmlsoap.org/soap/envelope/",
+			contentType:     "text/xml",
 			responseContent: "",
+			xpathQueries: []string{
+				"//pet:getPetByIdResponse",
+			},
 		},
 	}
 
@@ -177,20 +191,16 @@ func TestSOAPHandler_HandleRequest(t *testing.T) {
 			responseBody := string(responseState.Body)
 			ns := map[string]string{"env": tt.envelopeNS, "pet": "urn:com:example:petstore"}
 
-			result, success := query.XPathQuery(responseState.Body, "//pet:getPetByIdResponse", ns)
-			if !success {
-				t.Errorf("Failed to query response body: %s", responseBody)
-			}
-			if result == "" {
-				t.Errorf("Expected response to contain getPetByIdResponse: %s", responseBody)
-			}
-
-			result, success = query.XPathQuery(responseState.Body, "//pet:getPetByIdResponse/pet:name", ns)
-			if !success {
-				t.Errorf("Failed to query response body: %s", responseBody)
-			}
-			if result == "" {
-				t.Errorf("Expected response to contain <pet:name>: %s", responseBody)
+			// Execute XPath queries
+			for _, xpathQuery := range tt.xpathQueries {
+				result, success := query.XPathQuery(responseState.Body, xpathQuery, ns)
+				if !success {
+					t.Errorf("Failed to execute XPath query %s: %s", xpathQuery, responseBody)
+					continue
+				}
+				if result == "" {
+					t.Errorf("XPath query %s did not find a matching node in: %s", xpathQuery, responseBody)
+				}
 			}
 		})
 	}
