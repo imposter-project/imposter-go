@@ -17,6 +17,18 @@ A Go implementation of the [Imposter Mock Engine](https://www.imposter.sh).
 - No support (yet) for some SOAP styles (https://github.com/imposter-project/imposter-go/issues/7, https://github.com/imposter-project/imposter-go/issues/8, https://github.com/imposter-project/imposter-go/issues/9)
 - No support (yet) for selecting OAS example name (https://github.com/imposter-project/imposter-go/issues/11)
 
+## Getting Started
+
+The easiest way to get started if you have [Imposter CLI](https://github.com/gatehill/imposter-cli) installed is to use the `-t golang` option, for example:
+
+```
+imposter up -t golang -v <version>
+```
+
+...where `version` is from the [Releases](./releases) page.
+
+If you don't have Imposter CLI installed, continue to the [Installation](#Installation) section.
+
 ## Installation
 
 ### Using Pre-built Binaries
