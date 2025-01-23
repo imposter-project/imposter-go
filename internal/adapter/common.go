@@ -1,6 +1,7 @@
 package adapter
 
 import (
+	"github.com/imposter-project/imposter-go/internal/version"
 	"os"
 	"strings"
 
@@ -12,7 +13,7 @@ import (
 
 // InitialiseImposter performs common initialisation tasks for all adapters
 func InitialiseImposter(configDirArg string) (*config.ImposterConfig, []plugin.Plugin) {
-	logger.Infoln("starting imposter-go...")
+	logger.Infof("starting imposter-go %s...", version.Version)
 
 	imposterConfig := config.LoadImposterConfig()
 	configDirs := getConfigDirs(configDirArg)
