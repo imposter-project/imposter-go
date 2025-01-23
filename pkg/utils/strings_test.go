@@ -44,3 +44,56 @@ func TestStringSliceContainsElement(t *testing.T) {
 		})
 	}
 }
+
+func TestRemoveEmptyStrings(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []string
+		expected []string
+	}{
+		{
+			name:     "Empty slice",
+			input:    []string{},
+			expected: []string{},
+		},
+		{
+			name:     "No empty strings",
+			input:    []string{"first", "second", "third"},
+			expected: []string{"first", "second", "third"},
+		},
+		{
+			name:     "Whitespace strings",
+			input:    []string{" ", "\t", "\n", "\r", " \t\n\r "},
+			expected: []string{},
+		},
+		{
+			name:     "Strings with whitespace",
+			input:    []string{" first ", "\tsecond\t", "\nthird\n"},
+			expected: []string{"first", "second", "third"},
+		},
+		{
+			name:     "Mixed content",
+			input:    []string{"first", "", " second ", "\t", "third\n", " ", "fourth"},
+			expected: []string{"first", "second", "third", "fourth"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := RemoveEmptyStrings(tt.input)
+
+			// Check length
+			if len(result) != len(tt.expected) {
+				t.Errorf("RemoveEmptyStrings() returned slice of length %v, want %v", len(result), len(tt.expected))
+				return
+			}
+
+			// Check contents
+			for i := range result {
+				if result[i] != tt.expected[i] {
+					t.Errorf("RemoveEmptyStrings()[%d] = %v, want %v", i, result[i], tt.expected[i])
+				}
+			}
+		})
+	}
+}

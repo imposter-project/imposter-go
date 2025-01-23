@@ -15,7 +15,7 @@ func ValidatePath(path string, configDir string) (string, error) {
 
 	if !strings.HasPrefix(filePath, filepath.Clean(configDir)+string(filepath.Separator)) {
 		msg := fmt.Sprintf("file path escapes config directory: %s", filePath)
-		logger.Errorf(msg)
+		logger.Errorln(msg)
 		return "", errors.New(msg)
 	}
 	return filePath, nil
