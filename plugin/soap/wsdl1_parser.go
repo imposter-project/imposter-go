@@ -213,7 +213,10 @@ func (p *wsdl1Parser) filterParts(
 		logger.Warnf("no soap:body found in binding operation: %s", bindingOp.Data)
 	} else {
 		msgParts := strings.Split(bindingOpSoapBodyNode.SelectAttr("parts"), " ")
-		partFilter = &msgParts
+		msgParts = utils.RemoveEmptyStrings(msgParts)
+		if len(msgParts) > 0 {
+			partFilter = &msgParts
+		}
 	}
 
 	if partFilter != nil {
