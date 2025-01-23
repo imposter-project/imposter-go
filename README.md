@@ -74,7 +74,7 @@ sudo mv imposter-go /usr/local/bin/
 
 ## Usage
 
-Run the server with a configuration file:
+Run with a directory containing Imposter configuration file(s):
 
 ```bash
 imposter-go ./examples/rest/simple
