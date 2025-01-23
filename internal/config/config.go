@@ -101,10 +101,12 @@ func LoadConfig(configDir string) []Config {
 
 			if fileConfig.System != nil {
 				// Resolve preload file paths relative to config file
-				for _, definition := range fileConfig.System.Stores {
-					if definition.PreloadFile != "" && !filepath.IsAbs(definition.PreloadFile) {
-						definition.PreloadFile = filepath.Join(relDir, definition.PreloadFile)
+				for storeName := range fileConfig.System.Stores {
+					store := fileConfig.System.Stores[storeName]
+					if store.PreloadFile != "" && !filepath.IsAbs(store.PreloadFile) {
+						store.PreloadFile = filepath.Join(relDir, store.PreloadFile)
 					}
+					fileConfig.System.Stores[storeName] = store
 				}
 			}
 

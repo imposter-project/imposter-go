@@ -242,8 +242,18 @@ resources:
 resources:
   - path: /users
     response:
-      content: users response
-      statusCode: 200`
+      file: users-response.json
+      statusCode: 200
+  
+  - path: /static
+    response:
+      dir: static-content
+
+system:
+  stores:
+    users:
+      preloadFile: user-db.json
+`
 
 	err = os.WriteFile(filepath.Join(tempDir, "root-config.yaml"), []byte(rootConfig), 0644)
 	require.NoError(t, err)
@@ -273,8 +283,13 @@ resources:
 	require.Equal(t, "/test", rootCfg.Resources[0].Path)
 
 	// Check sub-directory config paths
-	require.Len(t, subCfg.Resources, 1)
+	require.Len(t, subCfg.Resources, 2)
 	require.Equal(t, "/api/v1/users", subCfg.Resources[0].Path)
+	require.Equal(t, "api/v1/users-response.json", subCfg.Resources[0].Response.File)
+	require.Equal(t, "api/v1/static-content", subCfg.Resources[1].Response.Dir)
+
+	// Check system store preload file path
+	require.Equal(t, "api/v1/user-db.json", subCfg.System.Stores["users"].PreloadFile)
 }
 
 func TestLoadConfig_WithInterceptors(t *testing.T) {
