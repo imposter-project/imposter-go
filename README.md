@@ -25,7 +25,7 @@ The easiest way to get started if you have [Imposter CLI](https://github.com/gat
 imposter up -t golang -v <version>
 ```
 
-...where `version` is from the [Releases](./releases) page.
+...where `version` is from the [Releases](https://github.com/imposter-project/imposter-go/releases/) page.
 
 If you don't have Imposter CLI installed, continue to the [Installation](#Installation) section.
 
