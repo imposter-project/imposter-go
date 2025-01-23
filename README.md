@@ -19,7 +19,12 @@ A Go implementation of the [Imposter Mock Engine](https://www.imposter.sh).
 
 ## Getting Started
 
-The easiest way to get started if you have the latest [Imposter CLI](https://github.com/gatehill/imposter-cli) installed is to use the `-t golang` option, for example:
+The recommended way to get started for most users is to use the latest [Imposter CLI](https://github.com/gatehill/imposter-cli).
+
+> **Note**
+> If you don't have Imposter CLI installed, or you want to use the `imposter-go` binary directly, continue to the [Installation](#Installation) section.
+
+With `imposter-cli` installed, use the `-t golang` option:
 
 ```
 imposter up -t golang -v <version>
@@ -30,8 +35,6 @@ imposter up -t golang -v <version>
 ```
 imposter up -t golang -v 0.15.0
 ```
-
-If you don't have Imposter CLI installed, continue to the [Installation](#Installation) section.
 
 ## Installation
 
