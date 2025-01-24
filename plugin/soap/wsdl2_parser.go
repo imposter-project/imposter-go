@@ -3,6 +3,7 @@ package soap
 import (
 	"fmt"
 	"github.com/antchfx/xmlquery"
+	"github.com/imposter-project/imposter-go/internal/wsdlmsg"
 	"github.com/imposter-project/imposter-go/pkg/xsd"
 )
 
@@ -16,15 +17,20 @@ func newWSDL2Parser(doc *xmlquery.Node, wsdlPath string) (*wsdl2Parser, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract schemas: %w", err)
 	}
+	targetNamespace := getWsdlTargetNamespace(doc)
 	parser := &wsdl2Parser{
 		BaseWSDLParser: BaseWSDLParser{
-			doc:        doc,
-			wsdlPath:   wsdlPath,
-			operations: make(map[string]*Operation),
-			schemas:    &schemas,
+			doc:             doc,
+			wsdlPath:        wsdlPath,
+			operations:      make(map[string]*Operation),
+			schemas:         &schemas,
+			targetNamespace: targetNamespace,
 		},
 	}
 	if err := parser.parseOperations(); err != nil {
+		return nil, err
+	}
+	if err := parser.resolveMessagesToElements(); err != nil {
 		return nil, err
 	}
 	return parser, nil
@@ -152,7 +158,7 @@ func (p *wsdl2Parser) findBindingOperation(interfaceName, opName string) *xmlque
 }
 
 // getMessage extracts message details from a WSDL 2.0 message reference
-func (p *wsdl2Parser) getMessage(context *xmlquery.Node, expression string, required bool) (*Message, error) {
+func (p *wsdl2Parser) getMessage(context *xmlquery.Node, expression string, required bool) (*wsdlmsg.Message, error) {
 	msgNode := xmlquery.FindOne(context, expression)
 	if msgNode == nil {
 		if required {
@@ -170,13 +176,7 @@ func (p *wsdl2Parser) getMessage(context *xmlquery.Node, expression string, requ
 		return nil, nil
 	}
 
-	//// If the element reference is not qualified, and we have a target namespace, qualify it
-	//if !strings.Contains(element, ":") {
-	//	tns := p.GetTargetNamespace()
-	//	if tns != "" {
-	//		element = "tns:" + element
-	//	}
-	//}
+	// qualify the element name if necessary
 	element = p.toQName(element)
 
 	elementNode, err := (*p.schemas).ResolveElement(element)
@@ -184,6 +184,6 @@ func (p *wsdl2Parser) getMessage(context *xmlquery.Node, expression string, requ
 		return nil, fmt.Errorf("failed to resolve element %s: %w", element, err)
 	}
 
-	var message Message = &ElementMessage{Element: elementNode}
+	var message wsdlmsg.Message = &wsdlmsg.ElementMessage{Element: elementNode}
 	return &message, nil
 }

@@ -3,6 +3,7 @@ package soap // WSDL 1.1 Parser
 import (
 	"fmt"
 	"github.com/imposter-project/imposter-go/internal/logger"
+	"github.com/imposter-project/imposter-go/internal/wsdlmsg"
 	"github.com/imposter-project/imposter-go/pkg/utils"
 	"github.com/imposter-project/imposter-go/pkg/xsd"
 	"strings"
@@ -19,15 +20,20 @@ func newWSDL1Parser(doc *xmlquery.Node, wsdlPath string) (*wsdl1Parser, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract schemas: %w", err)
 	}
+	targetNamespace := getWsdlTargetNamespace(doc)
 	parser := &wsdl1Parser{
 		BaseWSDLParser: BaseWSDLParser{
-			doc:        doc,
-			wsdlPath:   wsdlPath,
-			operations: make(map[string]*Operation),
-			schemas:    &schemas,
+			doc:             doc,
+			wsdlPath:        wsdlPath,
+			operations:      make(map[string]*Operation),
+			schemas:         &schemas,
+			targetNamespace: targetNamespace,
 		},
 	}
 	if err := parser.parseOperations(); err != nil {
+		return nil, err
+	}
+	if err := parser.resolveMessagesToElements(); err != nil {
 		return nil, err
 	}
 	return parser, nil
@@ -155,7 +161,7 @@ func (p *wsdl1Parser) findBindingOperation(portTypeName, opName string) *xmlquer
 }
 
 // getMessage extracts message details from a WSDL message reference
-func (p *wsdl1Parser) getMessage(msgNode *xmlquery.Node, messageType string, bindingOp *xmlquery.Node) (*Message, error) {
+func (p *wsdl1Parser) getMessage(msgNode *xmlquery.Node, messageType string, bindingOp *xmlquery.Node) (*wsdlmsg.Message, error) {
 	// Get the message QName (e.g. "tns:GetPetByNameRequest")
 	msgQName := msgNode.SelectAttr("message")
 	if msgQName == "" {
@@ -195,7 +201,7 @@ func (p *wsdl1Parser) getMessage(msgNode *xmlquery.Node, messageType string, bin
 	case 1:
 		return &parts[0], nil
 	default:
-		var composite Message = &CompositeMessage{Parts: &parts, MessageName: localPart}
+		var composite wsdlmsg.Message = &wsdlmsg.CompositeMessage{Parts: &parts, MessageName: localPart}
 		return &composite, nil
 	}
 }
@@ -237,10 +243,10 @@ func (p *wsdl1Parser) filterParts(
 func (p *wsdl1Parser) parseParts(
 	partNodes []*xmlquery.Node,
 	msgQName string,
-) ([]Message, error) {
+) ([]wsdlmsg.Message, error) {
 	schemas := *p.schemas
 
-	var parts []Message
+	var parts []wsdlmsg.Message
 	for _, part := range partNodes {
 		partName := part.SelectAttr("name")
 
@@ -250,7 +256,7 @@ func (p *wsdl1Parser) parseParts(
 			if err != nil {
 				return nil, fmt.Errorf("failed to resolve element %s: %w", element, err)
 			}
-			part := &ElementMessage{Element: elementNode}
+			part := &wsdlmsg.ElementMessage{Element: elementNode}
 			parts = append(parts, part)
 
 		} else if typeRef := part.SelectAttr("type"); typeRef != "" {
@@ -259,7 +265,7 @@ func (p *wsdl1Parser) parseParts(
 			if err != nil {
 				return nil, fmt.Errorf("failed to resolve type %s: %w", typeRef, err)
 			}
-			part := &TypeMessage{Type: typeNode, PartName: partName}
+			part := &wsdlmsg.TypeMessage{Type: typeNode, PartName: partName}
 			parts = append(parts, part)
 
 		} else {

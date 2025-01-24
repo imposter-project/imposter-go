@@ -1,8 +1,10 @@
 package soap
 
 import (
+	"encoding/xml"
 	"fmt"
 	"github.com/imposter-project/imposter-go/internal/logger"
+	"github.com/imposter-project/imposter-go/internal/wsdlmsg"
 	"github.com/imposter-project/imposter-go/pkg/xsd"
 	"os"
 	"strings"
@@ -28,12 +30,11 @@ const (
 )
 
 const (
-	WSDL1Namespace     = "http://schemas.xmlsoap.org/wsdl/"
-	WSDL2Namespace     = "http://www.w3.org/ns/wsdl"
-	XMLSchemaNamespace = "http://www.w3.org/2001/XMLSchema"
-	SOAP11Namespace    = "http://schemas.xmlsoap.org/wsdl/soap/"
-	SOAP12Namespace    = "http://schemas.xmlsoap.org/wsdl/soap12/"
-	WSOAP20Namespace   = "http://www.w3.org/ns/wsdl/soap"
+	WSDL1Namespace   = "http://schemas.xmlsoap.org/wsdl/"
+	WSDL2Namespace   = "http://www.w3.org/ns/wsdl"
+	SOAP11Namespace  = "http://schemas.xmlsoap.org/wsdl/soap/"
+	SOAP12Namespace  = "http://schemas.xmlsoap.org/wsdl/soap12/"
+	WSOAP20Namespace = "http://www.w3.org/ns/wsdl/soap"
 )
 
 // WSDLDocProvider is the interface that provides the WSDL document
@@ -57,10 +58,11 @@ type WSDLParser interface {
 
 // BaseWSDLParser provides common functionality for WSDL parsers
 type BaseWSDLParser struct {
-	wsdlPath   string
-	doc        *xmlquery.Node
-	operations map[string]*Operation
-	schemas    *xsd.SchemaSystem
+	wsdlPath        string
+	doc             *xmlquery.Node
+	operations      map[string]*Operation
+	schemas         *xsd.SchemaSystem
+	targetNamespace string
 }
 
 func (p *BaseWSDLParser) GetWSDLPath() string {
@@ -97,16 +99,7 @@ func (p *BaseWSDLParser) GetSchemaSystem() *xsd.SchemaSystem {
 
 // GetTargetNamespace returns the target namespace of the WSDL document
 func (p *BaseWSDLParser) GetTargetNamespace() string {
-	root := p.doc.SelectElement("*")
-	if root == nil {
-		return ""
-	}
-	for _, attr := range root.Attr {
-		if attr.Name.Local == "targetNamespace" {
-			return attr.Value
-		}
-	}
-	return ""
+	return p.targetNamespace
 }
 
 // GetNamespaceByPrefix returns the namespace URI for a given prefix
@@ -133,6 +126,81 @@ func (p *BaseWSDLParser) toQName(node string) string {
 		}
 	}
 	return node
+}
+
+// resolveMessagesToElements generates synthetic schemas for non-element messages
+func (p *BaseWSDLParser) resolveMessagesToElements() error {
+	schemaSystem := *p.GetSchemaSystem()
+	targetNamespace := p.GetTargetNamespace()
+
+	for _, op := range p.GetOperations() {
+		if op.Input != nil {
+			inputMsg, err := resolveMessage(*op.Input, "input", op.Name, targetNamespace, schemaSystem, p.wsdlPath)
+			if err != nil {
+				return err
+			}
+			op.Input = &inputMsg
+		}
+
+		if op.Output != nil {
+			outputMsg, err := resolveMessage(*op.Output, "output", op.Name, targetNamespace, schemaSystem, p.wsdlPath)
+			if err != nil {
+				return err
+			}
+			op.Output = &outputMsg
+		}
+
+		if op.Fault != nil {
+			faultMsg, err := resolveMessage(*op.Fault, "fault", op.Name, targetNamespace, schemaSystem, p.wsdlPath)
+			if err != nil {
+				return err
+			}
+			op.Fault = &faultMsg
+		}
+	}
+	return nil
+}
+
+// resolveMessage generates a synthetic schema for a message that is not an element
+func resolveMessage(rawMsg wsdlmsg.Message, msgRole string, opName string, targetNamespace string, schemaSystem xsd.SchemaSystem, wsdlPath string) (wsdlmsg.Message, error) {
+	filename := fmt.Sprintf("synthetic-%s-%s.xsd", opName, msgRole)
+
+	switch rawMsg.GetMessageType() {
+	case wsdlmsg.ElementMessageType:
+		return rawMsg, nil
+
+	case wsdlmsg.TypeMessageType:
+		msg := rawMsg.(*wsdlmsg.TypeMessage)
+		schema, elementName := wsdlmsg.CreateSinglePartSchema(msg, targetNamespace)
+
+		if err := schemaSystem.ImportSchema(wsdlPath, filename, schema); err != nil {
+			return nil, err
+		}
+		processedMsg := &wsdlmsg.ElementMessage{
+			Element: &xml.Name{
+				Local: getLocalPart(elementName),
+				Space: targetNamespace,
+			},
+		}
+		return processedMsg, nil
+
+	case wsdlmsg.CompositeMessageType:
+		msg := rawMsg.(*wsdlmsg.CompositeMessage)
+		elementName := msg.MessageName
+		schema := wsdlmsg.CreateCompositePartSchema(elementName, *msg.Parts, targetNamespace)
+
+		if err := schemaSystem.ImportSchema(wsdlPath, filename, schema); err != nil {
+			return nil, err
+		}
+		processedMsg := &wsdlmsg.ElementMessage{
+			Element: &xml.Name{
+				Local: getLocalPart(elementName),
+				Space: targetNamespace,
+			},
+		}
+		return processedMsg, nil
+	}
+	return nil, fmt.Errorf("unsupported message type: %T", rawMsg)
 }
 
 // newWSDLParser creates a new version-aware WSDL parser instance
@@ -162,21 +230,34 @@ func newWSDLParser(wsdlPath string) (WSDLParser, error) {
 		return nil, fmt.Errorf("invalid WSDL document: root element has no namespace")
 	}
 
+	var parser WSDLParser
+
 	// Check for WSDL 2.0
 	for _, attr := range root.Attr {
 		if strings.Contains(attr.Value, WSDL2Namespace) {
-			return newWSDL2Parser(doc, wsdlPath)
+			if parser, err = newWSDL2Parser(doc, wsdlPath); err != nil {
+				return nil, err
+			}
+			break
 		}
 	}
 
-	// Check for WSDL 1.1
-	for _, attr := range root.Attr {
-		if strings.Contains(attr.Value, WSDL1Namespace) {
-			return newWSDL1Parser(doc, wsdlPath)
+	if parser == nil {
+		// Check for WSDL 1.1
+		for _, attr := range root.Attr {
+			if strings.Contains(attr.Value, WSDL1Namespace) {
+				if parser, err = newWSDL1Parser(doc, wsdlPath); err != nil {
+					return nil, err
+				}
+				break
+			}
 		}
 	}
 
-	return nil, fmt.Errorf("unsupported WSDL version")
+	if parser == nil {
+		return nil, fmt.Errorf("unsupported WSDL version")
+	}
+	return parser, nil
 }
 
 // augmentConfigWithWSDL enriches the configuration with auto-generated interceptors for each WSDL operation.
@@ -263,6 +344,20 @@ func getLocalPart(qname string) string {
 func getPrefix(qname string) string {
 	if idx := strings.Index(qname, ":"); idx != -1 {
 		return qname[:idx]
+	}
+	return ""
+}
+
+// getWsdlTargetNamespace returns the target namespace of the WSDL document
+func getWsdlTargetNamespace(doc *xmlquery.Node) string {
+	root := doc.SelectElement("*")
+	if root == nil {
+		return ""
+	}
+	for _, attr := range root.Attr {
+		if attr.Name.Local == "targetNamespace" {
+			return attr.Value
+		}
 	}
 	return ""
 }

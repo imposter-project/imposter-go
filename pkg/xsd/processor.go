@@ -11,18 +11,23 @@ import (
 )
 
 // processSchema writes a schema and its imports to the destination directory, and returns a map of schema URLs to their local paths
-func processSchema(wsdlDir string, schema *xmlquery.Node, destDir string, index int, processedSchemas map[string]string) error {
-	InheritNamespaces(schema)
-
-	schemaXML := schema.OutputXML(true)
-	schemaDoc, err := xmlquery.Parse(strings.NewReader(schemaXML))
-	if err != nil {
-		return fmt.Errorf("failed to parse schema XML: %w", err)
+func processSchema(wsdlDir string, schema *xmlquery.Node, destDir string, index int, processedSchemas *map[string]string, isXmlBaseSchema bool) error {
+	if !isXmlBaseSchema {
+		InheritNamespaces(schema)
 	}
 
-	// Process imports first
-	if err := processImports(wsdlDir, schemaDoc, processedSchemas, destDir); err != nil {
-		return err
+	schemaXML := schema.OutputXML(true)
+
+	if !isXmlBaseSchema {
+		schemaDoc, err := xmlquery.Parse(strings.NewReader(schemaXML))
+		if err != nil {
+			return fmt.Errorf("failed to parse schema XML: %w", err)
+		}
+
+		// Process imports first
+		if err := processImports(wsdlDir, schemaDoc, processedSchemas, destDir); err != nil {
+			return err
+		}
 	}
 
 	// Write the current schema to the destination directory
@@ -32,13 +37,13 @@ func processSchema(wsdlDir string, schema *xmlquery.Node, destDir string, index 
 		return fmt.Errorf("failed to write schema to file: %w", err)
 	}
 
-	processedSchemas[getSchemaKey(schema)] = schemaPath
+	(*processedSchemas)[getSchemaKey(schema)] = schemaPath
 	logger.Tracef("wrote schema %d to %s", index, schemaPath)
 	return nil
 }
 
 // processImports processes import elements in a schema recursively
-func processImports(wsdlDir string, schemaDoc *xmlquery.Node, processedSchemas map[string]string, tempDir string) error {
+func processImports(wsdlDir string, schemaDoc *xmlquery.Node, processedSchemas *map[string]string, tempDir string) error {
 	imports := xmlquery.Find(schemaDoc, ".//*[local-name()='import']")
 	for _, imp := range imports {
 		var schemaLocation, namespace string
@@ -65,7 +70,7 @@ func processImports(wsdlDir string, schemaDoc *xmlquery.Node, processedSchemas m
 				return fmt.Errorf("failed to read imported schema %s: %v", resolvedPath, err)
 			}
 
-			if err := importSchema(wsdlDir, tempDir, schemaLocation, importedContent, processedSchemas, resolvedPath); err != nil {
+			if err := importSchema(wsdlDir, tempDir, schemaLocation, importedContent, processedSchemas, false); err != nil {
 				return err
 			}
 		}
@@ -74,25 +79,25 @@ func processImports(wsdlDir string, schemaDoc *xmlquery.Node, processedSchemas m
 }
 
 // importSchema processes a schema recursively
-func importSchema(wsdlDir string, destDir string, schemaLocation string, schemaContent []byte, processedSchemas map[string]string, resolvedPath string) error {
+func importSchema(wsdlDir string, destDir string, schemaLocation string, schemaContent []byte, processedSchemas *map[string]string, isXmlBaseSchema bool) error {
 	// Copy the imported schema to the temp directory
 	targetPath := filepath.Join(destDir, filepath.Base(schemaLocation))
 	if err := os.WriteFile(targetPath, schemaContent, 0644); err != nil {
 		return fmt.Errorf("failed to write schema %s: %v", targetPath, err)
 	}
-	processedSchemas[schemaLocation] = targetPath
+	(*processedSchemas)[schemaLocation] = targetPath
 
 	schemaDoc, err := xmlquery.Parse(bytes.NewReader(schemaContent))
 	if err != nil {
-		return fmt.Errorf("failed to parse schema %s: %v", resolvedPath, err)
+		return fmt.Errorf("failed to parse schema %s: %v", schemaLocation, err)
 	}
 
 	schemaRootNode := xmlquery.FindOne(schemaDoc, "//*[local-name()='schema']")
 	if schemaRootNode != nil {
 		// Process the imported schema recursively
-		subIndex := len(processedSchemas)
-		if err := processSchema(wsdlDir, schemaRootNode, destDir, subIndex, processedSchemas); err != nil {
-			return fmt.Errorf("failed to process schema %s: %v", resolvedPath, err)
+		subIndex := len(*processedSchemas)
+		if err := processSchema(wsdlDir, schemaRootNode, destDir, subIndex, processedSchemas, isXmlBaseSchema); err != nil {
+			return fmt.Errorf("failed to process schema %s: %v", schemaLocation, err)
 		}
 	}
 	return nil
@@ -111,8 +116,8 @@ func getSchemaKey(schema *xmlquery.Node) string {
 }
 
 // isProcessed checks if a schema has already been processed
-func isProcessed(schemaLocation string, processedSchemas map[string]string) bool {
-	for _, path := range processedSchemas {
+func isProcessed(schemaLocation string, processedSchemas *map[string]string) bool {
+	for _, path := range *processedSchemas {
 		if strings.Contains(path, schemaLocation) {
 			return true
 		}

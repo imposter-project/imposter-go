@@ -8,6 +8,14 @@ import (
 	"strings"
 )
 
+// MakeQName creates a qualified name from a prefix and local part
+func MakeQName(prefix, localPart string) string {
+	if prefix == "" {
+		return localPart
+	}
+	return fmt.Sprintf("%s:%s", prefix, localPart)
+}
+
 // SplitQName splits a qualified name into namespace and local part
 func SplitQName(qname string) (namespace, localPart string) {
 	parts := strings.Split(qname, ":")

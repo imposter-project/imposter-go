@@ -19,9 +19,14 @@ type SchemaSystem interface {
 
 	// ResolveType resolves a type by QName
 	ResolveType(qname string) (*xml.Name, error)
+
+	// ImportSchema imports a schema into the schema system
+	ImportSchema(wsdlDir string, uniqueSchemaFilename string, schemaContent []byte) error
 }
 
 type schemaSystem struct {
+	// dir is the directory where schema files are stored
+	dir     string
 	schemas map[string]string
 }
 
@@ -54,22 +59,32 @@ func ExtractSchemas(wsdlPath string, wsdlDoc *xmlquery.Node) (SchemaSystem, erro
 	wsdlDir := filepath.Dir(wsdlPath)
 
 	// Add the base XSD datatypes
-	if err := importSchema(wsdlDir, tempDir, "XMLSchema-datatypes.xsd", BaseDatatypes, processedSchemas, "XMLSchema-datatypes.xsd"); err != nil {
+	if err := importSchema(wsdlDir, tempDir, "XMLSchema.xsd", BaseDatatypes, &processedSchemas, true); err != nil {
 		return nil, fmt.Errorf("failed to import base datatypes: %w", err)
 	}
 
 	// Process each schema (and its imports) recursively
 	for i, schema := range schemas {
-		if err := processSchema(wsdlDir, schema, tempDir, i, processedSchemas); err != nil {
+		if err := processSchema(wsdlDir, schema, tempDir, i, &processedSchemas, false); err != nil {
 			return nil, fmt.Errorf("failed to process schema %d: %w", i, err)
 		}
 	}
 
 	// Create a new schema system
 	ss := &schemaSystem{
+		dir:     tempDir,
 		schemas: processedSchemas,
 	}
 	return ss, nil
+}
+
+// ImportSchema imports a schema into the schema system
+func (s *schemaSystem) ImportSchema(wsdlDir string, uniqueSchemaFilename string, schemaContent []byte) error {
+	logger.Tracef("importing schema: %s", uniqueSchemaFilename)
+	if err := importSchema(wsdlDir, s.dir, uniqueSchemaFilename, schemaContent, &s.schemas, false); err != nil {
+		return fmt.Errorf("failed to import schema: %s: %w", uniqueSchemaFilename, err)
+	}
+	return nil
 }
 
 func (s *schemaSystem) GetSchemas() map[string]string {

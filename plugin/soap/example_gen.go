@@ -3,6 +3,7 @@ package soap
 import (
 	"encoding/xml"
 	"fmt"
+	"github.com/imposter-project/imposter-go/internal/wsdlmsg"
 	"github.com/imposter-project/imposter-go/pkg/xsd"
 	"os"
 	"strings"
@@ -13,14 +14,11 @@ import (
 )
 
 // generateExampleXML generates example XML based on the WSDL schema
-func generateExampleXML(message *Message, schemaSystem *xsd.SchemaSystem) (string, error) {
+func generateExampleXML(message *wsdlmsg.Message, schemaSystem *xsd.SchemaSystem) (string, error) {
 	var element *xml.Name
 	switch (*message).GetMessageType() {
-	case ElementMessageType:
-		element = (*message).(*ElementMessage).Element
-	case TypeMessageType:
-		// TODO generate synthetic element schema using the type
-		return "", fmt.Errorf("type message not supported")
+	case wsdlmsg.ElementMessageType:
+		element = (*message).(*wsdlmsg.ElementMessage).Element
 	default:
 		return "", fmt.Errorf("unsupported message type: %T", *message)
 	}

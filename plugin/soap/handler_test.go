@@ -86,13 +86,26 @@ func TestSOAPHandler_HandleRequest(t *testing.T) {
 			},
 		},
 		{
-			name:            "WSDL 1.1 SOAP 1.1 with Message Part Filter",
-			wsdlPath:        "testdata/wsdl1-soap11-filter-message-parts/service.wsdl",
-			envelopeNS:      "http://schemas.xmlsoap.org/soap/envelope/",
-			contentType:     "text/xml",
+			name:        "WSDL 1.1 SOAP 1.1 with Message Part Filter",
+			wsdlPath:    "testdata/wsdl1-soap11-filter-message-parts/service.wsdl",
+			envelopeNS:  "http://schemas.xmlsoap.org/soap/envelope/",
+			contentType: "text/xml",
+			// expect a response to be generated from the WSDL schema
 			responseContent: "",
 			xpathQueries: []string{
 				"//pet:getPetByIdResponse",
+			},
+		},
+		{
+			name:        "WSDL 1.1 SOAP 1.1 with Composite Message",
+			wsdlPath:    "testdata/wsdl1-soap11-composite-message/service.wsdl",
+			envelopeNS:  "http://schemas.xmlsoap.org/soap/envelope/",
+			contentType: "text/xml",
+			// expect a response to be generated from the WSDL schema
+			responseContent: "",
+			xpathQueries: []string{
+				"//pet:getPetByIdResponse[pet:id/text()='3']",
+				"//pet:getPetByIdResponse[pet:name/text()='Test Pet']",
 			},
 		},
 	}

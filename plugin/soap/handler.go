@@ -3,6 +3,7 @@ package soap
 import (
 	"bytes"
 	"fmt"
+	"github.com/imposter-project/imposter-go/internal/wsdlmsg"
 	"net/http"
 	"strings"
 
@@ -156,21 +157,21 @@ func (h *PluginHandler) determineOperation(soapAction string, bodyHolder *Messag
 			inputMsg := *op.Input
 
 			switch inputMsg.GetMessageType() {
-			case ElementMessageType:
+			case wsdlmsg.ElementMessageType:
 				// Match by element
-				elementMsg := inputMsg.(*ElementMessage)
+				elementMsg := inputMsg.(*wsdlmsg.ElementMessage)
 				inputNS, inputName := elementMsg.Element.Space, elementMsg.Element.Local
 				if inputNS == bodyRootElementNs && inputName == bodyRootElementLocal {
 					matchedOps = append(matchedOps, op)
 				}
-			case TypeMessageType:
+			case wsdlmsg.TypeMessageType:
 				// Match by type
 				// TODO consider matching on body child element names against part names
 				if bodyRootElementLocal == op.Name {
 					matchedOps = append(matchedOps, op)
 				}
-			case CompositeMessageType:
-				if inputMsg.(*CompositeMessage).MessageName == bodyRootElementLocal {
+			case wsdlmsg.CompositeMessageType:
+				if inputMsg.(*wsdlmsg.CompositeMessage).MessageName == bodyRootElementLocal {
 					matchedOps = append(matchedOps, op)
 				}
 			}

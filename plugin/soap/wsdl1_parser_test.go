@@ -2,6 +2,7 @@ package soap
 
 import (
 	"encoding/xml"
+	"github.com/imposter-project/imposter-go/internal/wsdlmsg"
 	"os"
 	"path/filepath"
 	"testing"
@@ -93,9 +94,9 @@ func TestWSDL1Operations(t *testing.T) {
 	assert.Equal(t, "TestBinding", op.Binding)
 
 	// Test operation messages
-	assert.Equal(t, &xml.Name{Space: "urn:com:example:petstore", Local: "TestRequest"}, (*op.Input).(*ElementMessage).Element)
-	assert.Equal(t, &xml.Name{Space: "urn:com:example:petstore", Local: "TestResponse"}, (*op.Output).(*ElementMessage).Element)
-	assert.Equal(t, &xml.Name{Space: "urn:com:example:petstore", Local: "TestFault"}, (*op.Fault).(*ElementMessage).Element)
+	assert.Equal(t, &xml.Name{Space: "urn:com:example:petstore", Local: "TestRequest"}, (*op.Input).(*wsdlmsg.ElementMessage).Element)
+	assert.Equal(t, &xml.Name{Space: "urn:com:example:petstore", Local: "TestResponse"}, (*op.Output).(*wsdlmsg.ElementMessage).Element)
+	assert.Equal(t, &xml.Name{Space: "urn:com:example:petstore", Local: "TestFault"}, (*op.Fault).(*wsdlmsg.ElementMessage).Element)
 
 	// Test GetBindingName
 	assert.Equal(t, "TestBinding", parser.GetBindingName(op))
