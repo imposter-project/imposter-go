@@ -1,6 +1,7 @@
 package wsdlmsg
 
 import (
+	"encoding/xml"
 	"fmt"
 	"github.com/imposter-project/imposter-go/internal/logger"
 	"github.com/imposter-project/imposter-go/pkg/xsd"
@@ -12,21 +13,20 @@ const (
 )
 
 // CreateSinglePartSchema creates an XML schema for a single message part
-func CreateSinglePartSchema(message *TypeMessage, targetNamespace string) (schema []byte, elementName string) {
+func CreateSinglePartSchema(elementName string, elementType *xml.Name, targetNamespace string) (schema []byte, elementQName string) {
 	var typeNsPrefix string
-	if message.Type.Space != XMLSchemaNamespace {
+	if elementType.Space != XMLSchemaNamespace {
 		typeNsPrefix = "ns1"
 	} else {
 		typeNsPrefix = "xs"
 	}
 
-	elementName = message.PartName
-	elementQName := xsd.MakeQName(typeNsPrefix, elementName)
+	elementQName = xsd.MakeQName(typeNsPrefix, elementName)
 
 	// Build namespaces map
 	namespaces := make(map[string]string)
-	if message.Type.Space != "" {
-		namespaces[typeNsPrefix] = message.Type.Space
+	if elementType.Space != "" {
+		namespaces[typeNsPrefix] = elementType.Space
 	}
 	namespaces["xs"] = XMLSchemaNamespace
 	if targetNamespace != "" {
@@ -44,7 +44,7 @@ func CreateSinglePartSchema(message *TypeMessage, targetNamespace string) (schem
 		namespacesXml = append(namespacesXml, fmt.Sprintf(`targetNamespace="%s"`, targetNamespace))
 	}
 
-	typeQName := xsd.MakeQName(typeNsPrefix, message.Type.Local)
+	typeQName := xsd.MakeQName(typeNsPrefix, elementType.Local)
 
 	// Generate element XML
 	elementXml := fmt.Sprintf(`<xs:element name="%s" type="%s"/>`, elementName, typeQName)
@@ -81,8 +81,7 @@ func CreateCompositePartSchema(rootElementName string, parts []Message, targetNa
 			var nsPrefix string
 			if m.Element.Space != "" {
 				if m.Element.Space != XMLSchemaNamespace {
-					nsPrefix = fmt.Sprintf("ns%d", nsIndex)
-					namespaces[nsPrefix] = m.Element.Space
+					nsPrefix = getOrAddPrefixForNs(&namespaces, m.Element.Space)
 				} else {
 					nsPrefix = "xs"
 				}
@@ -94,8 +93,7 @@ func CreateCompositePartSchema(rootElementName string, parts []Message, targetNa
 			var nsPrefix string
 			if m.Type.Space != "" {
 				if m.Type.Space != XMLSchemaNamespace {
-					nsPrefix = fmt.Sprintf("ns%d", nsIndex)
-					namespaces[nsPrefix] = m.Type.Space
+					nsPrefix = getOrAddPrefixForNs(&namespaces, m.Type.Space)
 				} else {
 					nsPrefix = "xs"
 				}
@@ -131,4 +129,18 @@ func CreateCompositePartSchema(rootElementName string, parts []Message, targetNa
 
 	logger.Tracef("generated composite schema: %s", generatedSchema)
 	return []byte(generatedSchema)
+}
+
+// getOrAddPrefixForNs returns the prefix for a namespace if it already exists, or adds a new one
+// to the namespaces map and returns it
+func getOrAddPrefixForNs(namespaces *map[string]string, ns string) string {
+	for prefix, uri := range *namespaces {
+		if uri == ns {
+			return prefix
+		}
+	}
+
+	nsPrefix := fmt.Sprintf("ns%d", len(*namespaces))
+	(*namespaces)[nsPrefix] = ns
+	return nsPrefix
 }

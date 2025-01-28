@@ -8,10 +8,11 @@ import (
 
 func TestCreateSinglePartSchema(t *testing.T) {
 	tests := []struct {
-		name            string
-		message         *TypeMessage
-		targetNamespace string
-		want            []string // substrings that should be present in result
+		name             string
+		message          *TypeMessage
+		targetNamespace  string
+		wantElementQName string
+		want             []string // substrings that should be present in result
 	}{
 		{
 			name: "Simple type with no target namespace",
@@ -22,11 +23,12 @@ func TestCreateSinglePartSchema(t *testing.T) {
 					Local: "MyType",
 				},
 			},
-			targetNamespace: "",
+			targetNamespace:  "",
+			wantElementQName: "ns1:body",
 			want: []string{
 				`xmlns:xs="http://www.w3.org/2001/XMLSchema"`,
-				`xmlns:tns="tns"`,
-				`<xs:element name="body" type="tns:MyType"/>`,
+				`xmlns:ns1="tns"`,
+				`<xs:element name="body" type="ns1:MyType"/>`,
 			},
 		},
 		{
@@ -38,7 +40,8 @@ func TestCreateSinglePartSchema(t *testing.T) {
 					Local: "RequestType",
 				},
 			},
-			targetNamespace: "http://example.org/schema",
+			targetNamespace:  "http://example.org/schema",
+			wantElementQName: "ns1:request",
 			want: []string{
 				`xmlns:xs="http://www.w3.org/2001/XMLSchema"`,
 				`xmlns:ns1="ns1"`,
@@ -51,13 +54,14 @@ func TestCreateSinglePartSchema(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotSchema, gotElementName := CreateSinglePartSchema(tt.message, tt.targetNamespace)
-			if gotElementName != tt.message.PartName {
-				t.Errorf("CreateSinglePartSchema() element name = %v, want %v", gotElementName, tt.message.PartName)
+			gotSchema, gotElementName := CreateSinglePartSchema(tt.message.PartName, tt.message.Type, tt.targetNamespace)
+			if gotElementName != tt.wantElementQName {
+				t.Errorf("CreateSinglePartSchema() element name = %v, want %v", gotElementName, tt.wantElementQName)
 			}
 			for _, want := range tt.want {
-				if !strings.Contains(string(gotSchema), want) {
-					t.Errorf("CreateSinglePartSchema() = %v, should contain %v", gotSchema, want)
+				schemaStr := string(gotSchema)
+				if !strings.Contains(schemaStr, want) {
+					t.Errorf("CreateSinglePartSchema() = %v, should contain %v", schemaStr, want)
 				}
 			}
 		})
@@ -85,7 +89,7 @@ func TestCreateCompositePartSchema(t *testing.T) {
 				&TypeMessage{
 					PartName: "status",
 					Type: &xml.Name{
-						Space: "ns1",
+						Space: "pet",
 						Local: "StatusType",
 					},
 				},
@@ -93,15 +97,14 @@ func TestCreateCompositePartSchema(t *testing.T) {
 			targetNamespace: "http://example.org/pets",
 			want: []string{
 				`xmlns:xs="http://www.w3.org/2001/XMLSchema"`,
-				`xmlns:pet="pet"`,
-				`xmlns:ns1="ns1"`,
+				`xmlns:ns2="pet"`,
 				`xmlns:tns="http://example.org/pets"`,
 				`targetNamespace="http://example.org/pets"`,
 				`<xs:element name="getPetResponse">`,
 				`<xs:complexType>`,
 				`<xs:sequence>`,
-				`<xs:element ref="pet:Pet"/>`,
-				`<xs:element name="status" type="ns1:StatusType"/>`,
+				`<xs:element ref="ns2:Pet"/>`,
+				`<xs:element name="status" type="ns2:StatusType"/>`,
 			},
 		},
 		{
@@ -111,14 +114,14 @@ func TestCreateCompositePartSchema(t *testing.T) {
 				&TypeMessage{
 					PartName: "id",
 					Type: &xml.Name{
-						Space: "xs",
+						Space: XMLSchemaNamespace,
 						Local: "string",
 					},
 				},
 				&TypeMessage{
 					PartName: "name",
 					Type: &xml.Name{
-						Space: "xs",
+						Space: XMLSchemaNamespace,
 						Local: "string",
 					},
 				},
@@ -139,8 +142,9 @@ func TestCreateCompositePartSchema(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := CreateCompositePartSchema(tt.rootElementName, tt.parts, tt.targetNamespace)
 			for _, want := range tt.want {
-				if !strings.Contains(string(got), want) {
-					t.Errorf("CreateCompositePartSchema() = %v, should contain %v", got, want)
+				schemaStr := string(got)
+				if !strings.Contains(schemaStr, want) {
+					t.Errorf("CreateCompositePartSchema() = %v, should contain %v", schemaStr, want)
 				}
 			}
 		})

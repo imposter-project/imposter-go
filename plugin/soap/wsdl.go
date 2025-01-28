@@ -171,7 +171,7 @@ func resolveMessage(rawMsg wsdlmsg.Message, msgRole string, opName string, targe
 
 	case wsdlmsg.TypeMessageType:
 		msg := rawMsg.(*wsdlmsg.TypeMessage)
-		schema, elementName := wsdlmsg.CreateSinglePartSchema(msg, targetNamespace)
+		schema, elementName := wsdlmsg.CreateSinglePartSchema(msg.PartName, msg.Type, targetNamespace)
 
 		if err := schemaSystem.ImportSchema(wsdlPath, filename, schema); err != nil {
 			return nil, err

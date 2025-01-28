@@ -33,7 +33,7 @@ require (
 	github.com/aws/aws-sdk-go v1.55.5
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
-	github.com/outofcoffee/go-xml-example-generator v0.2.5
+	github.com/outofcoffee/go-xml-example-generator v0.3.1
 	github.com/satori/go.uuid v1.2.0
 	golang.org/x/net v0.33.0
 	golang.org/x/text v0.21.0 // indirect

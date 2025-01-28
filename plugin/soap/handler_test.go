@@ -23,6 +23,7 @@ func TestSOAPHandler_HandleRequest(t *testing.T) {
 		envelopeNS      string
 		contentType     string
 		responseContent string
+		tnsPrefix       string
 		xpathQueries    []string
 	}{
 		{
@@ -40,6 +41,7 @@ func TestSOAPHandler_HandleRequest(t *testing.T) {
         </pet:getPetByIdResponse>
     </env:Body>
 </env:Envelope>`,
+			tnsPrefix: "pet",
 			xpathQueries: []string{
 				"//pet:getPetByIdResponse[pet:id/text()='3']",
 				"//pet:getPetByIdResponse[pet:name/text()='Test Pet']",
@@ -60,6 +62,7 @@ func TestSOAPHandler_HandleRequest(t *testing.T) {
         </pet:getPetByIdResponse>
     </env:Body>
 </env:Envelope>`,
+			tnsPrefix: "pet",
 			xpathQueries: []string{
 				"//pet:getPetByIdResponse[pet:id/text()='3']",
 				"//pet:getPetByIdResponse[pet:name/text()='Test Pet']",
@@ -80,6 +83,7 @@ func TestSOAPHandler_HandleRequest(t *testing.T) {
         </pet:getPetByIdResponse>
     </env:Body>
 </env:Envelope>`,
+			tnsPrefix: "pet",
 			xpathQueries: []string{
 				"//pet:getPetByIdResponse[pet:id/text()='3']",
 				"//pet:getPetByIdResponse[pet:name/text()='Test Pet']",
@@ -92,6 +96,7 @@ func TestSOAPHandler_HandleRequest(t *testing.T) {
 			contentType: "text/xml",
 			// expect a response to be generated from the WSDL schema
 			responseContent: "",
+			tnsPrefix:       "pet",
 			xpathQueries: []string{
 				"//pet:getPetByIdResponse",
 			},
@@ -103,9 +108,10 @@ func TestSOAPHandler_HandleRequest(t *testing.T) {
 			contentType: "text/xml",
 			// expect a response to be generated from the WSDL schema
 			responseContent: "",
+			tnsPrefix:       "tns",
 			xpathQueries: []string{
-				"//pet:getPetByIdResponse[pet:id/text()='3']",
-				"//pet:getPetByIdResponse[pet:name/text()='Test Pet']",
+				"//tns:getPetByIdResponse[tns:id/text()='3']",
+				"//tns:getPetByIdResponse[tns:name/text()='Test Pet']",
 			},
 		},
 	}
@@ -202,7 +208,7 @@ func TestSOAPHandler_HandleRequest(t *testing.T) {
 			}
 
 			responseBody := string(responseState.Body)
-			ns := map[string]string{"env": tt.envelopeNS, "pet": "urn:com:example:petstore"}
+			ns := map[string]string{"env": tt.envelopeNS, tt.tnsPrefix: "urn:com:example:petstore"}
 
 			// Execute XPath queries
 			for _, xpathQuery := range tt.xpathQueries {
