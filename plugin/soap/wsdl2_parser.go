@@ -17,7 +17,7 @@ func newWSDL2Parser(doc *xmlquery.Node, wsdlPath string) (*wsdl2Parser, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract schemas: %w", err)
 	}
-	targetNamespace := getWsdlTargetNamespace(doc)
+	targetNamespace := xsd.GetTargetNamespace(doc)
 	parser := &wsdl2Parser{
 		BaseWSDLParser: BaseWSDLParser{
 			doc:             doc,

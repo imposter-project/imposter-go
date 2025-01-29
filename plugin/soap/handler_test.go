@@ -109,9 +109,10 @@ func TestSOAPHandler_HandleRequest(t *testing.T) {
 			// expect a response to be generated from the WSDL schema
 			responseContent: "",
 			tnsPrefix:       "tns",
+			// note: the id and name values are randomly generated
 			xpathQueries: []string{
-				"//tns:getPetByIdResponse[tns:id/text()='3']",
-				"//tns:getPetByIdResponse[tns:name/text()='Test Pet']",
+				"//tns:getPetByIdResponse/tns:id",
+				"//tns:getPetByIdResponse/tns:name",
 			},
 		},
 	}

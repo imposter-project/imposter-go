@@ -20,7 +20,7 @@ func newWSDL1Parser(doc *xmlquery.Node, wsdlPath string) (*wsdl1Parser, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract schemas: %w", err)
 	}
-	targetNamespace := getWsdlTargetNamespace(doc)
+	targetNamespace := xsd.GetTargetNamespace(doc)
 	parser := &wsdl1Parser{
 		BaseWSDLParser: BaseWSDLParser{
 			doc:             doc,
@@ -214,6 +214,7 @@ func (p *wsdl1Parser) filterParts(
 ) []*xmlquery.Node {
 	var partFilter *[]string
 
+	// TODO use namespace-aware XPath to query for ./wsdl:input/soap:body (or ./input/soap:body)
 	bindingOpSoapBodyNode := xmlquery.FindOne(bindingOp, fmt.Sprintf("./wsdl:%[1]s/soap:body|./wsdl:%[1]s/soap12:body", messageType))
 	if bindingOpSoapBodyNode == nil {
 		logger.Warnf("no soap:body found in binding operation: %s", bindingOp.Data)

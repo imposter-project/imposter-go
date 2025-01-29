@@ -32,23 +32,23 @@ func generateExampleXML(message *wsdlmsg.Message, schemaSystem *xsd.SchemaSystem
 	var targetNS string
 
 	schemas := (*schemaSystem).GetSchemas()
-	for _, schemaPath := range schemas {
-		schemaContent, err := os.ReadFile(schemaPath)
+	for _, schema := range schemas {
+		schemaContent, err := os.ReadFile(schema.FilePath)
 		if err != nil {
-			logger.Warnf("failed to read schema file %s: %v", schemaPath, err)
+			logger.Warnf("failed to read schema file %s: %v", schema.FilePath, err)
 			continue
 		}
 
 		schemaDoc, err := xmlquery.Parse(strings.NewReader(string(schemaContent)))
 		if err != nil {
-			logger.Warnf("failed to parse schema file %s: %v", schemaPath, err)
+			logger.Warnf("failed to parse schema file %s: %v", schema.FilePath, err)
 			continue
 		}
 
 		elementNode := xmlquery.FindOne(schemaDoc, elementExpr)
 		if elementNode != nil {
 			// Found the element, remember the path to the schema file and get its target namespace
-			elementSchemaPath = schemaPath
+			elementSchemaPath = schema.FilePath
 
 			ns := xsd.GetTargetNamespace(schemaDoc)
 			if ns != "" {

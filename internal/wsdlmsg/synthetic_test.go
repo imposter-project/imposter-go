@@ -140,7 +140,7 @@ func TestCreateCompositePartSchema(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := CreateCompositePartSchema(tt.rootElementName, tt.parts, tt.targetNamespace)
+			got := CreateCompositePartSchema(tt.rootElementName, tt.parts, tt.targetNamespace, nil)
 			for _, want := range tt.want {
 				schemaStr := string(got)
 				if !strings.Contains(schemaStr, want) {

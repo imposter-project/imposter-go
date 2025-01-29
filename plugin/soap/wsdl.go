@@ -187,7 +187,8 @@ func resolveMessage(rawMsg wsdlmsg.Message, msgRole string, opName string, targe
 	case wsdlmsg.CompositeMessageType:
 		msg := rawMsg.(*wsdlmsg.CompositeMessage)
 		elementName := msg.MessageName
-		schema := wsdlmsg.CreateCompositePartSchema(elementName, *msg.Parts, targetNamespace)
+		imports := schemaSystem.GetSchemasWithTargetNamespace(targetNamespace)
+		schema := wsdlmsg.CreateCompositePartSchema(elementName, *msg.Parts, targetNamespace, imports)
 
 		if err := schemaSystem.ImportSchema(wsdlPath, filename, schema); err != nil {
 			return nil, err
@@ -344,20 +345,6 @@ func getLocalPart(qname string) string {
 func getPrefix(qname string) string {
 	if idx := strings.Index(qname, ":"); idx != -1 {
 		return qname[:idx]
-	}
-	return ""
-}
-
-// getWsdlTargetNamespace returns the target namespace of the WSDL document
-func getWsdlTargetNamespace(doc *xmlquery.Node) string {
-	root := doc.SelectElement("*")
-	if root == nil {
-		return ""
-	}
-	for _, attr := range root.Attr {
-		if attr.Name.Local == "targetNamespace" {
-			return attr.Value
-		}
 	}
 	return ""
 }

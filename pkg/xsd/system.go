@@ -11,8 +11,11 @@ import (
 
 // SchemaSystem is an interface for resolving schema elements and types
 type SchemaSystem interface {
-	// GetSchemas returns a map of schema URLs to their local paths
-	GetSchemas() map[string]string
+	// GetSchemas returns a map of schema URLs to schema metadata
+	GetSchemas() map[string]Schema
+
+	// GetSchemasWithTargetNamespace returns a slice of schemas with the given target namespace
+	GetSchemasWithTargetNamespace(targetNamespace string) []Schema
 
 	// ResolveElement resolves an element by QName
 	ResolveElement(qname string) (*xml.Name, error)
@@ -24,10 +27,18 @@ type SchemaSystem interface {
 	ImportSchema(wsdlDir string, uniqueSchemaFilename string, schemaContent []byte) error
 }
 
+// Schema represents an XSD schema
+type Schema struct {
+	TargetNamespace string
+
+	// FilePath is the local path of the schema
+	FilePath string
+}
+
 type schemaSystem struct {
 	// dir is the directory where schema files are stored
 	dir     string
-	schemas map[string]string
+	schemas map[string]Schema
 }
 
 // ExtractSchemas extracts schemas from a WSDL document and returns a schema system
@@ -54,7 +65,7 @@ func ExtractSchemas(wsdlPath string, wsdlDoc *xmlquery.Node) (SchemaSystem, erro
 	}
 
 	// Track processed schemas to avoid duplicates
-	processedSchemas := make(map[string]string)
+	processedSchemas := make(map[string]Schema)
 
 	wsdlDir := filepath.Dir(wsdlPath)
 
@@ -87,14 +98,24 @@ func (s *schemaSystem) ImportSchema(wsdlDir string, uniqueSchemaFilename string,
 	return nil
 }
 
-func (s *schemaSystem) GetSchemas() map[string]string {
+func (s *schemaSystem) GetSchemas() map[string]Schema {
 	return s.schemas
+}
+
+func (s *schemaSystem) GetSchemasWithTargetNamespace(targetNamespace string) []Schema {
+	var schemas []Schema
+	for _, schema := range s.GetSchemas() {
+		if schema.TargetNamespace == targetNamespace {
+			schemas = append(schemas, schema)
+		}
+	}
+	return schemas
 }
 
 func (s *schemaSystem) ResolveElement(qname string) (*xml.Name, error) {
 	_, localName := SplitQName(qname)
-	for _, schemaPath := range s.schemas {
-		schemaDoc, err := loadXmlFile(schemaPath)
+	for _, schema := range s.schemas {
+		schemaDoc, err := loadXmlFile(schema.FilePath)
 		if err != nil {
 			return nil, err
 		}
@@ -114,8 +135,8 @@ func (s *schemaSystem) ResolveElement(qname string) (*xml.Name, error) {
 
 func (s *schemaSystem) ResolveType(qname string) (*xml.Name, error) {
 	_, localName := SplitQName(qname)
-	for _, schemaPath := range s.schemas {
-		schemaDoc, err := loadXmlFile(schemaPath)
+	for _, schema := range s.schemas {
+		schemaDoc, err := loadXmlFile(schema.FilePath)
 		if err != nil {
 			return nil, err
 		}

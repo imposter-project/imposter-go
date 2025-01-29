@@ -68,6 +68,10 @@ func loadXmlFile(filePath string) (*xmlquery.Node, error) {
 
 // GetTargetNamespace gets the target namespace from the schema document
 func GetTargetNamespace(schemaDoc *xmlquery.Node) string {
+	if ns := schemaDoc.SelectAttr("targetNamespace"); ns != "" {
+		return ns
+	}
+	// Try to get from schema root
 	if schemaRoot := schemaDoc.SelectElement("schema"); schemaRoot != nil {
 		if ns := schemaRoot.SelectAttr("targetNamespace"); ns != "" {
 			return ns
