@@ -14,7 +14,7 @@ A Go implementation of the [Imposter Mock Engine](https://www.imposter.sh).
 
 - No support for [scripting](https://docs.imposter.sh/scripting/)
 - No support for [steps](https://docs.imposter.sh/steps/)
-- No support (yet) for some SOAP styles (https://github.com/imposter-project/imposter-go/issues/7, https://github.com/imposter-project/imposter-go/issues/8, https://github.com/imposter-project/imposter-go/issues/9)
+- No support (yet) for some SOAP styles (https://github.com/imposter-project/imposter-go/issues/7)
 - No support (yet) for selecting OAS example name (https://github.com/imposter-project/imposter-go/issues/11)
 
 ## Getting Started
@@ -92,7 +92,7 @@ The repository includes several examples demonstrating different features:
 
 - [Simple REST API](examples/rest/simple) - Basic REST API mocking
 - [SOAP Web Service](examples/soap/simple) - SOAP/WSDL-based service mocking
-- [OpenAPI service](examples/openapi/v30) - OpenAPI-based service mocking
+- [OpenAPI HTTP API](examples/openapi/v30) - OpenAPI-based service mocking
 - [AWS Lambda](examples/lambda) - Running Imposter in AWS Lambda
 
 ---
