@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.0] - 2025-01-29
+### Added
+- feat(soap): generate synthetic schema for non-element messages.
+
+### Changed
+- test: improves coverage of utils.
+- test: moves xpath assertions into table.
+
+### Fixed
+- fix(soap): improves namespace prefixing for synthetic schemas.
+- fix(soap): synthetic schemas should import dependencies.
+
 ## [0.15.4] - 2025-01-23
 ### Changed
 - build: creates placeholder directories in Docker image.
