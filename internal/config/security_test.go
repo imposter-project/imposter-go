@@ -713,3 +713,82 @@ func TestTransformSecurityConfig_UniqueResourcePrefixes(t *testing.T) {
 	deny3b := cfg3.Interceptors[3]
 	require.Equal(t, "${stores.request.resource4_security_condition1}", deny3b.AnyOf[0].Expression)
 }
+
+func TestTransformSecurityConfig_PreservesExistingInterceptors(t *testing.T) {
+	resetResourceCounter(t)
+	cfg := &Config{
+		Plugin: "rest",
+		Security: &SecurityConfig{
+			Default: "Deny",
+			Conditions: []SecurityCondition{
+				{
+					Effect: "Permit",
+					RequestHeaders: map[string]MatcherUnmarshaler{
+						"Authorization": {
+							Matcher: StringMatcher("Bearer token"),
+						},
+					},
+				},
+			},
+		},
+		Resources: []Resource{
+			{
+				RequestMatcher: RequestMatcher{
+					Path: "/api",
+				},
+				Response: Response{
+					StatusCode: 200,
+				},
+			},
+		},
+		Interceptors: []Interceptor{
+			{
+				RequestMatcher: RequestMatcher{
+					RequestHeaders: map[string]MatcherUnmarshaler{
+						"X-Custom": {
+							Matcher: StringMatcher("custom-value"),
+						},
+					},
+				},
+				Response: &Response{
+					StatusCode: 200,
+					Content:    "Custom Response",
+				},
+				Continue: true,
+			},
+		},
+	}
+
+	transformSecurityConfig(cfg)
+
+	// Check that security config was removed
+	require.Nil(t, cfg.Security)
+
+	// Should have 3 interceptors: security condition + deny + original
+	require.Len(t, cfg.Interceptors, 3)
+
+	// First interceptor should be security condition
+	interceptor1 := cfg.Interceptors[0]
+	require.Contains(t, interceptor1.RequestHeaders, "Authorization")
+	require.Contains(t, interceptor1.Capture, "security_condition1")
+	require.Equal(t, "met", interceptor1.Capture["security_condition1"].Const)
+	require.True(t, interceptor1.Continue)
+
+	// Second interceptor should be security deny
+	deny := cfg.Interceptors[1]
+	require.Len(t, deny.AnyOf, 1)
+	require.Equal(t, "${stores.request.security_condition1}", deny.AnyOf[0].Expression)
+	require.Equal(t, "met", deny.AnyOf[0].MatchCondition.Value)
+	require.Equal(t, "NotEqualTo", deny.AnyOf[0].MatchCondition.Operator)
+	require.Equal(t, 401, deny.Response.StatusCode)
+	require.Equal(t, "Unauthorised", deny.Response.Content)
+	require.Equal(t, "text/plain", deny.Response.Headers["Content-Type"])
+	require.False(t, deny.Continue)
+
+	// Third interceptor should be the original one
+	original := cfg.Interceptors[2]
+	require.Contains(t, original.RequestHeaders, "X-Custom")
+	require.Equal(t, StringMatcher("custom-value"), original.RequestHeaders["X-Custom"].Matcher)
+	require.Equal(t, 200, original.Response.StatusCode)
+	require.Equal(t, "Custom Response", original.Response.Content)
+}

@@ -26,9 +26,12 @@ type SecurityCondition struct {
 
 // transformSecurityConfig converts security configuration into interceptors
 func transformSecurityConfig(cfg *Config) {
+	var interceptors []Interceptor
+
 	// Transform root-level security first
 	if cfg.Security != nil {
-		transformSecurityBlock(cfg, cfg.Security, "")
+		rootInterceptors := transformSecurityBlock(cfg, cfg.Security, "")
+		interceptors = append(interceptors, *rootInterceptors...)
 		cfg.Security = nil
 	}
 
@@ -37,15 +40,21 @@ func transformSecurityConfig(cfg *Config) {
 		if cfg.Resources[i].Security != nil {
 			// Generate a unique prefix for this resource
 			prefix := fmt.Sprintf("resource%d_", atomic.AddUint64(&resourceCounter, 1))
-			transformSecurityBlock(cfg, cfg.Resources[i].Security, prefix)
+			resourceInterceptors := transformSecurityBlock(cfg, cfg.Resources[i].Security, prefix)
+			interceptors = append(interceptors, *resourceInterceptors...)
 			cfg.Resources[i].Security = nil
 		}
 	}
+
+	// always put security interceptors at the beginning
+	cfg.Interceptors = append(interceptors, cfg.Interceptors...)
 }
 
 // transformSecurityBlock converts a security block into interceptors
 // prefix is used to make condition keys unique across different security blocks
-func transformSecurityBlock(cfg *Config, security *SecurityConfig, prefix string) {
+func transformSecurityBlock(cfg *Config, security *SecurityConfig, prefix string) *[]Interceptor {
+	var interceptors []Interceptor
+
 	// Create a map to store condition states
 	for i, condition := range security.Conditions {
 		// Create a unique key for this condition
@@ -84,7 +93,7 @@ func transformSecurityBlock(cfg *Config, security *SecurityConfig, prefix string
 			interceptor.FormParams[param] = matcher
 		}
 
-		cfg.Interceptors = append(cfg.Interceptors, interceptor)
+		interceptors = append(interceptors, interceptor)
 	}
 
 	// Add default deny interceptor if default is "Deny"
@@ -102,8 +111,10 @@ func transformSecurityBlock(cfg *Config, security *SecurityConfig, prefix string
 			},
 			Continue: false,
 		}
-		cfg.Interceptors = append(cfg.Interceptors, denyInterceptor)
+		interceptors = append(interceptors, denyInterceptor)
 	}
+
+	return &interceptors
 }
 
 // buildSecurityEvalConditions creates evaluation conditions to check if any security condition was met
