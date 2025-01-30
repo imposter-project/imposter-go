@@ -30,15 +30,29 @@ type MessageBodyHolder struct {
 	EnvNamespace    string
 }
 
+// GetSOAPVersion returns the SOAP version based on the envelope namespace
+func (b *MessageBodyHolder) GetSOAPVersion() SOAPVersion {
+	switch b.EnvNamespace {
+	case SOAP11EnvNamespace:
+		return SOAP11
+	case SOAP12DraftEnvNamespace:
+		return SOAP12
+	case SOAP12RecEnvNamespace:
+		return SOAP12
+	default:
+		panic(fmt.Errorf("root element is not a SOAP envelope - namespace is %s", b.EnvNamespace))
+	}
+}
+
 // getSoapAction extracts the SOAPAction from headers
-func (h *PluginHandler) getSoapAction(r *http.Request) string {
+func (h *PluginHandler) getSoapAction(r *http.Request, body *MessageBodyHolder) string {
 	// Try SOAPAction header first
 	if soapAction := r.Header.Get("SOAPAction"); soapAction != "" {
 		return strings.Trim(soapAction, "\"")
 	}
 
 	// For SOAP 1.2, check Content-Type header for action parameter
-	if h.wsdlParser.GetSOAPVersion() == SOAP12 {
+	if body.GetSOAPVersion() == SOAP12 {
 		contentType := r.Header.Get("Content-Type")
 		parts := strings.Split(contentType, ";")
 		for _, part := range parts {
@@ -106,20 +120,6 @@ func (h *PluginHandler) parseBody(body []byte) (*MessageBodyHolder, error) {
 	bodyNode := xmlquery.FindOne(doc, "//*[local-name()='Body']/*[1]")
 	if bodyNode == nil {
 		return nil, fmt.Errorf("no SOAP body element found")
-	}
-
-	// Validate SOAP version if namespace is found
-	if envNamespace != "" {
-		expectedNamespace := ""
-		if h.wsdlParser.GetSOAPVersion() == SOAP12 {
-			expectedNamespace = "http://www.w3.org/2003/05/soap-envelope"
-		} else {
-			expectedNamespace = "http://schemas.xmlsoap.org/soap/envelope/"
-		}
-
-		if envNamespace != expectedNamespace {
-			return nil, fmt.Errorf("invalid SOAP version namespace: expected %s, got %s", expectedNamespace, envNamespace)
-		}
 	}
 
 	return &MessageBodyHolder{
@@ -233,11 +233,14 @@ func (h *PluginHandler) HandleRequest(r *http.Request, requestStore store.Store,
 		return // Let the main handler deal with non-POST requests
 	}
 
+	wsdlVersion := h.wsdlParser.GetVersion()
+
 	// Read and parse the SOAP request
 	body, err := matcher.GetRequestBody(r)
 	if err != nil {
 		logger.Warnf("failed to read request body: %v", err)
-		h.sendSOAPFault(responseState, "Failed to read request body", http.StatusBadRequest)
+		soapVersion := guessSoapVersion(wsdlVersion)
+		h.sendSOAPFault(soapVersion, guessEnvNamespace(soapVersion), responseState, "Failed to read request body", http.StatusBadRequest)
 		responseState.Handled = true
 		return
 	}
@@ -246,13 +249,14 @@ func (h *PluginHandler) HandleRequest(r *http.Request, requestStore store.Store,
 	bodyHolder, err := h.parseBody(body)
 	if err != nil {
 		logger.Warnf("failed to parse SOAP body: %v", err)
-		h.sendSOAPFault(responseState, "Invalid SOAP envelope", http.StatusBadRequest)
+		soapVersion := guessSoapVersion(wsdlVersion)
+		h.sendSOAPFault(soapVersion, guessEnvNamespace(soapVersion), responseState, "Invalid SOAP envelope", http.StatusBadRequest)
 		responseState.Handled = true
 		return
 	}
 
 	// Get SOAPAction from headers
-	soapAction := h.getSoapAction(r)
+	soapAction := h.getSoapAction(r, bodyHolder)
 
 	// Determine operation
 	op := h.determineOperation(soapAction, bodyHolder)
@@ -262,7 +266,7 @@ func (h *PluginHandler) HandleRequest(r *http.Request, requestStore store.Store,
 
 	// interceptor response processor
 	interceptorResponseProc := func(reqMatcher *config.RequestMatcher, rs *response.ResponseState, r *http.Request, resp config.Response, requestStore store.Store) {
-		h.processResponse(reqMatcher, rs, r, resp, requestStore, op)
+		h.processResponse(bodyHolder, reqMatcher, rs, r, resp, requestStore, op)
 	}
 
 	// Process interceptors first
@@ -301,6 +305,6 @@ func (h *PluginHandler) HandleRequest(r *http.Request, requestStore store.Store,
 	capture.CaptureRequestData(h.imposterConfig, best.Resource.Capture, r, body, requestStore)
 
 	// Process the response
-	h.processResponse(&best.Resource.RequestMatcher, responseState, r, best.Resource.Response, requestStore, op)
+	h.processResponse(bodyHolder, &best.Resource.RequestMatcher, responseState, r, best.Resource.Response, requestStore, op)
 	responseState.Handled = true
 }

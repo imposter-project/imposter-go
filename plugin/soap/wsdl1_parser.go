@@ -43,14 +43,6 @@ func (p *wsdl1Parser) GetVersion() WSDLVersion {
 	return WSDL1
 }
 
-func (p *wsdl1Parser) GetSOAPVersion() SOAPVersion {
-	// Check for SOAP 1.2 binding
-	if node := xmlquery.FindOne(p.doc, "//soap12:binding"); node != nil {
-		return SOAP12
-	}
-	return SOAP11
-}
-
 func (p *wsdl1Parser) GetOperations() map[string]*Operation {
 	return p.operations
 }

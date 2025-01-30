@@ -30,11 +30,14 @@ const (
 )
 
 const (
-	WSDL1Namespace   = "http://schemas.xmlsoap.org/wsdl/"
-	WSDL2Namespace   = "http://www.w3.org/ns/wsdl"
-	SOAP11Namespace  = "http://schemas.xmlsoap.org/wsdl/soap/"
-	SOAP12Namespace  = "http://schemas.xmlsoap.org/wsdl/soap12/"
-	WSOAP20Namespace = "http://www.w3.org/ns/wsdl/soap"
+	WSDL1Namespace          = "http://schemas.xmlsoap.org/wsdl/"
+	WSDL2Namespace          = "http://www.w3.org/ns/wsdl"
+	SOAP11Namespace         = "http://schemas.xmlsoap.org/wsdl/soap/"
+	SOAP12Namespace         = "http://schemas.xmlsoap.org/wsdl/soap12/"
+	WSOAP20Namespace        = "http://www.w3.org/ns/wsdl/soap"
+	SOAP11EnvNamespace      = "http://schemas.xmlsoap.org/soap/envelope/"
+	SOAP12DraftEnvNamespace = "http://www.w3.org/2001/12/soap-envelope"
+	SOAP12RecEnvNamespace   = "http://www.w3.org/2003/05/soap-envelope"
 )
 
 // WSDLDocProvider is the interface that provides the WSDL document
@@ -48,7 +51,6 @@ type WSDLDocProvider interface {
 type WSDLParser interface {
 	WSDLDocProvider
 	GetVersion() WSDLVersion
-	GetSOAPVersion() SOAPVersion
 	GetOperations() map[string]*Operation
 	GetOperation(name string) *Operation
 	ValidateRequest(operation string, body []byte) error
@@ -63,6 +65,16 @@ type BaseWSDLParser struct {
 	operations      map[string]*Operation
 	schemas         *xsd.SchemaSystem
 	targetNamespace string
+}
+
+// Operation represents a WSDL operation
+type Operation struct {
+	Name       string
+	SOAPAction string
+	Input      *wsdlmsg.Message
+	Output     *wsdlmsg.Message
+	Fault      *wsdlmsg.Message
+	Binding    string
 }
 
 func (p *BaseWSDLParser) GetWSDLPath() string {
@@ -267,14 +279,6 @@ func augmentConfigWithWSDL(cfg *config.Config, parser WSDLParser) error {
 	for _, op := range ops {
 		logger.Debugf("adding interceptor for operation %s with binding %s", op.Name, op.Binding)
 
-		// Generate example response XML
-		// TODO make this lazy; use a template placeholder function, such as ${soap.example('${op.Name}')}
-		exampleXml, err := generateExampleXML(op.Output, parser.GetSchemaSystem())
-		if err != nil {
-			return err
-		}
-		exampleResponse := wrapInEnvelope(exampleXml, parser.GetSOAPVersion())
-
 		// Create an interceptor with default RequestMatcher
 		newInterceptor := config.Interceptor{
 			Continue: true,
@@ -286,7 +290,7 @@ func augmentConfigWithWSDL(cfg *config.Config, parser WSDLParser) error {
 					"_matched-soap-operation": {
 						Store: "request",
 						CaptureConfig: config.CaptureConfig{
-							Const: "true",
+							Const: op.Name,
 						},
 					},
 				},
@@ -296,10 +300,7 @@ func augmentConfigWithWSDL(cfg *config.Config, parser WSDLParser) error {
 			},
 			Response: &config.Response{
 				StatusCode: 200,
-				Headers: map[string]string{
-					"Content-Type": getResponseContentType(parser.GetSOAPVersion()),
-				},
-				Content: exampleResponse,
+				Content:    soapExamplePlaceholder,
 			},
 		}
 		cfg.Interceptors = append(cfg.Interceptors, newInterceptor)
@@ -312,8 +313,7 @@ func augmentConfigWithWSDL(cfg *config.Config, parser WSDLParser) error {
 				{
 					Expression: "${stores.request._matched-soap-operation}",
 					MatchCondition: config.MatchCondition{
-						Operator: "EqualTo",
-						Value:    "true",
+						Operator: "Exists",
 					},
 				},
 			},
@@ -323,14 +323,6 @@ func augmentConfigWithWSDL(cfg *config.Config, parser WSDLParser) error {
 	cfg.Resources = append(cfg.Resources, defaultResource)
 
 	return nil
-}
-
-// getEnvNamespace returns SOAP envelope namespace for the specified SOAP version
-func getEnvNamespace(version SOAPVersion) string {
-	if version == SOAP12 {
-		return "http://www.w3.org/2003/05/soap-envelope"
-	}
-	return "http://schemas.xmlsoap.org/soap/envelope/"
 }
 
 // getLocalPart extracts the local part from a QName

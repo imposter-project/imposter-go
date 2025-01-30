@@ -40,11 +40,6 @@ func (p *wsdl2Parser) GetVersion() WSDLVersion {
 	return WSDL2
 }
 
-func (p *wsdl2Parser) GetSOAPVersion() SOAPVersion {
-	// WSDL 2.0 typically uses SOAP 1.2
-	return SOAP12
-}
-
 func (p *wsdl2Parser) GetOperations() map[string]*Operation {
 	return p.operations
 }

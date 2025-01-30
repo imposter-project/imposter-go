@@ -13,8 +13,14 @@ import (
 	"github.com/outofcoffee/go-xml-example-generator/examplegen"
 )
 
+const (
+	soapExamplePlaceholder = "${soap.example()}"
+)
+
 // generateExampleXML generates example XML based on the WSDL schema
 func generateExampleXML(message *wsdlmsg.Message, schemaSystem *xsd.SchemaSystem) (string, error) {
+	// TODO cache example responses for each message
+
 	var element *xml.Name
 	switch (*message).GetMessageType() {
 	case wsdlmsg.ElementMessageType:

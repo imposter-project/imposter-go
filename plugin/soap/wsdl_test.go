@@ -94,7 +94,6 @@ func TestNewWSDLParser(t *testing.T) {
 
 			require.NoError(t, err)
 			assert.Equal(t, tt.wantVersion, parser.GetVersion())
-			assert.Equal(t, tt.wantSOAP, parser.GetSOAPVersion())
 		})
 	}
 }
@@ -154,7 +153,7 @@ func TestErrorCases(t *testing.T) {
 	})
 }
 
-func TestGetEnvNamespace(t *testing.T) {
+func TestGuessEnvNamespace(t *testing.T) {
 	tests := []struct {
 		name        string
 		soapVersion SOAPVersion
@@ -174,9 +173,9 @@ func TestGetEnvNamespace(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := getEnvNamespace(tt.soapVersion)
+			got := guessEnvNamespace(tt.soapVersion)
 			if got != tt.want {
-				t.Errorf("getEnvNamespace() = %v, want %v", got, tt.want)
+				t.Errorf("guessEnvNamespace() = %v, want %v", got, tt.want)
 			}
 		})
 	}
