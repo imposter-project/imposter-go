@@ -15,7 +15,7 @@ func (h *PluginHandler) HandleRequest(
 	r *http.Request,
 	requestStore *store.Store,
 	responseState *response.ResponseState,
-	respPreprocessor response.Processor,
+	preproc response.Processor,
 ) {
 	body, err := matcher.GetRequestBody(r)
 	if err != nil {
@@ -40,7 +40,7 @@ func (h *PluginHandler) HandleRequest(
 				capture.CaptureRequestData(h.imposterConfig, interceptorCfg.Capture, r, body, requestStore)
 			}
 			if interceptorCfg.Response != nil {
-				h.processResponse(&interceptorCfg.RequestMatcher, responseState, r, interceptorCfg.Response, requestStore, respPreprocessor)
+				h.processResponse(&interceptorCfg.RequestMatcher, responseState, r, interceptorCfg.Response, requestStore, preproc)
 			}
 			if !interceptorCfg.Continue {
 				responseState.Handled = true
@@ -71,6 +71,6 @@ func (h *PluginHandler) HandleRequest(
 	capture.CaptureRequestData(h.imposterConfig, best.Resource.Capture, r, body, requestStore)
 
 	// Process the response
-	h.processResponse(&best.Resource.RequestMatcher, responseState, r, &best.Resource.Response, requestStore, respPreprocessor)
+	h.processResponse(&best.Resource.RequestMatcher, responseState, r, &best.Resource.Response, requestStore, preproc)
 	responseState.Handled = true
 }

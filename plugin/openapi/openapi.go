@@ -49,6 +49,20 @@ type OpenAPIParser interface {
 	GetOperation(opName string) *Operation
 }
 
+// GetResponse returns a response by its unique ID
+func (o Operation) GetResponse(responseId string) *Response {
+	var openApiResp *Response
+	for _, resp := range o.Responses {
+		for _, statusResp := range resp {
+			if statusResp.UniqueID == responseId {
+				openApiResp = &statusResp
+				break
+			}
+		}
+	}
+	return openApiResp
+}
+
 func newOpenAPIParser(specFile string, opts parserOptions) (OpenAPIParser, error) {
 	logger.Tracef("loading OpenAPI spec %s", specFile)
 

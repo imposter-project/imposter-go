@@ -14,10 +14,10 @@ func (h *PluginHandler) processResponse(
 	r *http.Request,
 	resp *config.Response,
 	requestStore *store.Store,
-	respPreprocessor response.Processor,
+	preproc response.Processor,
 ) {
-	if respPreprocessor != nil {
-		respPreprocessor(reqMatcher, rs, r, resp, requestStore)
+	if preproc != nil {
+		preproc(reqMatcher, rs, r, resp, requestStore)
 	}
 	response.ProcessResponse(reqMatcher, rs, r, resp, h.configDir, requestStore, h.imposterConfig)
 }

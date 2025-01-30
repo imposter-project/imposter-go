@@ -44,10 +44,10 @@ func (h *PluginHandler) processResponse(
 	resp *config.Response,
 	requestStore *store.Store,
 	op *Operation,
-	respPreprocessor response.Processor,
+	preproc response.Processor,
 ) {
-	if respPreprocessor != nil {
-		respPreprocessor(reqMatcher, rs, r, resp, requestStore)
+	if preproc != nil {
+		preproc(reqMatcher, rs, r, resp, requestStore)
 	}
 
 	// Set content type for SOAP response
