@@ -236,13 +236,16 @@ func (h *PluginHandler) HandleRequest(r *http.Request, requestStore store.Store,
 	// Read and parse the SOAP request
 	body, err := matcher.GetRequestBody(r)
 	if err != nil {
+		logger.Warnf("failed to read request body: %v", err)
 		h.sendSOAPFault(responseState, "Failed to read request body", http.StatusBadRequest)
+		responseState.Handled = true
 		return
 	}
 
 	// Parse the SOAP body first since we need it for both interceptors and resources
 	bodyHolder, err := h.parseBody(body)
 	if err != nil {
+		logger.Warnf("failed to parse SOAP body: %v", err)
 		h.sendSOAPFault(responseState, "Invalid SOAP envelope", http.StatusBadRequest)
 		responseState.Handled = true
 		return
