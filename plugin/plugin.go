@@ -14,7 +14,7 @@ import (
 
 type Plugin interface {
 	GetConfig() *config.Config
-	HandleRequest(r *http.Request, requestStore store.Store, responseState *response.ResponseState)
+	HandleRequest(r *http.Request, requestStore *store.Store, responseState *response.ResponseState, respPreprocessor response.Processor)
 }
 
 // LoadPlugins loads plugins from the provided configs

@@ -4,21 +4,19 @@ import (
 	"net/http"
 
 	"github.com/imposter-project/imposter-go/internal/capture"
-	"github.com/imposter-project/imposter-go/internal/config"
-	commonInterceptor "github.com/imposter-project/imposter-go/internal/interceptor"
 	"github.com/imposter-project/imposter-go/internal/logger"
 	"github.com/imposter-project/imposter-go/internal/matcher"
 	"github.com/imposter-project/imposter-go/internal/response"
 	"github.com/imposter-project/imposter-go/internal/store"
 )
 
-// processResponse handles preparing the response state
-func (h *PluginHandler) processResponse(reqMatcher *config.RequestMatcher, rs *response.ResponseState, r *http.Request, resp config.Response, requestStore store.Store) {
-	response.ProcessResponse(reqMatcher, rs, r, resp, h.configDir, requestStore, h.imposterConfig)
-}
-
 // HandleRequest processes incoming REST API requests
-func (h *PluginHandler) HandleRequest(r *http.Request, requestStore store.Store, responseState *response.ResponseState) {
+func (h *PluginHandler) HandleRequest(
+	r *http.Request,
+	requestStore *store.Store,
+	responseState *response.ResponseState,
+	respPreprocessor response.Processor,
+) {
 	body, err := matcher.GetRequestBody(r)
 	if err != nil {
 		responseState.StatusCode = http.StatusBadRequest
@@ -38,8 +36,13 @@ func (h *PluginHandler) HandleRequest(r *http.Request, requestStore store.Store,
 		score, _ := matcher.CalculateMatchScore(&interceptorCfg.RequestMatcher, r, body, systemNamespaces, h.imposterConfig, requestStore)
 		if score > 0 {
 			logger.Infof("matched interceptor - method:%s, path:%s", r.Method, r.URL.Path)
-
-			if !commonInterceptor.ProcessInterceptor(&interceptorCfg.RequestMatcher, responseState, r, body, interceptorCfg, requestStore, h.imposterConfig, h.processResponse) {
+			if interceptorCfg.Capture != nil {
+				capture.CaptureRequestData(h.imposterConfig, interceptorCfg.Capture, r, body, requestStore)
+			}
+			if interceptorCfg.Response != nil {
+				h.processResponse(&interceptorCfg.RequestMatcher, responseState, r, interceptorCfg.Response, requestStore, respPreprocessor)
+			}
+			if !interceptorCfg.Continue {
 				responseState.Handled = true
 				return // Short-circuit if interceptor continue is false
 			}
@@ -68,6 +71,6 @@ func (h *PluginHandler) HandleRequest(r *http.Request, requestStore store.Store,
 	capture.CaptureRequestData(h.imposterConfig, best.Resource.Capture, r, body, requestStore)
 
 	// Process the response
-	h.processResponse(&best.Resource.RequestMatcher, responseState, r, best.Resource.Response, requestStore)
+	h.processResponse(&best.Resource.RequestMatcher, responseState, r, &best.Resource.Response, requestStore, respPreprocessor)
 	responseState.Handled = true
 }

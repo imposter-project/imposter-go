@@ -2,6 +2,7 @@ package openapi
 
 import (
 	"encoding/json"
+	uuid "github.com/satori/go.uuid"
 	"testing"
 	"time"
 
@@ -22,6 +23,7 @@ func TestGenerateExampleJSON(t *testing.T) {
 		{
 			name: "with example",
 			response: Response{
+				UniqueID: uuid.NewV4().String(),
 				SparseResponse: SparseResponse{
 					Example: `{"name": "test"}`,
 				},
@@ -31,6 +33,7 @@ func TestGenerateExampleJSON(t *testing.T) {
 		{
 			name: "with string schema",
 			response: Response{
+				UniqueID: uuid.NewV4().String(),
 				SparseResponse: SparseResponse{
 					Schema: createSchemaProxy([]string{"string"}, "", nil, nil, nil),
 				},
@@ -40,6 +43,7 @@ func TestGenerateExampleJSON(t *testing.T) {
 		{
 			name: "with number schema",
 			response: Response{
+				UniqueID: uuid.NewV4().String(),
 				SparseResponse: SparseResponse{
 					Schema: createSchemaProxy([]string{"number"}, "", nil, nil, nil),
 				},
@@ -49,6 +53,7 @@ func TestGenerateExampleJSON(t *testing.T) {
 		{
 			name: "with boolean schema",
 			response: Response{
+				UniqueID: uuid.NewV4().String(),
 				SparseResponse: SparseResponse{
 					Schema: createSchemaProxy([]string{"boolean"}, "", nil, nil, nil),
 				},
@@ -58,6 +63,7 @@ func TestGenerateExampleJSON(t *testing.T) {
 		{
 			name: "with array schema",
 			response: Response{
+				UniqueID: uuid.NewV4().String(),
 				SparseResponse: SparseResponse{
 					Schema: createSchemaProxy([]string{"array"}, "", nil, createSchemaProxy([]string{"string"}, "", nil, nil, nil), nil),
 				},
@@ -67,6 +73,7 @@ func TestGenerateExampleJSON(t *testing.T) {
 		{
 			name: "with object schema",
 			response: Response{
+				UniqueID: uuid.NewV4().String(),
 				SparseResponse: SparseResponse{
 					Schema: createSchemaProxy([]string{"object"}, "", map[string]*base.SchemaProxy{
 						"name": createSchemaProxy([]string{"string"}, "", nil, nil, nil),
@@ -79,6 +86,7 @@ func TestGenerateExampleJSON(t *testing.T) {
 		{
 			name: "with enum",
 			response: Response{
+				UniqueID: uuid.NewV4().String(),
 				SparseResponse: SparseResponse{
 					Schema: createSchemaProxyWithEnum([]string{"string"}, "", []interface{}{"one", "two", "three"}),
 				},
@@ -88,6 +96,7 @@ func TestGenerateExampleJSON(t *testing.T) {
 		{
 			name: "with date-time format",
 			response: Response{
+				UniqueID: uuid.NewV4().String(),
 				SparseResponse: SparseResponse{
 					Schema: createSchemaProxy([]string{"string"}, "date-time", nil, nil, nil),
 				},
@@ -97,6 +106,7 @@ func TestGenerateExampleJSON(t *testing.T) {
 		{
 			name: "with allOf",
 			response: Response{
+				UniqueID: uuid.NewV4().String(),
 				SparseResponse: SparseResponse{
 					Schema: createSchemaProxyWithAllOf([]*base.SchemaProxy{
 						createSchemaProxy([]string{"object"}, "", map[string]*base.SchemaProxy{
@@ -113,6 +123,7 @@ func TestGenerateExampleJSON(t *testing.T) {
 		{
 			name: "with oneOf",
 			response: Response{
+				UniqueID: uuid.NewV4().String(),
 				SparseResponse: SparseResponse{
 					Schema: createSchemaProxyWithOneOf([]*base.SchemaProxy{
 						createSchemaProxy([]string{"string"}, "", nil, nil, nil),
@@ -125,6 +136,7 @@ func TestGenerateExampleJSON(t *testing.T) {
 		{
 			name: "with anyOf",
 			response: Response{
+				UniqueID: uuid.NewV4().String(),
 				SparseResponse: SparseResponse{
 					Schema: createSchemaProxyWithAnyOf([]*base.SchemaProxy{
 						createSchemaProxy([]string{"string"}, "", nil, nil, nil),

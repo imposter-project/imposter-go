@@ -5,6 +5,7 @@ import (
 	"github.com/imposter-project/imposter-go/internal/logger"
 	"github.com/pb33f/libopenapi"
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
+	uuid "github.com/satori/go.uuid"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -50,6 +51,15 @@ func (p *openAPI3Parser) GetVersion() OpenAPIVersion {
 
 func (p *openAPI3Parser) GetOperations() []Operation {
 	return p.operations
+}
+
+func (p *openAPI3Parser) GetOperation(opName string) *Operation {
+	for _, op := range p.operations {
+		if op.Name == opName {
+			return &op
+		}
+	}
+	return nil
 }
 
 // parseOperations extracts operations from the OpenAPI 3 document
@@ -126,6 +136,7 @@ func (p *openAPI3Parser) processResponse(resp *v3.Response) []Response {
 			}
 
 			response := Response{
+				UniqueID:       uuid.NewV4().String(),
 				ContentType:    mediaType,
 				SparseResponse: r,
 				Headers:        respHeaders,

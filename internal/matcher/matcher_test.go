@@ -227,7 +227,7 @@ func TestCalculateMatchScore(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotScore, gotWildcard := CalculateMatchScore(tt.matcher, tt.request, tt.body, tt.systemNamespaces, tt.imposterConfig, tt.requestStore)
+			gotScore, gotWildcard := CalculateMatchScore(tt.matcher, tt.request, tt.body, tt.systemNamespaces, tt.imposterConfig, &tt.requestStore)
 			if gotScore != tt.wantScore {
 				t.Errorf("expected score %d, got %d", tt.wantScore, gotScore)
 			}

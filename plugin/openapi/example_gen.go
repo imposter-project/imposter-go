@@ -10,10 +10,16 @@ import (
 	"github.com/pb33f/libopenapi/datamodel/high/base"
 )
 
+const (
+	openapiExamplePlaceholder = "${openapi.example()}"
+)
+
 // generateExampleJSON generates an example object based on the sparse response object.
 // If the response has an example, it will be returned as is, and isLiteral will be true.
 // If the response has a schema, an example will be generated based on the schema.
 func generateExampleRaw(response SparseResponse) (example interface{}, isLiteral bool, err error) {
+	// TODO cache example responses
+
 	if response.Example != "" {
 		logger.Debugf("returning example from OpenAPI spec")
 		return response.Example, true, nil

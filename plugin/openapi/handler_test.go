@@ -225,7 +225,7 @@ Content-Type: image/jpeg
 			requestStore := make(store.Store)
 
 			// Handle request
-			handler.HandleRequest(tt.request, requestStore, responseState)
+			handler.HandleRequest(tt.request, &requestStore, responseState, nil)
 
 			// Assert status code
 			assert.Equal(t, tt.wantStatus, responseState.StatusCode, "Unexpected status code")

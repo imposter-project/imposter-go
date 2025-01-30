@@ -19,7 +19,7 @@ const (
 
 // generateExampleXML generates example XML based on the WSDL schema
 func generateExampleXML(message *wsdlmsg.Message, schemaSystem *xsd.SchemaSystem) (string, error) {
-	// TODO cache example responses for each message
+	// TODO cache example responses
 
 	var element *xml.Name
 	switch (*message).GetMessageType() {

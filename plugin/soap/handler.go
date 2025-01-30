@@ -10,18 +10,10 @@ import (
 	"github.com/antchfx/xmlquery"
 	"github.com/imposter-project/imposter-go/internal/capture"
 	"github.com/imposter-project/imposter-go/internal/config"
-	commonInterceptor "github.com/imposter-project/imposter-go/internal/interceptor"
 	"github.com/imposter-project/imposter-go/internal/logger"
 	"github.com/imposter-project/imposter-go/internal/matcher"
 	"github.com/imposter-project/imposter-go/internal/response"
 	"github.com/imposter-project/imposter-go/internal/store"
-)
-
-// Constants for SOAP content types
-const (
-	textXMLContentType = "text/xml"
-	soap11ContentType  = textXMLContentType
-	soap12ContentType  = "application/soap+xml"
 )
 
 // MessageBodyHolder represents a parsed SOAP message
@@ -185,7 +177,7 @@ func (h *PluginHandler) determineOperation(soapAction string, bodyHolder *Messag
 }
 
 // calculateScore calculates how well a request matches a resource or interceptor
-func (h *PluginHandler) calculateScore(reqMatcher *config.RequestMatcher, r *http.Request, body []byte, op *Operation, soapAction string, requestStore store.Store) (score int, isWildcard bool) {
+func (h *PluginHandler) calculateScore(reqMatcher *config.RequestMatcher, r *http.Request, body []byte, op *Operation, soapAction string, requestStore *store.Store) (score int, isWildcard bool) {
 	// Get system XML namespaces
 	var systemNamespaces map[string]string
 	if h.config.System != nil {
@@ -227,7 +219,7 @@ func (h *PluginHandler) calculateScore(reqMatcher *config.RequestMatcher, r *htt
 }
 
 // HandleRequest processes incoming SOAP requests
-func (h *PluginHandler) HandleRequest(r *http.Request, requestStore store.Store, responseState *response.ResponseState) {
+func (h *PluginHandler) HandleRequest(r *http.Request, requestStore *store.Store, responseState *response.ResponseState, respPreprocessor response.Processor) {
 	// Only handle POST requests for SOAP
 	if r.Method != http.MethodPost {
 		return // Let the main handler deal with non-POST requests
@@ -264,18 +256,18 @@ func (h *PluginHandler) HandleRequest(r *http.Request, requestStore store.Store,
 		return // Let the main handler deal with no operation match
 	}
 
-	// interceptor response processor
-	interceptorResponseProc := func(reqMatcher *config.RequestMatcher, rs *response.ResponseState, r *http.Request, resp config.Response, requestStore store.Store) {
-		h.processResponse(bodyHolder, reqMatcher, rs, r, resp, requestStore, op)
-	}
-
 	// Process interceptors first
 	for _, interceptorCfg := range h.config.Interceptors {
 		score, _ := h.calculateScore(&interceptorCfg.RequestMatcher, r, body, op, soapAction, requestStore)
 		if score > 0 {
 			logger.Infof("matched interceptor - method:%s, path:%s", r.Method, r.URL.Path)
-
-			if !commonInterceptor.ProcessInterceptor(&interceptorCfg.RequestMatcher, responseState, r, body, interceptorCfg, requestStore, h.imposterConfig, interceptorResponseProc) {
+			if interceptorCfg.Capture != nil {
+				capture.CaptureRequestData(h.imposterConfig, interceptorCfg.Capture, r, body, requestStore)
+			}
+			if interceptorCfg.Response != nil {
+				h.processResponse(bodyHolder, &interceptorCfg.RequestMatcher, responseState, r, interceptorCfg.Response, requestStore, op, respPreprocessor)
+			}
+			if !interceptorCfg.Continue {
 				responseState.Handled = true
 				return // Short-circuit if interceptor continue is false
 			}
@@ -305,6 +297,6 @@ func (h *PluginHandler) HandleRequest(r *http.Request, requestStore store.Store,
 	capture.CaptureRequestData(h.imposterConfig, best.Resource.Capture, r, body, requestStore)
 
 	// Process the response
-	h.processResponse(bodyHolder, &best.Resource.RequestMatcher, responseState, r, best.Resource.Response, requestStore, op)
+	h.processResponse(bodyHolder, &best.Resource.RequestMatcher, responseState, r, &best.Resource.Response, requestStore, op, respPreprocessor)
 	responseState.Handled = true
 }

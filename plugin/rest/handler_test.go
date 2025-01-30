@@ -53,7 +53,7 @@ func TestHandler_HandleRequest_NoMatchingResource(t *testing.T) {
 	responseState := response.NewResponseState()
 
 	// Handle request
-	handler.HandleRequest(req, requestStore, responseState)
+	handler.HandleRequest(req, &requestStore, responseState, nil)
 
 	// Check response
 	if responseState.Handled {
@@ -99,7 +99,7 @@ func TestHandler_HandleRequest_MatchingResource(t *testing.T) {
 	responseState := response.NewResponseState()
 
 	// Handle request
-	handler.HandleRequest(req, requestStore, responseState)
+	handler.HandleRequest(req, &requestStore, responseState, nil)
 
 	// Check response
 	if !responseState.Handled {
@@ -165,7 +165,7 @@ func TestHandler_HandleRequest_WithInterceptor(t *testing.T) {
 	responseState := response.NewResponseState()
 
 	// Handle request
-	handler.HandleRequest(req, requestStore, responseState)
+	handler.HandleRequest(req, &requestStore, responseState, nil)
 
 	// Check response
 	if !responseState.Handled {
@@ -227,7 +227,7 @@ func TestHandler_HandleRequest_WithPathParams(t *testing.T) {
 	responseState := response.NewResponseState()
 
 	// Handle request
-	handler.HandleRequest(req, requestStore, responseState)
+	handler.HandleRequest(req, &requestStore, responseState, nil)
 
 	// Check response
 	if !responseState.Handled {
@@ -288,7 +288,7 @@ func TestHandler_HandleRequest_WithResponseFile(t *testing.T) {
 	responseState := response.NewResponseState()
 
 	// Handle request
-	handler.HandleRequest(req, requestStore, responseState)
+	handler.HandleRequest(req, &requestStore, responseState, nil)
 
 	// Check response
 	if !responseState.Handled {
@@ -350,7 +350,7 @@ func TestHandler_HandleRequest_WithRequestBody(t *testing.T) {
 	responseState := response.NewResponseState()
 
 	// Handle request
-	handler.HandleRequest(req, requestStore, responseState)
+	handler.HandleRequest(req, &requestStore, responseState, nil)
 
 	// Check response
 	if !responseState.Handled {
@@ -422,7 +422,7 @@ func TestHandler_HandleRequest_WithXMLNamespaces(t *testing.T) {
 	responseState := response.NewResponseState()
 
 	// Handle request
-	handler.HandleRequest(req, requestStore, responseState)
+	handler.HandleRequest(req, &requestStore, responseState, nil)
 
 	// Check response
 	if !responseState.Handled {

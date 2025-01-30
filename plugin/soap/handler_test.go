@@ -193,7 +193,7 @@ func TestSOAPHandler_HandleRequest(t *testing.T) {
 			responseState := response.NewResponseState()
 
 			// Handle request
-			handler.HandleRequest(req, requestStore, responseState)
+			handler.HandleRequest(req, &requestStore, responseState, nil)
 
 			// Check response
 			if !responseState.Handled {
@@ -284,7 +284,7 @@ func TestSOAPHandler_HandleRequest_InvalidMethod(t *testing.T) {
 			responseState := response.NewResponseState()
 
 			// Handle request
-			handler.HandleRequest(req, requestStore, responseState)
+			handler.HandleRequest(req, &requestStore, responseState, nil)
 
 			// Check response - should not be handled by SOAP handler
 			if responseState.Handled {
@@ -373,7 +373,7 @@ func TestSOAPHandler_HandleRequest_NoMatchingOperation(t *testing.T) {
 			responseState := response.NewResponseState()
 
 			// Handle request
-			handler.HandleRequest(req, requestStore, responseState)
+			handler.HandleRequest(req, &requestStore, responseState, nil)
 
 			// Check response
 			if responseState.Handled {
@@ -444,7 +444,7 @@ func TestSOAPHandler_HandleRequest_WithInterceptor(t *testing.T) {
 	responseState := response.NewResponseState()
 
 	// Handle request
-	handler.HandleRequest(req, requestStore, responseState)
+	handler.HandleRequest(req, &requestStore, responseState, nil)
 
 	// Check response
 	if !responseState.Handled {
@@ -543,7 +543,7 @@ func TestSOAPHandler_HandleRequest_WithPassthroughInterceptor(t *testing.T) {
 	responseState := response.NewResponseState()
 
 	// Handle request
-	handler.HandleRequest(req, requestStore, responseState)
+	handler.HandleRequest(req, &requestStore, responseState, nil)
 
 	// Check response
 	if !responseState.Handled {
@@ -618,7 +618,7 @@ func TestSOAPHandler_HandleRequest_InvalidXML(t *testing.T) {
 			responseState := response.NewResponseState()
 
 			// Handle request
-			handler.HandleRequest(req, requestStore, responseState)
+			handler.HandleRequest(req, &requestStore, responseState, nil)
 
 			// Check response
 			if !responseState.Handled {
@@ -688,7 +688,7 @@ func TestSOAPHandler_HandleRequest_MissingBody(t *testing.T) {
 			responseState := response.NewResponseState()
 
 			// Handle request
-			handler.HandleRequest(req, requestStore, responseState)
+			handler.HandleRequest(req, &requestStore, responseState, nil)
 
 			// Check response
 			if !responseState.Handled {
@@ -870,7 +870,7 @@ func TestSOAPHandler_SOAPFault(t *testing.T) {
 			responseState := response.NewResponseState()
 
 			// Handle request
-			handler.HandleRequest(req, requestStore, responseState)
+			handler.HandleRequest(req, &requestStore, responseState, nil)
 
 			// Check response
 			if !responseState.Handled {

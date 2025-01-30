@@ -234,7 +234,7 @@ func TestCaptureRequestData(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			requestStore := store.Store{}
 			req, body := tt.setupRequest()
-			CaptureRequestData(tt.imposterConfig, tt.resource.Capture, req, body, requestStore)
+			CaptureRequestData(tt.imposterConfig, tt.resource.Capture, req, body, &requestStore)
 			tt.validate(t, requestStore)
 		})
 	}

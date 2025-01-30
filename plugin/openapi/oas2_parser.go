@@ -5,6 +5,7 @@ import (
 	"github.com/imposter-project/imposter-go/internal/logger"
 	"github.com/pb33f/libopenapi"
 	v2 "github.com/pb33f/libopenapi/datamodel/high/v2"
+	uuid "github.com/satori/go.uuid"
 	"net/http"
 	"strconv"
 	"strings"
@@ -40,6 +41,15 @@ func (p *openAPI2Parser) GetVersion() OpenAPIVersion {
 
 func (p *openAPI2Parser) GetOperations() []Operation {
 	return p.operations
+}
+
+func (p *openAPI2Parser) GetOperation(opName string) *Operation {
+	for _, op := range p.operations {
+		if op.Name == opName {
+			return &op
+		}
+	}
+	return nil
 }
 
 // parseOperations extracts operations from the OpenAPI 2 document
@@ -102,6 +112,7 @@ func (p *openAPI2Parser) processResponse(produces []string, resp *v2.Response) [
 		respHeaders := make(map[string]SparseResponse)
 
 		response := Response{
+			UniqueID:       uuid.NewV4().String(),
 			ContentType:    mediaType,
 			SparseResponse: r,
 			Headers:        respHeaders,
@@ -126,6 +137,7 @@ func (p *openAPI2Parser) processResponse(produces []string, resp *v2.Response) [
 				Example: example,
 			}
 			response := Response{
+				UniqueID:       uuid.NewV4().String(),
 				ContentType:    exampleName,
 				SparseResponse: r,
 			}
@@ -135,6 +147,7 @@ func (p *openAPI2Parser) processResponse(produces []string, resp *v2.Response) [
 	if len(responses) == 0 {
 		responses = []Response{
 			{
+				UniqueID:    uuid.NewV4().String(),
 				ContentType: "",
 				SparseResponse: SparseResponse{
 					Schema: resp.Schema,

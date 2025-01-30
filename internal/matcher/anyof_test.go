@@ -176,7 +176,7 @@ func TestCalculateMatchScore_AnyOf(t *testing.T) {
 				AnyOf: tt.anyOf,
 			}
 
-			score, isWildcard := CalculateMatchScore(matcher, tt.request, nil, map[string]string{}, tt.imposterConfig, tt.requestStore)
+			score, isWildcard := CalculateMatchScore(matcher, tt.request, nil, map[string]string{}, tt.imposterConfig, &tt.requestStore)
 			require.Equal(t, tt.expectedScore, score)
 			require.Equal(t, tt.expectedIsWildcard, isWildcard)
 		})

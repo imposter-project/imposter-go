@@ -26,6 +26,7 @@ type SparseResponse struct {
 }
 
 type Response struct {
+	UniqueID string
 	SparseResponse
 	ContentType string
 	Headers     map[string]SparseResponse
@@ -45,6 +46,7 @@ type parserOptions struct {
 type OpenAPIParser interface {
 	GetVersion() OpenAPIVersion
 	GetOperations() []Operation
+	GetOperation(opName string) *Operation
 }
 
 func newOpenAPIParser(specFile string, opts parserOptions) (OpenAPIParser, error) {
@@ -74,28 +76,6 @@ func augmentConfigWithOpenApiSpec(cfg *config.Config, parser OpenAPIParser) erro
 		responses := op.Responses[responseCode]
 
 		for _, resp := range responses {
-
-			// Generate example response JSON
-			// TODO make this lazy; use a template placeholder function, such as ${soap.example('${op.Name}')}
-			exampleResponse, err := generateExampleJSON(resp.SparseResponse)
-			if err != nil {
-				return err
-			}
-
-			respHeaders := map[string]string{
-				"Content-Type": resp.ContentType,
-			}
-			// TODO make this lazy; use a template placeholder function, such as ${soap.example('${op.Name}')}
-			if resp.Headers != nil {
-				for k, v := range resp.Headers {
-					h, err := generateExampleString(v)
-					if err != nil {
-						return err
-					}
-					respHeaders[k] = h
-				}
-			}
-
 			// Create an interceptor with default RequestMatcher
 			newInterceptor := config.Interceptor{
 				Continue: true,
@@ -117,13 +97,21 @@ func augmentConfigWithOpenApiSpec(cfg *config.Config, parser OpenAPIParser) erro
 								Const: op.Name,
 							},
 						},
+						"_matched-openapi-response": {
+							Store: "request",
+							CaptureConfig: config.CaptureConfig{
+								Const: resp.UniqueID,
+							},
+						},
 					},
-					// TODO add request headers, query params, etc.
+					// TODO check request headers, query params, etc.
 				},
 				Response: &config.Response{
 					StatusCode: responseCode,
-					Headers:    respHeaders,
-					Content:    exampleResponse,
+					Headers: map[string]string{
+						"Content-Type": resp.ContentType,
+					},
+					Content: openapiExamplePlaceholder,
 				},
 			}
 			logger.Tracef("adding interceptor for operation %s at %s %s", op.Name, op.Method, op.Path)

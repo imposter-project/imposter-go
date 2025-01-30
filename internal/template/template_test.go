@@ -111,7 +111,7 @@ func TestProcessTemplate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := ProcessTemplate(tt.template, tt.setupRequest(), tt.imposterConfig, tt.requestStore)
+			got := ProcessTemplate(tt.template, tt.setupRequest(), tt.imposterConfig, &tt.requestStore)
 			assert.Equal(t, tt.want, got)
 		})
 	}
@@ -169,7 +169,7 @@ func TestRandomPlaceholders(t *testing.T) {
 			req, _ := http.NewRequest("GET", "/", nil)
 			req.Body = io.NopCloser(strings.NewReader(""))
 			imposterConfig := &config.ImposterConfig{ServerPort: "8080"}
-			result := ProcessTemplate(tt.template, req, imposterConfig, store.Store{})
+			result := ProcessTemplate(tt.template, req, imposterConfig, &store.Store{})
 			tt.validate(t, result)
 		})
 	}
@@ -201,7 +201,7 @@ func TestStoreValueReplacement(t *testing.T) {
 			req, _ := http.NewRequest("GET", "/", nil)
 			req.Body = io.NopCloser(strings.NewReader(""))
 			imposterConfig := &config.ImposterConfig{ServerPort: "8080"}
-			got := ProcessTemplate(tt.template, req, imposterConfig, tt.requestStore)
+			got := ProcessTemplate(tt.template, req, imposterConfig, &tt.requestStore)
 			assert.Equal(t, tt.want, got)
 		})
 	}

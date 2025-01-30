@@ -2,6 +2,13 @@ package soap
 
 import "fmt"
 
+// Constants for SOAP content types
+const (
+	textXMLContentType = "text/xml"
+	soap11ContentType  = textXMLContentType
+	soap12ContentType  = "application/soap+xml"
+)
+
 // wrapInEnvelope wraps the given XML content in a SOAP envelope,
 // using the specified envelope namespace.
 // The prefix "env" is used for the envelope namespace.

@@ -2,6 +2,7 @@ package openapi
 
 import (
 	"fmt"
+	"github.com/imposter-project/imposter-go/internal/logger"
 	"github.com/imposter-project/imposter-go/plugin/rest"
 	"net/http"
 	"path/filepath"
@@ -61,8 +62,44 @@ func (h *PluginHandler) GetConfig() *config.Config {
 }
 
 // HandleRequest handles incoming HTTP requests
-func (h *PluginHandler) HandleRequest(r *http.Request, requestStore store.Store, responseState *response.ResponseState) {
+func (h *PluginHandler) HandleRequest(
+	r *http.Request,
+	requestStore *store.Store,
+	responseState *response.ResponseState,
+	respPreprocessor response.Processor,
+) {
 	// TODO validate request against OpenAPI spec
 
-	h.restPluginHandler.HandleRequest(r, requestStore, responseState)
+	wrapped := func(reqMatcher *config.RequestMatcher, rs *response.ResponseState, r *http.Request, resp *config.Response, requestStore *store.Store) {
+		h.preprocessResponse(reqMatcher, rs, r, resp, requestStore, respPreprocessor)
+	}
+
+	h.restPluginHandler.HandleRequest(r, requestStore, responseState, wrapped)
+}
+
+func (h *PluginHandler) getMatchedSpecResponse(requestStore store.Store, r *http.Request) *Response {
+	openApiOpId := requestStore["_matched-openapi-operation"]
+	if openApiOpId == nil {
+		logger.Tracef("no OpenAPI operation matched for request %s %s", r.Method, r.URL.Path)
+		return nil
+	}
+	op := h.openApiParser.GetOperation(openApiOpId.(string))
+
+	openApiRespId := requestStore["_matched-openapi-response"]
+	if openApiRespId == nil {
+		// if an operation is matched, a response should also be matched
+		logger.Errorf("no OpenAPI response matched for request %s %s", r.Method, r.URL.Path)
+		return nil
+	}
+
+	var openApiResp *Response
+	for _, oar := range op.Responses {
+		for _, statusResp := range oar {
+			if statusResp.UniqueID == openApiRespId.(string) {
+				openApiResp = &statusResp
+				break
+			}
+		}
+	}
+	return openApiResp
 }

@@ -91,7 +91,15 @@ func SimulateFailure(rs *ResponseState, failureType string, r *http.Request) boo
 }
 
 // ProcessResponse handles common response processing logic
-func ProcessResponse(reqMatcher *config.RequestMatcher, rs *ResponseState, req *http.Request, resp config.Response, configDir string, requestStore store.Store, imposterConfig *config.ImposterConfig) {
+func ProcessResponse(
+	reqMatcher *config.RequestMatcher,
+	rs *ResponseState,
+	req *http.Request,
+	resp *config.Response,
+	configDir string,
+	requestStore *store.Store,
+	imposterConfig *config.ImposterConfig,
+) {
 	// Handle delay if specified
 	SimulateDelay(resp.Delay, req)
 

@@ -24,7 +24,7 @@ func HandleRequest(w http.ResponseWriter, req *http.Request, plugins []plugin.Pl
 	// Process each config
 	for _, plg := range plugins {
 		// Process request with handler
-		plg.HandleRequest(req, requestStore, responseState)
+		plg.HandleRequest(req, &requestStore, responseState, nil)
 
 		// If the response has been handled by the handler, break the loop
 		if responseState.Handled {

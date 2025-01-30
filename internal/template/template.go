@@ -20,7 +20,7 @@ import (
 )
 
 // ProcessTemplate processes a template string, replacing placeholders with actual values.
-func ProcessTemplate(template string, r *http.Request, imposterConfig *config.ImposterConfig, requestStore store.Store) string {
+func ProcessTemplate(template string, r *http.Request, imposterConfig *config.ImposterConfig, requestStore *store.Store) string {
 	// Replace request method
 	template = strings.ReplaceAll(template, "${context.request.method}", r.Method)
 
@@ -216,7 +216,7 @@ func randomStringFromCharset(length int, charset string) string {
 }
 
 // replaceStorePlaceholders replaces store placeholders in a template with actual values.
-func replaceStorePlaceholders(tmpl string, requestStore store.Store) string {
+func replaceStorePlaceholders(tmpl string, requestStore *store.Store) string {
 	re := regexp.MustCompile(`\$\{stores\.([^\.]+)\.([^}]+)\}`)
 	return re.ReplaceAllStringFunc(tmpl, func(match string) string {
 		return replaceOrUseDefault(match, match, func(plainExpr string) string {
@@ -242,9 +242,9 @@ func replaceStorePlaceholders(tmpl string, requestStore store.Store) string {
 }
 
 // getStoreValue retrieves a value from a store, or from the request store if the store is "request".
-func getStoreValue(storeName, key string, requestStore store.Store) (interface{}, bool) {
+func getStoreValue(storeName, key string, requestStore *store.Store) (interface{}, bool) {
 	if storeName == "request" {
-		val, found := requestStore[key]
+		val, found := (*requestStore)[key]
 		return val, found
 	}
 	return store.GetValue(storeName, key)

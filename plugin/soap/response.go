@@ -36,20 +36,35 @@ func (h *PluginHandler) sendSOAPFault(soapVersion SOAPVersion, envNamespace stri
 }
 
 // processResponse processes and sends the SOAP response
-func (h *PluginHandler) processResponse(body *MessageBodyHolder, reqMatcher *config.RequestMatcher, rs *response.ResponseState, r *http.Request, resp config.Response, requestStore store.Store, op *Operation) {
+func (h *PluginHandler) processResponse(
+	body *MessageBodyHolder,
+	reqMatcher *config.RequestMatcher,
+	rs *response.ResponseState,
+	r *http.Request,
+	resp *config.Response,
+	requestStore *store.Store,
+	op *Operation,
+	respPreprocessor response.Processor,
+) {
+	if respPreprocessor != nil {
+		respPreprocessor(reqMatcher, rs, r, resp, requestStore)
+	}
+
 	// Set content type for SOAP response
 	rs.Headers["Content-Type"] = getResponseContentType(body.GetSOAPVersion())
 
-	var finalResp config.Response
+	var finalResp *config.Response
 	if resp.StatusCode == http.StatusInternalServerError || resp.SoapFault {
-		finalResp = h.applySoapFault(body, resp, op)
+		soapResp := h.applySoapFault(body, resp, op)
+		finalResp = &soapResp
 	} else {
 		finalResp = resp
 	}
 
-	if finalResp.Content != "" {
-		// Replace example placeholder in the response content
-		finalResp.Content = h.replaceExamplePlaceholder(op, finalResp.Content, body)
+	// Replace example placeholder in the response content
+	if finalResp.Content == soapExamplePlaceholder {
+		// note: this updates the config by reference, meaning the placeholder is replaced in the original config
+		finalResp.Content = h.replaceExamplePlaceholder(op, body)
 	}
 
 	// Process the response using common handler
@@ -57,7 +72,7 @@ func (h *PluginHandler) processResponse(body *MessageBodyHolder, reqMatcher *con
 }
 
 // applySoapFault applies a SOAP fault response if the response status code is 500 or if the response is marked as a SOAP fault.
-func (h *PluginHandler) applySoapFault(body *MessageBodyHolder, resp config.Response, op *Operation) config.Response {
+func (h *PluginHandler) applySoapFault(body *MessageBodyHolder, resp *config.Response, op *Operation) config.Response {
 	finalResp := config.Response{
 		StatusCode: http.StatusInternalServerError,
 	}
@@ -76,10 +91,7 @@ func (h *PluginHandler) applySoapFault(body *MessageBodyHolder, resp config.Resp
 }
 
 // replaceExamplePlaceholder replaces example placeholders in a template with a generated example response.
-func (h *PluginHandler) replaceExamplePlaceholder(op *Operation, tmpl string, body *MessageBodyHolder) string {
-	if tmpl != soapExamplePlaceholder {
-		return tmpl
-	}
+func (h *PluginHandler) replaceExamplePlaceholder(op *Operation, body *MessageBodyHolder) string {
 	exampleXml, err := generateExampleXML(op.Output, h.wsdlParser.GetSchemaSystem())
 	if err != nil {
 		logger.Warnf("failed to generate example XML for operation %s: %v", op.Name, err)
