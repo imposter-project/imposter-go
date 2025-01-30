@@ -169,6 +169,11 @@ func ProcessResponse(reqMatcher *config.RequestMatcher, rs *ResponseState, req *
 		rs.Body = []byte(responseContent)
 	}
 
+	if logger.IsTraceEnabled() {
+		logger.Tracef("response headers: %v", rs.Headers)
+		logger.Tracef("response body: %s", rs.Body)
+	}
+
 	// Set Content-Type header if not already set
 	if _, exists := rs.Headers["Content-Type"]; !exists {
 		// If response is from file, try to determine content type from extension
