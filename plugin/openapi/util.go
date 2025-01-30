@@ -36,3 +36,13 @@ func yamlNodeToObj(node *yaml.Node) interface{} {
 	}
 	return nil
 }
+
+// yamlNodeToString converts a YAML node to a string
+func yamlNodeToString(node *yaml.Node) string {
+	obj := yamlNodeToObj(node)
+	if str, ok := obj.(string); ok {
+		return str
+	}
+	logger.Tracef("failed to convert %v to string", obj)
+	return ""
+}

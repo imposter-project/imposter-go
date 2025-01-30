@@ -20,10 +20,15 @@ const (
 	OpenAPI31
 )
 
+type SparseResponse struct {
+	Example string
+	Schema  *base.SchemaProxy
+}
+
 type Response struct {
+	SparseResponse
 	ContentType string
-	Example     string
-	Schema      *base.SchemaProxy
+	Headers     map[string]SparseResponse
 }
 
 type Operation struct {
@@ -72,9 +77,23 @@ func augmentConfigWithOpenApiSpec(cfg *config.Config, parser OpenAPIParser) erro
 
 			// Generate example response JSON
 			// TODO make this lazy; use a template placeholder function, such as ${soap.example('${op.Name}')}
-			exampleResponse, err := generateExampleJSON(resp)
+			exampleResponse, err := generateExampleJSON(resp.SparseResponse)
 			if err != nil {
 				return err
+			}
+
+			respHeaders := map[string]string{
+				"Content-Type": resp.ContentType,
+			}
+			// TODO make this lazy; use a template placeholder function, such as ${soap.example('${op.Name}')}
+			if resp.Headers != nil {
+				for k, v := range resp.Headers {
+					h, err := generateExampleString(v)
+					if err != nil {
+						return err
+					}
+					respHeaders[k] = h
+				}
 			}
 
 			// Create an interceptor with default RequestMatcher
@@ -103,11 +122,8 @@ func augmentConfigWithOpenApiSpec(cfg *config.Config, parser OpenAPIParser) erro
 				},
 				Response: &config.Response{
 					StatusCode: responseCode,
-					Headers: map[string]string{
-						"Content-Type": resp.ContentType,
-					},
-					Content: exampleResponse,
-					// TODO add response headers
+					Headers:    respHeaders,
+					Content:    exampleResponse,
 				},
 			}
 			logger.Tracef("adding interceptor for operation %s at %s %s", op.Name, op.Method, op.Path)

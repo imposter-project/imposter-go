@@ -101,18 +101,34 @@ func (p *openAPI3Parser) processResponse(resp *v3.Response) []Response {
 		}
 	} else {
 		for mediaType, content := range resp.Content.FromOldest() {
-			var example string
+			r := SparseResponse{
+				Schema: content.Schema,
+			}
 			if content.Example != nil {
-				example = content.Example.Value
+				r.Example = content.Example.Value
 			} else if content.Examples != nil && content.Examples.Len() > 0 {
 				ex := content.Examples.Oldest().Value
-				example = yamlNodeToJson(ex.Value)
+				r.Example = yamlNodeToJson(ex.Value)
+			}
+
+			respHeaders := make(map[string]SparseResponse)
+			for headerName, header := range resp.Headers.FromOldest() {
+				h := SparseResponse{
+					Schema: header.Schema,
+				}
+				if header.Example != nil {
+					h.Example = header.Example.Value
+				} else if header.Examples != nil && header.Examples.Len() > 0 {
+					ex := header.Examples.Oldest().Value
+					h.Example = yamlNodeToString(ex.Value)
+				}
+				respHeaders[headerName] = h
 			}
 
 			response := Response{
-				ContentType: mediaType,
-				Example:     example,
-				Schema:      content.Schema,
+				ContentType:    mediaType,
+				SparseResponse: r,
+				Headers:        respHeaders,
 			}
 			responses = append(responses, response)
 		}

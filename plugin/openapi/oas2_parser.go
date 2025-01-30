@@ -86,20 +86,25 @@ func (p *openAPI2Parser) processResponse(produces []string, resp *v2.Response) [
 
 	// check the produces list first, but it's not mandatory
 	for _, mediaType := range produces {
-		var example string
+		r := SparseResponse{
+			Schema: resp.Schema,
+		}
 		if resp.Examples != nil {
 			// get the example for the specific media type, or the first one
 			ex, present := resp.Examples.Values.Get(mediaType)
 			if !present {
 				ex = resp.Examples.Values.Oldest().Value
 			}
-			example = ex.Value
+			r.Example = ex.Value
 		}
 
+		// TODO: handle v2 header items
+		respHeaders := make(map[string]SparseResponse)
+
 		response := Response{
-			ContentType: mediaType,
-			Example:     example,
-			Schema:      resp.Schema,
+			ContentType:    mediaType,
+			SparseResponse: r,
+			Headers:        respHeaders,
 		}
 		responses = append(responses, response)
 	}
@@ -116,10 +121,13 @@ func (p *openAPI2Parser) processResponse(produces []string, resp *v2.Response) [
 				continue
 			}
 			example := yamlNodeToJson(ex)
+			r := SparseResponse{
+				Schema:  resp.Schema,
+				Example: example,
+			}
 			response := Response{
-				ContentType: exampleName,
-				Example:     example,
-				Schema:      resp.Schema,
+				ContentType:    exampleName,
+				SparseResponse: r,
 			}
 			responses = append(responses, response)
 		}
@@ -128,7 +136,9 @@ func (p *openAPI2Parser) processResponse(produces []string, resp *v2.Response) [
 		responses = []Response{
 			{
 				ContentType: "",
-				Schema:      resp.Schema,
+				SparseResponse: SparseResponse{
+					Schema: resp.Schema,
+				},
 			},
 		}
 	}

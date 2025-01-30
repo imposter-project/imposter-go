@@ -22,93 +22,115 @@ func TestGenerateExampleJSON(t *testing.T) {
 		{
 			name: "with example",
 			response: Response{
-				Example: `{"name": "test"}`,
+				SparseResponse: SparseResponse{
+					Example: `{"name": "test"}`,
+				},
 			},
 			want: `{"name": "test"}`,
 		},
 		{
 			name: "with string schema",
 			response: Response{
-				Schema: createSchemaProxy([]string{"string"}, "", nil, nil, nil),
+				SparseResponse: SparseResponse{
+					Schema: createSchemaProxy([]string{"string"}, "", nil, nil, nil),
+				},
 			},
 			want: `"example"`,
 		},
 		{
 			name: "with number schema",
 			response: Response{
-				Schema: createSchemaProxy([]string{"number"}, "", nil, nil, nil),
+				SparseResponse: SparseResponse{
+					Schema: createSchemaProxy([]string{"number"}, "", nil, nil, nil),
+				},
 			},
 			want: "42",
 		},
 		{
 			name: "with boolean schema",
 			response: Response{
-				Schema: createSchemaProxy([]string{"boolean"}, "", nil, nil, nil),
+				SparseResponse: SparseResponse{
+					Schema: createSchemaProxy([]string{"boolean"}, "", nil, nil, nil),
+				},
 			},
 			want: "false",
 		},
 		{
 			name: "with array schema",
 			response: Response{
-				Schema: createSchemaProxy([]string{"array"}, "", nil, createSchemaProxy([]string{"string"}, "", nil, nil, nil), nil),
+				SparseResponse: SparseResponse{
+					Schema: createSchemaProxy([]string{"array"}, "", nil, createSchemaProxy([]string{"string"}, "", nil, nil, nil), nil),
+				},
 			},
 			want: `["example"]`,
 		},
 		{
 			name: "with object schema",
 			response: Response{
-				Schema: createSchemaProxy([]string{"object"}, "", map[string]*base.SchemaProxy{
-					"name": createSchemaProxy([]string{"string"}, "", nil, nil, nil),
-					"age":  createSchemaProxy([]string{"integer"}, "", nil, nil, nil),
-				}, nil, nil),
+				SparseResponse: SparseResponse{
+					Schema: createSchemaProxy([]string{"object"}, "", map[string]*base.SchemaProxy{
+						"name": createSchemaProxy([]string{"string"}, "", nil, nil, nil),
+						"age":  createSchemaProxy([]string{"integer"}, "", nil, nil, nil),
+					}, nil, nil),
+				},
 			},
 			want: `{"age":42,"name":"example"}`,
 		},
 		{
 			name: "with enum",
 			response: Response{
-				Schema: createSchemaProxyWithEnum([]string{"string"}, "", []interface{}{"one", "two", "three"}),
+				SparseResponse: SparseResponse{
+					Schema: createSchemaProxyWithEnum([]string{"string"}, "", []interface{}{"one", "two", "three"}),
+				},
 			},
 			want: `"one"`,
 		},
 		{
 			name: "with date-time format",
 			response: Response{
-				Schema: createSchemaProxy([]string{"string"}, "date-time", nil, nil, nil),
+				SparseResponse: SparseResponse{
+					Schema: createSchemaProxy([]string{"string"}, "date-time", nil, nil, nil),
+				},
 			},
 			want: `"` + time.Now().UTC().Format(time.RFC3339) + `"`,
 		},
 		{
 			name: "with allOf",
 			response: Response{
-				Schema: createSchemaProxyWithAllOf([]*base.SchemaProxy{
-					createSchemaProxy([]string{"object"}, "", map[string]*base.SchemaProxy{
-						"name": createSchemaProxy([]string{"string"}, "", nil, nil, nil),
-					}, nil, nil),
-					createSchemaProxy([]string{"object"}, "", map[string]*base.SchemaProxy{
-						"age": createSchemaProxy([]string{"integer"}, "", nil, nil, nil),
-					}, nil, nil),
-				}),
+				SparseResponse: SparseResponse{
+					Schema: createSchemaProxyWithAllOf([]*base.SchemaProxy{
+						createSchemaProxy([]string{"object"}, "", map[string]*base.SchemaProxy{
+							"name": createSchemaProxy([]string{"string"}, "", nil, nil, nil),
+						}, nil, nil),
+						createSchemaProxy([]string{"object"}, "", map[string]*base.SchemaProxy{
+							"age": createSchemaProxy([]string{"integer"}, "", nil, nil, nil),
+						}, nil, nil),
+					}),
+				},
 			},
 			want: `{"age":42,"name":"example"}`,
 		},
 		{
 			name: "with oneOf",
 			response: Response{
-				Schema: createSchemaProxyWithOneOf([]*base.SchemaProxy{
-					createSchemaProxy([]string{"string"}, "", nil, nil, nil),
-					createSchemaProxy([]string{"integer"}, "", nil, nil, nil),
-				}),
+				SparseResponse: SparseResponse{
+					Schema: createSchemaProxyWithOneOf([]*base.SchemaProxy{
+						createSchemaProxy([]string{"string"}, "", nil, nil, nil),
+						createSchemaProxy([]string{"integer"}, "", nil, nil, nil),
+					}),
+				},
 			},
 			want: `"example"`,
 		},
 		{
 			name: "with anyOf",
 			response: Response{
-				Schema: createSchemaProxyWithAnyOf([]*base.SchemaProxy{
-					createSchemaProxy([]string{"string"}, "", nil, nil, nil),
-					createSchemaProxy([]string{"integer"}, "", nil, nil, nil),
-				}),
+				SparseResponse: SparseResponse{
+					Schema: createSchemaProxyWithAnyOf([]*base.SchemaProxy{
+						createSchemaProxy([]string{"string"}, "", nil, nil, nil),
+						createSchemaProxy([]string{"integer"}, "", nil, nil, nil),
+					}),
+				},
 			},
 			want: `"example"`,
 		},
@@ -116,7 +138,7 @@ func TestGenerateExampleJSON(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := generateExampleJSON(tt.response)
+			got, err := generateExampleJSON(tt.response.SparseResponse)
 			if tt.wantErr {
 				require.Error(t, err)
 				return

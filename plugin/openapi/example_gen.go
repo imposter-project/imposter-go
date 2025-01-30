@@ -10,25 +10,62 @@ import (
 	"github.com/pb33f/libopenapi/datamodel/high/base"
 )
 
-// generateExampleJSON generates an example JSON response based on the response object
-func generateExampleJSON(response Response) (string, error) {
+// generateExampleJSON generates an example object based on the sparse response object.
+// If the response has an example, it will be returned as is, and isLiteral will be true.
+// If the response has a schema, an example will be generated based on the schema.
+func generateExampleRaw(response SparseResponse) (example interface{}, isLiteral bool, err error) {
 	if response.Example != "" {
 		logger.Debugf("returning example from OpenAPI spec")
-		return response.Example, nil
+		return response.Example, true, nil
 	} else if response.Schema != nil {
 		logger.Debugf("generating example from OpenAPI schema")
-		example, err := generateExample(response.Schema)
+		example, err = generateExample(response.Schema)
 		if err != nil {
-			return "", fmt.Errorf("failed to generate example: %w", err)
+			return "", false, fmt.Errorf("failed to generate example: %w", err)
 		}
-		exampleJSON, err := json.Marshal(example)
-		if err != nil {
-			return "", fmt.Errorf("failed to marshal example: %w", err)
-		}
-		return string(exampleJSON), nil
+		return example, false, nil
 	}
 	logger.Warnf("no example or schema found for response")
-	return "", nil
+	return "", false, nil
+}
+
+// generateExampleJSON generates an example JSON response based on the sparse response object
+func generateExampleJSON(response SparseResponse) (string, error) {
+	example, isLiteral, err := generateExampleRaw(response)
+	if err != nil {
+		return "", err
+	}
+	if isLiteral {
+		return example.(string), nil
+	}
+	exampleJSON, err := json.Marshal(example)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal example: %w", err)
+	}
+	return string(exampleJSON), nil
+}
+
+// generateExampleString generates an example string response based on the sparse response object
+func generateExampleString(response SparseResponse) (string, error) {
+	example, isLiteral, err := generateExampleRaw(response)
+	if err != nil {
+		return "", err
+	}
+	if isLiteral {
+		return example.(string), nil
+	}
+	switch example.(type) {
+	case string:
+		return example.(string), nil
+	case int, int32, int64:
+		return fmt.Sprintf("%d", example), nil
+	case float64, float32:
+		return fmt.Sprintf("%f", example), nil
+	case bool:
+		return fmt.Sprintf("%t", example), nil
+	default:
+		return "", fmt.Errorf("unsupported example type: %T", example)
+	}
 }
 
 // getSchemaType returns the first type from the schema's Type array

@@ -81,3 +81,85 @@ list:
 		require.Empty(t, result, "Complex YAML structure should not be converted to string")
 	})
 }
+
+func TestYamlNodeToJson(t *testing.T) {
+	tests := []struct {
+		name     string
+		yaml     string
+		expected string
+	}{
+		{
+			name:     "Simple string value",
+			yaml:     "test string",
+			expected: `"test string"`,
+		},
+		{
+			name:     "Simple object",
+			yaml:     "key: value",
+			expected: `{"key":"value"}`,
+		},
+		{
+			name: "Complex object",
+			yaml: `
+name: test
+age: 42
+tags:
+  - one
+  - two
+settings:
+  enabled: true
+  timeout: 30`,
+			expected: `{"name":"test","age":42,"tags":["one","two"],"settings":{"enabled":true,"timeout":30}}`,
+		},
+		{
+			name: "Array of objects",
+			yaml: `
+- name: item1
+  value: 1
+- name: item2
+  value: 2`,
+			expected: `[{"name":"item1","value":1},{"name":"item2","value":2}]`,
+		},
+		{
+			name:     "Number value",
+			yaml:     "42",
+			expected: `42`,
+		},
+		{
+			name:     "Boolean value",
+			yaml:     "true",
+			expected: `true`,
+		},
+		{
+			name:     "Null value",
+			yaml:     "null",
+			expected: `null`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var node yaml.Node
+			err := yaml.Unmarshal([]byte(tt.yaml), &node)
+			require.NoError(t, err)
+
+			result := yamlNodeToJson(&node)
+			require.Equal(t, tt.expected, result)
+		})
+	}
+
+	t.Run("Nil node", func(t *testing.T) {
+		result := yamlNodeToJson(nil)
+		require.Empty(t, result)
+	})
+
+	t.Run("Invalid YAML", func(t *testing.T) {
+		node := &yaml.Node{
+			Kind:  yaml.ScalarNode,
+			Tag:   "!!binary",
+			Value: "invalid",
+		}
+		result := yamlNodeToJson(node)
+		require.Empty(t, result)
+	})
+}
