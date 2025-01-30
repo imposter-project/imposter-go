@@ -54,18 +54,7 @@ func generateExampleString(response SparseResponse) (string, error) {
 	if isLiteral {
 		return example.(string), nil
 	}
-	switch example.(type) {
-	case string:
-		return example.(string), nil
-	case int, int32, int64:
-		return fmt.Sprintf("%d", example), nil
-	case float64, float32:
-		return fmt.Sprintf("%f", example), nil
-	case bool:
-		return fmt.Sprintf("%t", example), nil
-	default:
-		return "", fmt.Errorf("unsupported example type: %T", example)
-	}
+	return coerceToString(example)
 }
 
 // getSchemaType returns the first type from the schema's Type array

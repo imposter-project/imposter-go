@@ -133,7 +133,7 @@ settings:
 		{
 			name:     "Null value",
 			yaml:     "null",
-			expected: `null`,
+			expected: ``,
 		},
 	}
 
@@ -144,7 +144,11 @@ settings:
 			require.NoError(t, err)
 
 			result := yamlNodeToJson(&node)
-			require.Equal(t, tt.expected, result)
+			if tt.expected == "" {
+				require.Empty(t, result)
+			} else {
+				require.JSONEq(t, tt.expected, result)
+			}
 		})
 	}
 

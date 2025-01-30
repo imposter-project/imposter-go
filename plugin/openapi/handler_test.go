@@ -37,10 +37,10 @@ func TestOpenAPIHandlerEndToEnd(t *testing.T) {
 			wantBodyJson: true,
 			wantBodyMatch: `{
   "category" : {
-    "id" : "1",
+    "id" : 1,
     "name" : "Dogs"
   },
-  "id" : "10",
+  "id" : 10,
   "name" : "doggie",
   "photoUrls" : [ "example" ],
   "status" : "available",
@@ -67,10 +67,10 @@ func TestOpenAPIHandlerEndToEnd(t *testing.T) {
 			wantBodyJson: true,
 			wantBodyMatch: `{
   "category" : {
-    "id" : "1",
+    "id" : 1,
     "name" : "Dogs"
   },
-  "id" : "10",
+  "id" : 10,
   "name" : "doggie",
   "photoUrls" : [ "example" ],
   "status" : "available",
