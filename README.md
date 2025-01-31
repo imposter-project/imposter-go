@@ -116,7 +116,7 @@ Set the `IMPOSTER_LOG_LEVEL` environment variable to control logging verbosity:
 export IMPOSTER_LOG_LEVEL=DEBUG  # Available levels: TRACE, DEBUG, INFO, WARN, ERROR
 ```
 
-The default log level is DEBUG. Log levels are processed in order of severity:
+The default log level is DEBUG. Available log levels:
 - TRACE - Most verbose, logs all messages
 - DEBUG - Detailed information for debugging
 - INFO - General operational messages
@@ -187,7 +187,17 @@ Run the test suite using:
 make test
 ```
 
-This will run all tests with verbose output, showing the progress of each test case.
+This will run all tests.
+
+To run a specific test, use the `go test` command:
+```bash
+go test ./pkg/server
+```
+
+To run tests with verbose output, use the `-v` flag:
+```bash
+go test -v ./pkg/server
+```
 
 ---
 
