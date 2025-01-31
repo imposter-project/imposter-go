@@ -13,8 +13,15 @@ import (
 )
 
 type Plugin interface {
+	// GetConfigDir returns the original config directory, *which might be a parent*,
+	// from which the config file was discovered.
+	GetConfigDir() string
+
+	// GetConfig returns the plugin configuration
 	GetConfig() *config.Config
-	HandleRequest(r *http.Request, requestStore *store.Store, responseState *response.ResponseState, preproc response.Processor)
+
+	// HandleRequest processes incoming HTTP requests and routes them to the appropriate handler
+	HandleRequest(r *http.Request, requestStore *store.Store, responseState *response.ResponseState, respProc response.Processor)
 }
 
 // LoadPlugins loads plugins from the provided configs

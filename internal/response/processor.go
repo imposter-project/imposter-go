@@ -15,3 +15,10 @@ type Processor func(
 	resp *config.Response,
 	requestStore *store.Store,
 )
+
+// NewProcessor creates a new standard response processor
+func NewProcessor(imposterConfig *config.ImposterConfig, configDir string) Processor {
+	return func(reqMatcher *config.RequestMatcher, rs *ResponseState, r *http.Request, resp *config.Response, requestStore *store.Store) {
+		processResponse(reqMatcher, rs, r, resp, configDir, requestStore, imposterConfig)
+	}
+}

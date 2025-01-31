@@ -37,7 +37,7 @@ func TestSystemStatus(t *testing.T) {
 
 	// Start test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		handler.HandleRequest(w, r, plugins)
+		handler.HandleRequest(nil, w, r, plugins)
 	}))
 	defer server.Close()
 

@@ -3,12 +3,9 @@ package openapi
 import (
 	"fmt"
 	"github.com/imposter-project/imposter-go/plugin/rest"
-	"net/http"
 	"path/filepath"
 
 	"github.com/imposter-project/imposter-go/internal/config"
-	"github.com/imposter-project/imposter-go/internal/response"
-	"github.com/imposter-project/imposter-go/internal/store"
 )
 
 // PluginHandler handles OpenAPI mock requests
@@ -55,23 +52,12 @@ func NewPluginHandler(cfg *config.Config, configDir string, imposterConfig *conf
 	}, nil
 }
 
+// GetConfigDir returns the original config directory
+func (h *PluginHandler) GetConfigDir() string {
+	return h.configDir
+}
+
 // GetConfig returns the plugin configuration
 func (h *PluginHandler) GetConfig() *config.Config {
 	return h.config
-}
-
-// HandleRequest handles incoming HTTP requests
-func (h *PluginHandler) HandleRequest(
-	r *http.Request,
-	requestStore *store.Store,
-	responseState *response.ResponseState,
-	preproc response.Processor,
-) {
-	// TODO validate request against OpenAPI spec
-
-	wrapped := func(reqMatcher *config.RequestMatcher, rs *response.ResponseState, r *http.Request, resp *config.Response, requestStore *store.Store) {
-		h.preprocessResponse(reqMatcher, rs, r, resp, requestStore, preproc)
-	}
-
-	h.restPluginHandler.HandleRequest(r, requestStore, responseState, wrapped)
 }

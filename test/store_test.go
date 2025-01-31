@@ -21,7 +21,7 @@ func TestSystemStore(t *testing.T) {
 
 	// Start test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		handler.HandleRequest(w, r, []plugin.Plugin{})
+		handler.HandleRequest(nil, w, r, []plugin.Plugin{})
 	}))
 	defer server.Close()
 

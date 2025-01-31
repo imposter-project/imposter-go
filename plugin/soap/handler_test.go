@@ -191,9 +191,10 @@ func TestSOAPHandler_HandleRequest(t *testing.T) {
 			// Initialise store and response state
 			requestStore := make(store.Store)
 			responseState := response.NewResponseState()
+			responseProc := response.NewProcessor(&config.ImposterConfig{}, tempDir)
 
 			// Handle request
-			handler.HandleRequest(req, &requestStore, responseState, nil)
+			handler.HandleRequest(req, &requestStore, responseState, responseProc)
 
 			// Check response
 			if !responseState.Handled {
@@ -418,8 +419,10 @@ func TestSOAPHandler_HandleRequest_WithInterceptor(t *testing.T) {
 		},
 	}
 
+	configDir := "."
+
 	// Create handler
-	handler, err := NewPluginHandler(cfg, ".", &config.ImposterConfig{})
+	handler, err := NewPluginHandler(cfg, configDir, &config.ImposterConfig{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -442,9 +445,10 @@ func TestSOAPHandler_HandleRequest_WithInterceptor(t *testing.T) {
 	// Initialise store and response state
 	requestStore := make(store.Store)
 	responseState := response.NewResponseState()
+	responseProc := response.NewProcessor(&config.ImposterConfig{}, configDir)
 
 	// Handle request
-	handler.HandleRequest(req, &requestStore, responseState, nil)
+	handler.HandleRequest(req, &requestStore, responseState, responseProc)
 
 	// Check response
 	if !responseState.Handled {
@@ -517,8 +521,10 @@ func TestSOAPHandler_HandleRequest_WithPassthroughInterceptor(t *testing.T) {
 		},
 	}
 
+	configDir := "."
+
 	// Create handler
-	handler, err := NewPluginHandler(cfg, ".", &config.ImposterConfig{})
+	handler, err := NewPluginHandler(cfg, configDir, &config.ImposterConfig{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -541,9 +547,10 @@ func TestSOAPHandler_HandleRequest_WithPassthroughInterceptor(t *testing.T) {
 	// Initialise store and response state
 	requestStore := make(store.Store)
 	responseState := response.NewResponseState()
+	responseProc := response.NewProcessor(&config.ImposterConfig{}, configDir)
 
 	// Handle request
-	handler.HandleRequest(req, &requestStore, responseState, nil)
+	handler.HandleRequest(req, &requestStore, responseState, responseProc)
 
 	// Check response
 	if !responseState.Handled {
@@ -845,8 +852,10 @@ func TestSOAPHandler_SOAPFault(t *testing.T) {
 				},
 			}
 
+			configDir := "."
+
 			// Create handler
-			handler, err := NewPluginHandler(cfg, ".", &config.ImposterConfig{})
+			handler, err := NewPluginHandler(cfg, configDir, &config.ImposterConfig{})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -868,9 +877,10 @@ func TestSOAPHandler_SOAPFault(t *testing.T) {
 			// Initialise store and response state
 			requestStore := make(store.Store)
 			responseState := response.NewResponseState()
+			responseProc := response.NewProcessor(&config.ImposterConfig{}, configDir)
 
 			// Handle request
-			handler.HandleRequest(req, &requestStore, responseState, nil)
+			handler.HandleRequest(req, &requestStore, responseState, responseProc)
 
 			// Check response
 			if !responseState.Handled {

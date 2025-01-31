@@ -90,8 +90,8 @@ func SimulateFailure(rs *ResponseState, failureType string, r *http.Request) boo
 	return false
 }
 
-// ProcessResponse handles common response processing logic
-func ProcessResponse(
+// processResponse handles common response processing logic
+func processResponse(
 	reqMatcher *config.RequestMatcher,
 	rs *ResponseState,
 	req *http.Request,

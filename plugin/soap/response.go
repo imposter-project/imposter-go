@@ -44,12 +44,8 @@ func (h *PluginHandler) processResponse(
 	resp *config.Response,
 	requestStore *store.Store,
 	op *Operation,
-	preproc response.Processor,
+	respProc response.Processor,
 ) {
-	if preproc != nil {
-		preproc(reqMatcher, rs, r, resp, requestStore)
-	}
-
 	// Set content type for SOAP response
 	rs.Headers["Content-Type"] = getResponseContentType(body.GetSOAPVersion())
 
@@ -67,8 +63,8 @@ func (h *PluginHandler) processResponse(
 		finalResp.Content = h.replaceExamplePlaceholder(op, body)
 	}
 
-	// Process the response using common handler
-	response.ProcessResponse(reqMatcher, rs, r, finalResp, h.configDir, requestStore, h.imposterConfig)
+	// Standard response processor
+	respProc(reqMatcher, rs, r, finalResp, requestStore)
 }
 
 // applySoapFault applies a SOAP fault response if the response status code is 500 or if the response is marked as a SOAP fault.

@@ -17,3 +17,12 @@ func NewPluginHandler(cfg *config.Config, configDir string, imposterConfig *conf
 		imposterConfig: imposterConfig,
 	}, nil
 }
+
+// GetConfigDir returns the original config directory
+func (h *PluginHandler) GetConfigDir() string {
+	return h.configDir
+}
+
+func (h *PluginHandler) GetConfig() *config.Config {
+	return h.config
+}

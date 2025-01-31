@@ -8,19 +8,15 @@ import (
 	"net/http"
 )
 
-// preprocessResponse handles preparing the response state
-func (h *PluginHandler) preprocessResponse(
+// processResponse handles preparing the response state
+func (h *PluginHandler) processResponse(
 	reqMatcher *config.RequestMatcher,
 	rs *response.ResponseState,
 	r *http.Request,
 	resp *config.Response,
 	requestStore *store.Store,
-	preproc response.Processor,
+	respProc response.Processor,
 ) {
-	if preproc != nil {
-		preproc(reqMatcher, rs, r, resp, requestStore)
-	}
-
 	// Replace example placeholder in the response content
 	if resp.Content == openapiExamplePlaceholder {
 		openApiResp := h.lookupSpecResponse(r, *requestStore)
@@ -34,6 +30,9 @@ func (h *PluginHandler) preprocessResponse(
 		resp.Headers = respHeaders
 		resp.Content = respContent
 	}
+
+	// Standard response processor
+	respProc(reqMatcher, rs, r, resp, requestStore)
 }
 
 // lookupSpecResponse gets the matched OpenAPI response for the request

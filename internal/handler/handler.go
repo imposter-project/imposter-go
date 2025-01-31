@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/logger"
 	"net/http"
 	"strings"
@@ -11,7 +12,7 @@ import (
 )
 
 // HandleRequest processes incoming HTTP requests and routes them to the appropriate handler
-func HandleRequest(w http.ResponseWriter, req *http.Request, plugins []plugin.Plugin) {
+func HandleRequest(imposterConfig *config.ImposterConfig, w http.ResponseWriter, req *http.Request, plugins []plugin.Plugin) {
 	// Initialise request-scoped store and response state
 	requestStore := make(store.Store)
 	responseState := response.NewResponseState()
@@ -23,8 +24,11 @@ func HandleRequest(w http.ResponseWriter, req *http.Request, plugins []plugin.Pl
 
 	// Process each config
 	for _, plg := range plugins {
+		// Standard response processor
+		responseProc := response.NewProcessor(imposterConfig, plg.GetConfigDir())
+
 		// Process request with handler
-		plg.HandleRequest(req, &requestStore, responseState, nil)
+		plg.HandleRequest(req, &requestStore, responseState, responseProc)
 
 		// If the response has been handled by the handler, break the loop
 		if responseState.Handled {

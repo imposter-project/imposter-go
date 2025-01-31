@@ -82,7 +82,7 @@ func handleAPIGatewayProxyRequest(req events.APIGatewayProxyRequest, plugins []p
 	recorder := &responseRecorder{Headers: make(http.Header)}
 
 	// Handle the request
-	handler.HandleRequest(recorder, httpReq, plugins)
+	handler.HandleRequest(imposterConfig, recorder, httpReq, plugins)
 	logResponse(recorder)
 
 	// Convert the captured response to APIGatewayProxyResponse
@@ -102,7 +102,7 @@ func handleLambdaFunctionURLRequest(req events.LambdaFunctionURLRequest, plugins
 	recorder := &responseRecorder{Headers: make(http.Header)}
 
 	// Handle the request
-	handler.HandleRequest(recorder, httpReq, plugins)
+	handler.HandleRequest(imposterConfig, recorder, httpReq, plugins)
 	logResponse(recorder)
 
 	// Convert the captured response to LambdaFunctionURLResponse

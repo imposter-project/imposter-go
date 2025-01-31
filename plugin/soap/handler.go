@@ -219,7 +219,7 @@ func (h *PluginHandler) calculateScore(reqMatcher *config.RequestMatcher, r *htt
 }
 
 // HandleRequest processes incoming SOAP requests
-func (h *PluginHandler) HandleRequest(r *http.Request, requestStore *store.Store, responseState *response.ResponseState, preproc response.Processor) {
+func (h *PluginHandler) HandleRequest(r *http.Request, requestStore *store.Store, responseState *response.ResponseState, respProc response.Processor) {
 	// Only handle POST requests for SOAP
 	if r.Method != http.MethodPost {
 		return // Let the main handler deal with non-POST requests
@@ -265,7 +265,7 @@ func (h *PluginHandler) HandleRequest(r *http.Request, requestStore *store.Store
 				capture.CaptureRequestData(h.imposterConfig, interceptorCfg.Capture, r, body, requestStore)
 			}
 			if interceptorCfg.Response != nil {
-				h.processResponse(bodyHolder, &interceptorCfg.RequestMatcher, responseState, r, interceptorCfg.Response, requestStore, op, preproc)
+				h.processResponse(bodyHolder, &interceptorCfg.RequestMatcher, responseState, r, interceptorCfg.Response, requestStore, op, respProc)
 			}
 			if !interceptorCfg.Continue {
 				responseState.Handled = true
@@ -297,6 +297,6 @@ func (h *PluginHandler) HandleRequest(r *http.Request, requestStore *store.Store
 	capture.CaptureRequestData(h.imposterConfig, best.Resource.Capture, r, body, requestStore)
 
 	// Process the response
-	h.processResponse(bodyHolder, &best.Resource.RequestMatcher, responseState, r, &best.Resource.Response, requestStore, op, preproc)
+	h.processResponse(bodyHolder, &best.Resource.RequestMatcher, responseState, r, &best.Resource.Response, requestStore, op, respProc)
 	responseState.Handled = true
 }

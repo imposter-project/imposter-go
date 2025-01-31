@@ -55,7 +55,7 @@ func (s *httpServer) start(imposterConfig *config.ImposterConfig) {
 	logger.Infof("server is listening on %s...", s.Addr)
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		handler.HandleRequest(w, r, s.Plugins)
+		handler.HandleRequest(imposterConfig, w, r, s.Plugins)
 	})
 
 	if err := http.ListenAndServe(s.Addr, nil); err != nil {

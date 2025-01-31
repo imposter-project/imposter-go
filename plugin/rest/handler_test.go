@@ -97,9 +97,10 @@ func TestHandler_HandleRequest_MatchingResource(t *testing.T) {
 	// Initialise store and response state
 	requestStore := make(store.Store)
 	responseState := response.NewResponseState()
+	responseProc := response.NewProcessor(&config.ImposterConfig{}, tempDir)
 
 	// Handle request
-	handler.HandleRequest(req, &requestStore, responseState, nil)
+	handler.HandleRequest(req, &requestStore, responseState, responseProc)
 
 	// Check response
 	if !responseState.Handled {
@@ -163,9 +164,10 @@ func TestHandler_HandleRequest_WithInterceptor(t *testing.T) {
 	// Initialise store and response state
 	requestStore := make(store.Store)
 	responseState := response.NewResponseState()
+	responseProc := response.NewProcessor(&config.ImposterConfig{}, tempDir)
 
 	// Handle request
-	handler.HandleRequest(req, &requestStore, responseState, nil)
+	handler.HandleRequest(req, &requestStore, responseState, responseProc)
 
 	// Check response
 	if !responseState.Handled {
@@ -225,9 +227,10 @@ func TestHandler_HandleRequest_WithPathParams(t *testing.T) {
 	// Initialise store and response state
 	requestStore := make(store.Store)
 	responseState := response.NewResponseState()
+	responseProc := response.NewProcessor(&config.ImposterConfig{}, tempDir)
 
 	// Handle request
-	handler.HandleRequest(req, &requestStore, responseState, nil)
+	handler.HandleRequest(req, &requestStore, responseState, responseProc)
 
 	// Check response
 	if !responseState.Handled {
@@ -286,9 +289,10 @@ func TestHandler_HandleRequest_WithResponseFile(t *testing.T) {
 	// Initialise store and response state
 	requestStore := make(store.Store)
 	responseState := response.NewResponseState()
+	responseProc := response.NewProcessor(&config.ImposterConfig{}, tempDir)
 
 	// Handle request
-	handler.HandleRequest(req, &requestStore, responseState, nil)
+	handler.HandleRequest(req, &requestStore, responseState, responseProc)
 
 	// Check response
 	if !responseState.Handled {
@@ -348,9 +352,10 @@ func TestHandler_HandleRequest_WithRequestBody(t *testing.T) {
 	// Initialise store and response state
 	requestStore := make(store.Store)
 	responseState := response.NewResponseState()
+	responseProc := response.NewProcessor(&config.ImposterConfig{}, tempDir)
 
 	// Handle request
-	handler.HandleRequest(req, &requestStore, responseState, nil)
+	handler.HandleRequest(req, &requestStore, responseState, responseProc)
 
 	// Check response
 	if !responseState.Handled {
@@ -420,9 +425,10 @@ func TestHandler_HandleRequest_WithXMLNamespaces(t *testing.T) {
 	// Initialise store and response state
 	requestStore := make(store.Store)
 	responseState := response.NewResponseState()
+	responseProc := response.NewProcessor(&config.ImposterConfig{}, tempDir)
 
 	// Handle request
-	handler.HandleRequest(req, &requestStore, responseState, nil)
+	handler.HandleRequest(req, &requestStore, responseState, responseProc)
 
 	// Check response
 	if !responseState.Handled {
