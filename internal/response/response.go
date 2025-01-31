@@ -120,6 +120,10 @@ func processResponse(
 		}
 	}
 
+	// Handle response file or content
+	respFile := resp.File
+	respContent := resp.Content
+
 	// Handle directory-based responses with wildcards
 	if resp.Dir != "" {
 		if reqMatcher == nil || !strings.HasSuffix(reqMatcher.Path, "/*") {
@@ -136,15 +140,15 @@ func processResponse(
 		}
 
 		// Set the response file path relative to the config directory
-		resp.File = filepath.Join(resp.Dir, requestSpecificPath)
-		logger.Debugf("using directory-based response file: %s", resp.File)
+		respFile = filepath.Join(resp.Dir, requestSpecificPath)
+		logger.Debugf("using directory-based response file: %s", respFile)
 	}
 
 	// Only override response content if specified, as it may have been set by an interceptor
-	if resp.File != "" || resp.Content != "" {
+	if respFile != "" || respContent != "" {
 		var responseContent string
-		if resp.File != "" {
-			filePath, err := utils.ValidatePath(resp.File, configDir)
+		if respFile != "" {
+			filePath, err := utils.ValidatePath(respFile, configDir)
 			if err != nil {
 				rs.StatusCode = http.StatusInternalServerError
 				rs.Body = []byte("Invalid file path")
@@ -165,8 +169,8 @@ func processResponse(
 				}
 			}
 			responseContent = string(data)
-		} else if resp.Content != "" {
-			responseContent = resp.Content
+		} else if respContent != "" {
+			responseContent = respContent
 		}
 
 		// Process template if enabled
@@ -185,8 +189,8 @@ func processResponse(
 	// Set Content-Type header if not already set
 	if _, exists := rs.Headers["Content-Type"]; !exists {
 		// If response is from file, try to determine content type from extension
-		if resp.File != "" {
-			ext := filepath.Ext(resp.File)
+		if respFile != "" {
+			ext := filepath.Ext(respFile)
 			contentType := mime.TypeByExtension(ext)
 			if contentType == "" {
 				contentType = "application/octet-stream"
