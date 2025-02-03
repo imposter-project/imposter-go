@@ -9,8 +9,8 @@ import (
 	"net/http"
 )
 
-// sendSOAPFault sends a SOAP fault response
-func (h *PluginHandler) sendSOAPFault(soapVersion SOAPVersion, envNamespace string, rs *response.ResponseState, message string, statusCode int) {
+// failWithSOAPFault fails the request and sends a SOAP fault response
+func (h *PluginHandler) failWithSOAPFault(soapVersion SOAPVersion, envNamespace string, rs *response.ResponseState, message string, statusCode int) {
 	rs.Headers["Content-Type"] = getResponseContentType(soapVersion)
 	rs.StatusCode = statusCode
 
@@ -51,7 +51,7 @@ func (h *PluginHandler) processResponse(
 
 	var finalResp *config.Response
 	if resp.StatusCode == http.StatusInternalServerError || resp.SoapFault {
-		soapResp := h.applySoapFault(body, resp, op)
+		soapResp := h.generateSoapFault(body, resp, op)
 		finalResp = &soapResp
 	} else {
 		finalResp = resp
@@ -67,23 +67,31 @@ func (h *PluginHandler) processResponse(
 	respProc(reqMatcher, rs, r, finalResp, requestStore)
 }
 
-// applySoapFault applies a SOAP fault response if the response status code is 500 or if the response is marked as a SOAP fault.
-func (h *PluginHandler) applySoapFault(body *MessageBodyHolder, resp *config.Response, op *Operation) config.Response {
-	finalResp := config.Response{
-		StatusCode: http.StatusInternalServerError,
+// generateSoapFault applies a SOAP fault response if the response status code is 500 or if the response is marked as a SOAP fault.
+func (h *PluginHandler) generateSoapFault(body *MessageBodyHolder, resp *config.Response, op *Operation) config.Response {
+	var statusCode int
+	if resp.StatusCode != 0 {
+		statusCode = resp.StatusCode
+	} else {
+		statusCode = http.StatusInternalServerError
+	}
+	faultResp := config.Response{
+		StatusCode: statusCode,
+		Delay:      resp.Delay,
+		Fail:       resp.Fail,
 	}
 	if resp.Content != "" {
-		finalResp.Content = resp.Content
+		faultResp.Content = resp.Content
 	} else if resp.File != "" {
-		finalResp.File = resp.File
+		faultResp.File = resp.File
 	} else {
 		faultXml, err := generateExampleXML(op.Fault, h.wsdlParser.GetSchemaSystem())
 		if err != nil {
 			logger.Errorf("failed to generate example XML for fault: %v", err)
 		}
-		finalResp.Content = wrapInEnvelope(faultXml, body.EnvNamespace)
+		faultResp.Content = wrapInEnvelope(faultXml, body.EnvNamespace)
 	}
-	return finalResp
+	return faultResp
 }
 
 // replaceExamplePlaceholder replaces example placeholders in a template with a generated example response.

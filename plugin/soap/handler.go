@@ -232,7 +232,7 @@ func (h *PluginHandler) HandleRequest(r *http.Request, requestStore *store.Store
 	if err != nil {
 		logger.Warnf("failed to read request body: %v", err)
 		soapVersion := guessSoapVersion(wsdlVersion)
-		h.sendSOAPFault(soapVersion, guessEnvNamespace(soapVersion), responseState, "Failed to read request body", http.StatusBadRequest)
+		h.failWithSOAPFault(soapVersion, guessEnvNamespace(soapVersion), responseState, "Failed to read request body", http.StatusBadRequest)
 		responseState.Handled = true
 		return
 	}
@@ -242,7 +242,7 @@ func (h *PluginHandler) HandleRequest(r *http.Request, requestStore *store.Store
 	if err != nil {
 		logger.Warnf("failed to parse SOAP body: %v", err)
 		soapVersion := guessSoapVersion(wsdlVersion)
-		h.sendSOAPFault(soapVersion, guessEnvNamespace(soapVersion), responseState, "Invalid SOAP envelope", http.StatusBadRequest)
+		h.failWithSOAPFault(soapVersion, guessEnvNamespace(soapVersion), responseState, "Invalid SOAP envelope", http.StatusBadRequest)
 		responseState.Handled = true
 		return
 	}
