@@ -5,6 +5,7 @@ import (
 	"github.com/imposter-project/imposter-go/internal/logger"
 	"github.com/imposter-project/imposter-go/internal/response"
 	"github.com/imposter-project/imposter-go/internal/store"
+	"github.com/imposter-project/imposter-go/pkg/utils"
 	"net/http"
 )
 
@@ -18,14 +19,14 @@ func (h *PluginHandler) processResponse(
 	respProc response.Processor,
 ) {
 	// Replace example placeholder in the response content
-	if resp.Content == openapiExamplePlaceholder {
-		openApiResp := h.lookupSpecResponse(r, *requestStore)
-		if openApiResp == nil {
+	if resp.Content == openapiExamplePlaceholder || resp.ExampleName != "" {
+		specResp := h.lookupSpecResponse(r, *requestStore)
+		if specResp == nil {
 			logger.Errorf("no OpenAPI response with ID matched for request %s %s", r.Method, r.URL.Path)
 			return
 		}
 
-		respHeaders, respContent := h.replaceExamplePlaceholder(rs.Headers, openApiResp)
+		respHeaders, respContent := h.replaceExamplePlaceholder(rs.Headers, specResp, resp)
 		// note: this updates the config by reference, meaning the placeholder is replaced in the original config
 		resp.Headers = respHeaders
 		resp.Content = respContent
@@ -55,9 +56,13 @@ func (h *PluginHandler) lookupSpecResponse(r *http.Request, requestStore store.S
 }
 
 // replaceExamplePlaceholder replaces example placeholders in a template with a generated example response.
-func (h *PluginHandler) replaceExamplePlaceholder(headers map[string]string, resp *Response) (respHeaders map[string]string, content string) {
+func (h *PluginHandler) replaceExamplePlaceholder(headers map[string]string, specResp *Response, resp *config.Response) (respHeaders map[string]string, content string) {
+	// check if an example name is provided in the response config or OpenAPI spec, otherwise
+	// will fall back to generation from schema
+	exampleName := checkForExample(resp, specResp)
+
 	// Generate example response JSON
-	exampleResponse, err := generateExampleJSON(resp.SparseResponse)
+	exampleResponse, err := generateExampleJSON(specResp.SparseResponse, exampleName)
 	if err != nil {
 		logger.Warnf("failed to generate example body: %v", err)
 		return nil, ""
@@ -71,9 +76,9 @@ func (h *PluginHandler) replaceExamplePlaceholder(headers map[string]string, res
 		}
 	}
 
-	if resp.Headers != nil {
-		for k, v := range resp.Headers {
-			h, err := generateExampleString(v)
+	if specResp.Headers != nil {
+		for k, v := range specResp.Headers {
+			h, err := generateExampleString(v, defaultExampleName)
 			if err != nil {
 				logger.Warnf("failed to generate example header: %v", err)
 				return nil, ""
@@ -82,4 +87,23 @@ func (h *PluginHandler) replaceExamplePlaceholder(headers map[string]string, res
 		}
 	}
 	return respHeaders, exampleResponse
+}
+
+// checkForExample checks if an example name is provided in the response config or OpenAPI spec
+func checkForExample(resp *config.Response, specResp *Response) string {
+	var exampleName string
+	if resp.ExampleName != "" {
+		exampleName = resp.ExampleName
+
+	} else if specResp.Examples != nil && len(specResp.Examples) > 0 {
+		// if there are one or more examples in the OpenAPI spec, use the first one
+		_, exists := specResp.Examples[defaultExampleName]
+		if exists {
+			exampleName = defaultExampleName
+		} else {
+			exName, _ := utils.GetFirstItemFromMap(specResp.Examples)
+			exampleName = exName
+		}
+	}
+	return exampleName
 }

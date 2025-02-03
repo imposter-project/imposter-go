@@ -14,15 +14,23 @@ const (
 	openapiExamplePlaceholder = "${openapi.example()}"
 )
 
-// generateExampleJSON generates an example object based on the sparse response object.
+// generateExampleRaw generates an example object based on the sparse response object.
 // If the response has an example, it will be returned as is, and isLiteral will be true.
 // If the response has a schema, an example will be generated based on the schema.
-func generateExampleRaw(response SparseResponse) (example interface{}, isLiteral bool, err error) {
+func generateExampleRaw(response SparseResponse, exampleName string) (example interface{}, isLiteral bool, err error) {
 	// TODO cache example responses
 
-	if response.Example != "" {
-		logger.Debugf("returning example from OpenAPI spec")
-		return response.Example, true, nil
+	var exampleStr string
+	if exampleName != "" {
+		ex, found := response.Examples[exampleName]
+		if !found {
+			logger.Warnf("example '%s' not found in spec", exampleName)
+		}
+		exampleStr = ex
+	}
+	if exampleStr != "" {
+		logger.Debugf("returning example '%s' from OpenAPI spec", exampleName)
+		return exampleStr, true, nil
 	} else if response.Schema != nil {
 		logger.Debugf("generating example from OpenAPI schema")
 		example, err = generateExample(response.Schema)
@@ -36,8 +44,8 @@ func generateExampleRaw(response SparseResponse) (example interface{}, isLiteral
 }
 
 // generateExampleJSON generates an example JSON response based on the sparse response object
-func generateExampleJSON(response SparseResponse) (string, error) {
-	example, isLiteral, err := generateExampleRaw(response)
+func generateExampleJSON(response SparseResponse, exampleName string) (string, error) {
+	example, isLiteral, err := generateExampleRaw(response, exampleName)
 	if err != nil {
 		return "", err
 	}
@@ -52,8 +60,8 @@ func generateExampleJSON(response SparseResponse) (string, error) {
 }
 
 // generateExampleString generates an example string response based on the sparse response object
-func generateExampleString(response SparseResponse) (string, error) {
-	example, isLiteral, err := generateExampleRaw(response)
+func generateExampleString(response SparseResponse, exampleName string) (string, error) {
+	example, isLiteral, err := generateExampleRaw(response, exampleName)
 	if err != nil {
 		return "", err
 	}

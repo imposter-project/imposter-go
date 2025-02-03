@@ -20,9 +20,11 @@ const (
 	OpenAPI31
 )
 
+const defaultExampleName = "default-example"
+
 type SparseResponse struct {
-	Example string
-	Schema  *base.SchemaProxy
+	Examples map[string]string
+	Schema   *base.SchemaProxy
 }
 
 type Response struct {

@@ -97,15 +97,17 @@ func (p *openAPI2Parser) processResponse(produces []string, resp *v2.Response) [
 	// check the produces list first, but it's not mandatory
 	for _, mediaType := range produces {
 		r := SparseResponse{
-			Schema: resp.Schema,
+			Examples: make(map[string]string),
+			Schema:   resp.Schema,
 		}
 		if resp.Examples != nil {
+			// TODO: should we handle multiple examples?
 			// get the example for the specific media type, or the first one
 			ex, present := resp.Examples.Values.Get(mediaType)
 			if !present {
 				ex = resp.Examples.Values.Oldest().Value
 			}
-			r.Example = ex.Value
+			r.Examples[defaultExampleName] = ex.Value
 		}
 
 		// TODO: handle v2 header items
@@ -123,6 +125,7 @@ func (p *openAPI2Parser) processResponse(produces []string, resp *v2.Response) [
 	// derive from response example names
 	if resp.Examples != nil {
 		for exampleName, ex := range resp.Examples.Values.FromOldest() {
+			// TODO: should all examples be added, in case 'exampleName' is specified in the config?
 			if !strings.Contains(exampleName, "/") {
 				// skip example names that are not media types
 				continue
@@ -133,8 +136,10 @@ func (p *openAPI2Parser) processResponse(produces []string, resp *v2.Response) [
 			}
 			example := yamlNodeToJson(ex)
 			r := SparseResponse{
-				Schema:  resp.Schema,
-				Example: example,
+				Examples: map[string]string{
+					exampleName: example,
+				},
+				Schema: resp.Schema,
 			}
 			response := Response{
 				UniqueID:       uuid.NewV4().String(),
@@ -150,7 +155,8 @@ func (p *openAPI2Parser) processResponse(produces []string, resp *v2.Response) [
 				UniqueID:    uuid.NewV4().String(),
 				ContentType: "",
 				SparseResponse: SparseResponse{
-					Schema: resp.Schema,
+					Examples: make(map[string]string),
+					Schema:   resp.Schema,
 				},
 			},
 		}

@@ -25,7 +25,9 @@ func TestGenerateExampleJSON(t *testing.T) {
 			response: Response{
 				UniqueID: uuid.NewV4().String(),
 				SparseResponse: SparseResponse{
-					Example: `{"name": "test"}`,
+					Examples: map[string]string{
+						defaultExampleName: `{"name": "test"}`,
+					},
 				},
 			},
 			want: `{"name": "test"}`,
@@ -150,7 +152,7 @@ func TestGenerateExampleJSON(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := generateExampleJSON(tt.response.SparseResponse)
+			got, err := generateExampleJSON(tt.response.SparseResponse, defaultExampleName)
 			if tt.wantErr {
 				require.Error(t, err)
 				return

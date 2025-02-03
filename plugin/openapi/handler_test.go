@@ -26,7 +26,7 @@ func TestOpenAPIHandlerEndToEnd(t *testing.T) {
 	}{
 		// OpenAPI 3.0 Tests
 		{
-			name:      "OpenAPI 3.0 - Get Pet by ID",
+			name:      "OpenAPI 3.0 - Get Pet by ID - default example",
 			configDir: "testdata/v30",
 			request: func() *http.Request {
 				req := httptest.NewRequest(http.MethodGet, "/v3/pet/123", nil)
@@ -38,10 +38,10 @@ func TestOpenAPIHandlerEndToEnd(t *testing.T) {
 			wantBodyMatch: `{
   "category" : {
     "id" : 1,
-    "name" : "Dogs"
+    "name" : "Cats"
   },
-  "id" : 10,
-  "name" : "doggie",
+  "id" : 200,
+  "name" : "fluffy",
   "photoUrls" : [ "example" ],
   "status" : "available",
   "tags" : [ {
@@ -54,7 +54,7 @@ func TestOpenAPIHandlerEndToEnd(t *testing.T) {
 			},
 		},
 		{
-			name:      "OpenAPI 3.0 - Add New Pet",
+			name:      "OpenAPI 3.0 - Add New Pet - generate from schema",
 			configDir: "testdata/v30",
 			request: func() *http.Request {
 				body := strings.NewReader(`{"id": 999, "name": "TestPet", "status": "available"}`)
@@ -102,6 +102,34 @@ func TestOpenAPIHandlerEndToEnd(t *testing.T) {
 			wantStatus:    http.StatusNotFound,
 			wantBodyJson:  false,
 			wantBodyMatch: ``,
+		},
+		{
+			name:      "OpenAPI 3.0 - Named example",
+			configDir: "testdata/v30",
+			request: func() *http.Request {
+				req := httptest.NewRequest(http.MethodGet, "/v3/pet/100", nil)
+				req.Header.Set("Accept", "application/json")
+				return req
+			}(),
+			wantStatus:   http.StatusOK,
+			wantBodyJson: true,
+			wantBodyMatch: `{
+  "category" : {
+    "id" : 2,
+    "name" : "Dogs"
+  },
+  "id" : 100,
+  "name" : "woof",
+  "photoUrls" : [ "example" ],
+  "status" : "available",
+  "tags" : [ {
+    "id" : 43,
+    "name" : "example"
+  } ]
+}`,
+			wantHeaders: map[string]string{
+				"Content-Type": "application/json",
+			},
 		},
 		// OpenAPI 2.0 Tests
 		{

@@ -16,7 +16,12 @@ type Response struct {
 	Delay      Delay             `yaml:"delay"`
 	Headers    map[string]string `yaml:"headers"`
 	Template   bool              `yaml:"template"`
-	SoapFault  bool              `yaml:"soapFault"`
+
+	// SOAP-specific fields
+	SoapFault bool `yaml:"soapFault"`
+
+	// OpenAPI-specific fields
+	ExampleName string `yaml:"exampleName"`
 }
 
 // Delay represents the delay configuration for a response

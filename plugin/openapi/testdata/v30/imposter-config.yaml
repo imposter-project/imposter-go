@@ -11,3 +11,8 @@ resources:
     method: GET
     response:
       statusCode: 404
+
+  - path: /v3/pet/100
+    method: GET
+    response:
+      exampleName: dog

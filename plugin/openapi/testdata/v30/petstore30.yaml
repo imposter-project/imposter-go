@@ -210,6 +210,39 @@ paths:
               schema:
                 $ref: '#/components/schemas/Pet'
             application/json:
+              examples:
+                cat:
+                  description: used by named example tests
+                  value: {
+                    "category" : {
+                      "id" : 1,
+                      "name" : "Cats"
+                    },
+                    "id" : 200,
+                    "name" : "fluffy",
+                    "photoUrls" : [ "example" ],
+                    "status" : "available",
+                    "tags" : [ {
+                      "id" : 42,
+                      "name" : "example"
+                    } ]
+                  }
+                dog:
+                  description: used by named example tests
+                  value: {
+                    "category" : {
+                      "id" : 2,
+                      "name" : "Dogs"
+                    },
+                    "id" : 100,
+                    "name" : "woof",
+                    "photoUrls" : [ "example" ],
+                    "status" : "available",
+                    "tags" : [ {
+                      "id" : 43,
+                      "name" : "example"
+                    } ]
+                  }
               schema:
                 $ref: '#/components/schemas/Pet'
         '400':
