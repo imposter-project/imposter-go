@@ -15,7 +15,6 @@ A Go implementation of the [Imposter Mock Engine](https://www.imposter.sh).
 - No support for [scripting](https://docs.imposter.sh/scripting/)
 - No support for [steps](https://docs.imposter.sh/steps/)
 - No support (yet) for some SOAP styles (https://github.com/imposter-project/imposter-go/issues/7)
-- No support (yet) for selecting OAS example name (https://github.com/imposter-project/imposter-go/issues/11)
 
 ## Getting Started
 
