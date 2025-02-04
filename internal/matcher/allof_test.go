@@ -68,7 +68,7 @@ func TestCalculateMatchScore_AllOfConditions(t *testing.T) {
 			}),
 			requestStore:       store.Store{},
 			imposterConfig:     &config.ImposterConfig{},
-			expectedScore:      0,
+			expectedScore:      NegativeMatchScore,
 			expectedIsWildcard: false,
 		},
 		{
@@ -94,7 +94,7 @@ func TestCalculateMatchScore_AllOfConditions(t *testing.T) {
 			}),
 			requestStore:       store.Store{},
 			imposterConfig:     &config.ImposterConfig{},
-			expectedScore:      0,
+			expectedScore:      NegativeMatchScore,
 			expectedIsWildcard: false,
 		},
 		{

@@ -139,7 +139,7 @@ func TestCalculateMatchScore_AnyOf(t *testing.T) {
 			}),
 			requestStore:       store.Store{},
 			imposterConfig:     &config.ImposterConfig{},
-			expectedScore:      0,
+			expectedScore:      NegativeMatchScore,
 			expectedIsWildcard: false,
 		},
 		{

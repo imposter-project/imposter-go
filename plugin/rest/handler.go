@@ -53,7 +53,7 @@ func (h *PluginHandler) HandleRequest(
 	for _, res := range h.config.Resources {
 		score, isWildcard := matcher.CalculateMatchScore(&res.RequestMatcher, r, body, systemNamespaces, h.imposterConfig, requestStore)
 		if score > 0 {
-			matches = append(matches, matcher.MatchResult{Resource: &res, Score: score, Wildcard: isWildcard})
+			matches = append(matches, matcher.MatchResult{Resource: &res, Score: score, Wildcard: isWildcard, RuntimeGenerated: res.RuntimeGenerated})
 		}
 	}
 

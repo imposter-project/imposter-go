@@ -186,31 +186,31 @@ func (h *PluginHandler) calculateScore(reqMatcher *config.RequestMatcher, r *htt
 
 	// Calculate base score using common request matcher fields
 	baseScore, baseWildcard := matcher.CalculateMatchScore(reqMatcher, r, body, systemNamespaces, h.imposterConfig, requestStore)
+	if baseScore == matcher.NegativeMatchScore {
+		return matcher.NegativeMatchScore, false
+	}
 	score = baseScore
 	isWildcard = baseWildcard
 
 	// Check SOAP-specific matches
 	if reqMatcher.Operation != "" {
 		if reqMatcher.Operation != op.Name {
-			return 0, false
+			return matcher.NegativeMatchScore, false
 		}
 		score++
 	}
 
 	if reqMatcher.SOAPAction != "" {
 		if reqMatcher.SOAPAction != soapAction {
-			return 0, false
+			return matcher.NegativeMatchScore, false
 		}
 		score++
 	}
 
 	if reqMatcher.Binding != "" {
-		if op == nil {
-			return 0, false
-		}
 		bindingName := h.wsdlParser.GetBindingName(op)
 		if reqMatcher.Binding != bindingName {
-			return 0, false
+			return matcher.NegativeMatchScore, false
 		}
 		score++
 	}
@@ -279,7 +279,7 @@ func (h *PluginHandler) HandleRequest(r *http.Request, requestStore *store.Store
 	for _, resource := range h.config.Resources {
 		score, isWildcard := h.calculateScore(&resource.RequestMatcher, r, body, op, soapAction, requestStore)
 		if score > 0 {
-			matches = append(matches, matcher.MatchResult{Resource: &resource, Score: score, Wildcard: isWildcard})
+			matches = append(matches, matcher.MatchResult{Resource: &resource, Score: score, Wildcard: isWildcard, RuntimeGenerated: resource.RuntimeGenerated})
 		}
 	}
 

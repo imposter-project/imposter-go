@@ -94,7 +94,8 @@ func augmentConfigWithOpenApiSpec(cfg *config.Config, parser OpenAPIParser) erro
 		for _, resp := range responses {
 			// Create an interceptor with default RequestMatcher
 			newInterceptor := config.Interceptor{
-				Continue: true,
+				RuntimeGenerated: true,
+				Continue:         true,
 				RequestMatcher: config.RequestMatcher{
 					Method: op.Method,
 					Path:   op.Path,
@@ -137,6 +138,7 @@ func augmentConfigWithOpenApiSpec(cfg *config.Config, parser OpenAPIParser) erro
 
 	// Add a default resource to handle unmatched requests
 	defaultResource := config.Resource{
+		RuntimeGenerated: true,
 		RequestMatcher: config.RequestMatcher{
 			AllOf: []config.ExpressionMatchCondition{
 				{

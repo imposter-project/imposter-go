@@ -281,7 +281,8 @@ func augmentConfigWithWSDL(cfg *config.Config, parser WSDLParser) error {
 
 		// Create an interceptor with default RequestMatcher
 		newInterceptor := config.Interceptor{
-			Continue: true,
+			RuntimeGenerated: true,
+			Continue:         true,
 			RequestMatcher: config.RequestMatcher{
 				Method:    "POST",
 				Operation: op.Name,
@@ -308,6 +309,7 @@ func augmentConfigWithWSDL(cfg *config.Config, parser WSDLParser) error {
 
 	// Add a default resource to handle unmatched requests
 	defaultResource := config.Resource{
+		RuntimeGenerated: true,
 		RequestMatcher: config.RequestMatcher{
 			AllOf: []config.ExpressionMatchCondition{
 				{

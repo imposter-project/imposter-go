@@ -118,7 +118,7 @@ func TestCalculateMatchScore(t *testing.T) {
 				Method: "POST",
 			},
 			request:      httptest.NewRequest("GET", "/test", nil),
-			wantScore:    0,
+			wantScore:    NegativeMatchScore,
 			wantWildcard: false,
 		},
 		{
@@ -160,7 +160,7 @@ func TestCalculateMatchScore(t *testing.T) {
 				},
 			},
 			request:      httptest.NewRequest("GET", "/users/456", nil),
-			wantScore:    0,
+			wantScore:    NegativeMatchScore,
 			wantWildcard: false,
 		},
 		{

@@ -19,14 +19,24 @@ type MatchResult struct {
 	Interceptor *config.Interceptor
 	Score       int
 	Wildcard    bool
+
+	// Whether the match was from a runtime-generated resource or interceptor
+	RuntimeGenerated bool
 }
 
-// CalculateMatchScore calculates how well a request matches a resource or interceptor
+const (
+	NegativeMatchScore = -1
+)
+
+// CalculateMatchScore calculates how well a request matches a resource or interceptor.
+// The score is calculated based on the number of matching conditions.
+// If score is negative, the request explicitly does not match the resource.
+// If the score is zero, no conditions were specified by the resource matcher.
 func CalculateMatchScore(matcher *config.RequestMatcher, r *http.Request, body []byte, systemNamespaces map[string]string, imposterConfig *config.ImposterConfig, requestStore *store.Store) (score int, isWildcard bool) {
 	// Method match
 	if matcher.Method != "" {
 		if !strings.EqualFold(matcher.Method, r.Method) {
-			return 0, false
+			return NegativeMatchScore, false
 		}
 		score++
 	}
@@ -43,11 +53,11 @@ func CalculateMatchScore(matcher *config.RequestMatcher, r *http.Request, body [
 			resourceSegments = resourceSegments[:len(resourceSegments)-1]
 			// For wildcard matches, we require at least the base path to match
 			if len(requestSegments) < len(resourceSegments) {
-				return 0, false
+				return NegativeMatchScore, false
 			}
 			requestSegments = requestSegments[:len(resourceSegments)]
 		} else if len(resourceSegments) != len(requestSegments) {
-			return 0, false
+			return NegativeMatchScore, false
 		}
 
 		// Match path segments, including path parameters
@@ -56,13 +66,13 @@ func CalculateMatchScore(matcher *config.RequestMatcher, r *http.Request, body [
 				paramName := strings.Trim(segment, "{}")
 				if condition, hasParam := matcher.PathParams[paramName]; hasParam {
 					if !condition.Matcher.Match(requestSegments[i]) {
-						return 0, false
+						return NegativeMatchScore, false
 					}
 					score++
 				}
 			} else {
 				if requestSegments[i] != segment {
-					return 0, false
+					return NegativeMatchScore, false
 				}
 				score++
 			}
@@ -73,7 +83,7 @@ func CalculateMatchScore(matcher *config.RequestMatcher, r *http.Request, body [
 	for key, condition := range matcher.RequestHeaders {
 		actualValue := r.Header.Get(key)
 		if !condition.Matcher.Match(actualValue) {
-			return 0, false
+			return NegativeMatchScore, false
 		}
 		score++
 	}
@@ -82,7 +92,7 @@ func CalculateMatchScore(matcher *config.RequestMatcher, r *http.Request, body [
 	for key, condition := range matcher.QueryParams {
 		actualValue := r.URL.Query().Get(key)
 		if !condition.Matcher.Match(actualValue) {
-			return 0, false
+			return NegativeMatchScore, false
 		}
 		score++
 	}
@@ -90,12 +100,12 @@ func CalculateMatchScore(matcher *config.RequestMatcher, r *http.Request, body [
 	// Form params match
 	if len(matcher.FormParams) > 0 {
 		if err := r.ParseForm(); err != nil {
-			return 0, false
+			return NegativeMatchScore, false
 		}
 		for key, condition := range matcher.FormParams {
 			actualValue := r.FormValue(key)
 			if !condition.Matcher.Match(actualValue) {
-				return 0, false
+				return NegativeMatchScore, false
 			}
 			score++
 		}
@@ -104,13 +114,13 @@ func CalculateMatchScore(matcher *config.RequestMatcher, r *http.Request, body [
 	// Request body match
 	if hasSingleBodyMatcher(matcher) {
 		if !matchBodyCondition(body, *matcher.RequestBody.BodyMatchCondition, systemNamespaces) {
-			return 0, false
+			return NegativeMatchScore, false
 		}
 		score++
 	} else if len(matcher.RequestBody.AllOf) > 0 {
 		for _, condition := range matcher.RequestBody.AllOf {
 			if !matchBodyCondition(body, condition, systemNamespaces) {
-				return 0, false
+				return NegativeMatchScore, false
 			}
 		}
 		score += len(matcher.RequestBody.AllOf)
@@ -123,7 +133,7 @@ func CalculateMatchScore(matcher *config.RequestMatcher, r *http.Request, body [
 			}
 		}
 		if !matched {
-			return 0, false
+			return NegativeMatchScore, false
 		}
 		score++
 	}
@@ -134,10 +144,10 @@ func CalculateMatchScore(matcher *config.RequestMatcher, r *http.Request, body [
 			// Evaluate the expression using the template engine
 			result, err := evaluateExpression(expr.Expression, r, imposterConfig, requestStore)
 			if err != nil {
-				return 0, false
+				return NegativeMatchScore, false
 			}
 			if !expr.MatchCondition.Match(result) {
-				return 0, false
+				return NegativeMatchScore, false
 			}
 		}
 		score += len(matcher.AllOf)
@@ -157,7 +167,7 @@ func CalculateMatchScore(matcher *config.RequestMatcher, r *http.Request, body [
 			}
 		}
 		if !matched {
-			return 0, false
+			return NegativeMatchScore, false
 		}
 		score++
 	}
@@ -203,8 +213,14 @@ func FindBestMatch(matches []MatchResult) (best MatchResult, tie bool) {
 			if best.Wildcard && !m.Wildcard {
 				best = m
 				tie = false
-			} else if !best.Wildcard && !m.Wildcard || best.Wildcard && m.Wildcard {
-				tie = true
+			} else if best.Wildcard == m.Wildcard {
+				// If both wildcard states are equal, prefer the one that is not runtime-generated
+				if best.RuntimeGenerated && !m.RuntimeGenerated {
+					best = m
+					tie = false
+				} else if best.RuntimeGenerated == m.RuntimeGenerated {
+					tie = true
+				}
 			}
 		} else if m.Score > best.Score {
 			best = m
