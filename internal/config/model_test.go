@@ -62,6 +62,18 @@ func TestMatchCondition_Match(t *testing.T) {
 			want:        true,
 		},
 		{
+			name:        "Match success with character class subtraction",
+			condition:   MatchCondition{Value: "[A-Z-[BC]]", Operator: "Matches"},
+			actualValue: "A",
+			want:        true,
+		},
+		{
+			name:        "Match failure with character class subtraction",
+			condition:   MatchCondition{Value: "[A-Z-[BC]]", Operator: "Matches"},
+			actualValue: "B",
+			want:        false,
+		},
+		{
 			name:        "NotMatches",
 			condition:   MatchCondition{Value: "^test\\d+$", Operator: "NotMatches"},
 			actualValue: "invalid",

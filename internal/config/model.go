@@ -2,7 +2,7 @@ package config
 
 import (
 	"fmt"
-	"regexp"
+	"github.com/dlclark/regexp2"
 	"strings"
 )
 
@@ -64,10 +64,12 @@ func (m MatchCondition) Match(actualValue string) bool {
 	case "NotContains":
 		return !strings.Contains(actualValue, m.Value)
 	case "Matches":
-		matched, _ := regexp.MatchString(m.Value, actualValue)
+		re := regexp2.MustCompile(m.Value, 0)
+		matched, _ := re.MatchString(actualValue)
 		return matched
 	case "NotMatches":
-		matched, _ := regexp.MatchString(m.Value, actualValue)
+		re := regexp2.MustCompile(m.Value, 0)
+		matched, _ := re.MatchString(actualValue)
 		return !matched
 	default:
 		return false
