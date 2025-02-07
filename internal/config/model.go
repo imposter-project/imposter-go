@@ -189,19 +189,19 @@ type RequestMatcher struct {
 // Resource represents an HTTP resource
 type Resource struct {
 	RequestMatcher   `yaml:",inline"`
-	Capture        map[string]Capture `yaml:"capture,omitempty"`
+	Capture          map[string]Capture `yaml:"capture,omitempty"`
 	Response         Response           `yaml:"response"`
 	Security         *SecurityConfig    `yaml:"security,omitempty"`
-	RuntimeGenerated bool            `yaml:"-"`
+	RuntimeGenerated bool               `yaml:"-"`
 }
 
 // Interceptor represents an HTTP interceptor that can be executed before resources
 type Interceptor struct {
 	RequestMatcher   `yaml:",inline"`
-	Capture        map[string]Capture `yaml:"capture,omitempty"`
+	Capture          map[string]Capture `yaml:"capture,omitempty"`
 	Response         *Response          `yaml:"response,omitempty"`
 	Continue         bool               `yaml:"continue"`
-	RuntimeGenerated bool      `yaml:"-"`
+	RuntimeGenerated bool               `yaml:"-"`
 }
 
 type System struct {
