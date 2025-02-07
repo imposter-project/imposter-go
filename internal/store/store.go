@@ -3,12 +3,12 @@ package store
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/imposter-project/imposter-go/pkg/logger"
 	"github.com/imposter-project/imposter-go/pkg/utils"
 	"os"
 	"strings"
 
 	"github.com/imposter-project/imposter-go/internal/config"
-	"github.com/imposter-project/imposter-go/internal/logger"
 )
 
 // Store represents a key-value store with string keys and arbitrary values

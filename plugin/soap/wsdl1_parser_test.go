@@ -2,7 +2,7 @@ package soap
 
 import (
 	"encoding/xml"
-	"github.com/imposter-project/imposter-go/internal/wsdlmsg"
+	"github.com/imposter-project/imposter-go/pkg/wsdlmsg"
 	"os"
 	"path/filepath"
 	"testing"

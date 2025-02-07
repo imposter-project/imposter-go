@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"github.com/antchfx/xmlquery"
 	"github.com/antchfx/xpath"
-	"github.com/imposter-project/imposter-go/internal/logger"
+	"github.com/imposter-project/imposter-go/pkg/logger"
 )
 
 // XPathQuery extracts a value from the XML document using an XPath expression.

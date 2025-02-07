@@ -2,9 +2,9 @@ package soap // WSDL 1.1 Parser
 
 import (
 	"fmt"
-	"github.com/imposter-project/imposter-go/internal/logger"
-	"github.com/imposter-project/imposter-go/internal/wsdlmsg"
+	"github.com/imposter-project/imposter-go/pkg/logger"
 	"github.com/imposter-project/imposter-go/pkg/utils"
+	"github.com/imposter-project/imposter-go/pkg/wsdlmsg"
 	"github.com/imposter-project/imposter-go/pkg/xsd"
 	"strings"
 

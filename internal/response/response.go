@@ -1,6 +1,7 @@
 package response
 
 import (
+	"github.com/imposter-project/imposter-go/pkg/logger"
 	"github.com/imposter-project/imposter-go/pkg/utils"
 	"math/rand"
 	"mime"
@@ -11,7 +12,6 @@ import (
 	"time"
 
 	"github.com/imposter-project/imposter-go/internal/config"
-	"github.com/imposter-project/imposter-go/internal/logger"
 	"github.com/imposter-project/imposter-go/internal/store"
 	"github.com/imposter-project/imposter-go/internal/template"
 )

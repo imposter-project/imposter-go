@@ -4,7 +4,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"github.com/antchfx/xmlquery"
-	"github.com/imposter-project/imposter-go/internal/logger"
+	"github.com/imposter-project/imposter-go/pkg/logger"
 	"os"
 	"path/filepath"
 )

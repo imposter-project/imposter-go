@@ -3,9 +3,9 @@ package soap
 import (
 	"fmt"
 	"github.com/imposter-project/imposter-go/internal/config"
-	"github.com/imposter-project/imposter-go/internal/logger"
 	"github.com/imposter-project/imposter-go/internal/response"
 	"github.com/imposter-project/imposter-go/internal/store"
+	"github.com/imposter-project/imposter-go/pkg/logger"
 	"net/http"
 )
 

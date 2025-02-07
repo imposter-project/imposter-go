@@ -3,8 +3,8 @@ package soap
 import (
 	"encoding/xml"
 	"fmt"
-	"github.com/imposter-project/imposter-go/internal/logger"
-	"github.com/imposter-project/imposter-go/internal/wsdlmsg"
+	"github.com/imposter-project/imposter-go/pkg/logger"
+	wsdlmsg2 "github.com/imposter-project/imposter-go/pkg/wsdlmsg"
 	"github.com/imposter-project/imposter-go/pkg/xsd"
 	"os"
 	"strings"
@@ -71,9 +71,9 @@ type BaseWSDLParser struct {
 type Operation struct {
 	Name       string
 	SOAPAction string
-	Input      *wsdlmsg.Message
-	Output     *wsdlmsg.Message
-	Fault      *wsdlmsg.Message
+	Input      *wsdlmsg2.Message
+	Output     *wsdlmsg2.Message
+	Fault      *wsdlmsg2.Message
 	Binding    string
 }
 
@@ -174,21 +174,21 @@ func (p *BaseWSDLParser) resolveMessagesToElements() error {
 }
 
 // resolveMessage generates a synthetic schema for a message that is not an element
-func resolveMessage(rawMsg wsdlmsg.Message, msgRole string, opName string, targetNamespace string, schemaSystem xsd.SchemaSystem, wsdlPath string) (wsdlmsg.Message, error) {
+func resolveMessage(rawMsg wsdlmsg2.Message, msgRole string, opName string, targetNamespace string, schemaSystem xsd.SchemaSystem, wsdlPath string) (wsdlmsg2.Message, error) {
 	filename := fmt.Sprintf("synthetic-%s-%s.xsd", opName, msgRole)
 
 	switch rawMsg.GetMessageType() {
-	case wsdlmsg.ElementMessageType:
+	case wsdlmsg2.ElementMessageType:
 		return rawMsg, nil
 
-	case wsdlmsg.TypeMessageType:
-		msg := rawMsg.(*wsdlmsg.TypeMessage)
-		schema, elementName := wsdlmsg.CreateSinglePartSchema(msg.PartName, msg.Type, targetNamespace)
+	case wsdlmsg2.TypeMessageType:
+		msg := rawMsg.(*wsdlmsg2.TypeMessage)
+		schema, elementName := wsdlmsg2.CreateSinglePartSchema(msg.PartName, msg.Type, targetNamespace)
 
 		if err := schemaSystem.ImportSchema(wsdlPath, filename, schema); err != nil {
 			return nil, err
 		}
-		processedMsg := &wsdlmsg.ElementMessage{
+		processedMsg := &wsdlmsg2.ElementMessage{
 			Element: &xml.Name{
 				Local: getLocalPart(elementName),
 				Space: targetNamespace,
@@ -196,16 +196,16 @@ func resolveMessage(rawMsg wsdlmsg.Message, msgRole string, opName string, targe
 		}
 		return processedMsg, nil
 
-	case wsdlmsg.CompositeMessageType:
-		msg := rawMsg.(*wsdlmsg.CompositeMessage)
+	case wsdlmsg2.CompositeMessageType:
+		msg := rawMsg.(*wsdlmsg2.CompositeMessage)
 		elementName := msg.MessageName
 		imports := schemaSystem.GetSchemasWithTargetNamespace(targetNamespace)
-		schema := wsdlmsg.CreateCompositePartSchema(elementName, *msg.Parts, targetNamespace, imports)
+		schema := wsdlmsg2.CreateCompositePartSchema(elementName, *msg.Parts, targetNamespace, imports)
 
 		if err := schemaSystem.ImportSchema(wsdlPath, filename, schema); err != nil {
 			return nil, err
 		}
-		processedMsg := &wsdlmsg.ElementMessage{
+		processedMsg := &wsdlmsg2.ElementMessage{
 			Element: &xml.Name{
 				Local: getLocalPart(elementName),
 				Space: targetNamespace,

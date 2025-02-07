@@ -3,7 +3,7 @@ package wsdlmsg
 import (
 	"encoding/xml"
 	"fmt"
-	"github.com/imposter-project/imposter-go/internal/logger"
+	"github.com/imposter-project/imposter-go/pkg/logger"
 	"github.com/imposter-project/imposter-go/pkg/xsd"
 	"path/filepath"
 	"strings"

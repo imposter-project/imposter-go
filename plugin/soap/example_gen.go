@@ -3,13 +3,13 @@ package soap
 import (
 	"encoding/xml"
 	"fmt"
-	"github.com/imposter-project/imposter-go/internal/wsdlmsg"
+	"github.com/imposter-project/imposter-go/pkg/logger"
+	"github.com/imposter-project/imposter-go/pkg/wsdlmsg"
 	"github.com/imposter-project/imposter-go/pkg/xsd"
 	"os"
 	"strings"
 
 	"github.com/antchfx/xmlquery"
-	"github.com/imposter-project/imposter-go/internal/logger"
 	"github.com/outofcoffee/go-xml-example-generator/examplegen"
 )
 

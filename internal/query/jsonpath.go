@@ -3,7 +3,7 @@ package query
 import (
 	"encoding/json"
 	"github.com/PaesslerAG/jsonpath"
-	"github.com/imposter-project/imposter-go/internal/logger"
+	"github.com/imposter-project/imposter-go/pkg/logger"
 )
 
 // JsonPathQuery extracts a value from the JSON document using a JSONPath expression.

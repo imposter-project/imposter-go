@@ -1,6 +1,7 @@
 package httpserver
 
 import (
+	"github.com/imposter-project/imposter-go/pkg/logger"
 	"net/http"
 	"os"
 	"time"
@@ -8,7 +9,6 @@ import (
 	"github.com/imposter-project/imposter-go/internal/adapter"
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/handler"
-	"github.com/imposter-project/imposter-go/internal/logger"
 	"github.com/imposter-project/imposter-go/plugin"
 )
 

@@ -2,7 +2,7 @@ package openapi
 
 import (
 	"fmt"
-	"github.com/imposter-project/imposter-go/internal/logger"
+	"github.com/imposter-project/imposter-go/pkg/logger"
 	"github.com/pb33f/libopenapi"
 	v2 "github.com/pb33f/libopenapi/datamodel/high/v2"
 	uuid "github.com/satori/go.uuid"

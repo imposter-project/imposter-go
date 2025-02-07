@@ -3,10 +3,10 @@ package openapi
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/imposter-project/imposter-go/pkg/logger"
 	"strconv"
 	"time"
 
-	"github.com/imposter-project/imposter-go/internal/logger"
 	"github.com/pb33f/libopenapi/datamodel/high/base"
 )
 

@@ -3,7 +3,7 @@ package utils
 import (
 	"errors"
 	"fmt"
-	"github.com/imposter-project/imposter-go/internal/logger"
+	"github.com/imposter-project/imposter-go/pkg/logger"
 	"path/filepath"
 	"strings"
 )

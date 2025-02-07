@@ -2,10 +2,10 @@ package config
 
 import (
 	"fmt"
+	"github.com/imposter-project/imposter-go/pkg/logger"
 	"os"
 	"strings"
 
-	"github.com/imposter-project/imposter-go/internal/logger"
 	"gopkg.in/yaml.v3"
 )
 

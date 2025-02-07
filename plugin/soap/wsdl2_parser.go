@@ -3,7 +3,7 @@ package soap
 import (
 	"fmt"
 	"github.com/antchfx/xmlquery"
-	"github.com/imposter-project/imposter-go/internal/wsdlmsg"
+	"github.com/imposter-project/imposter-go/pkg/wsdlmsg"
 	"github.com/imposter-project/imposter-go/pkg/xsd"
 )
 

@@ -2,6 +2,7 @@ package awslambda
 
 import (
 	"encoding/json"
+	"github.com/imposter-project/imposter-go/pkg/logger"
 	"net/http"
 	"os"
 	"strings"
@@ -12,7 +13,6 @@ import (
 	"github.com/imposter-project/imposter-go/internal/adapter"
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/handler"
-	"github.com/imposter-project/imposter-go/internal/logger"
 	"github.com/imposter-project/imposter-go/plugin"
 )
 

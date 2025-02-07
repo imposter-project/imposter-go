@@ -3,7 +3,7 @@ package openapi
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/imposter-project/imposter-go/internal/logger"
+	"github.com/imposter-project/imposter-go/pkg/logger"
 	"gopkg.in/yaml.v3"
 )
 

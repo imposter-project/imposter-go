@@ -3,14 +3,14 @@ package soap
 import (
 	"bytes"
 	"fmt"
-	"github.com/imposter-project/imposter-go/internal/wsdlmsg"
+	"github.com/imposter-project/imposter-go/pkg/logger"
+	"github.com/imposter-project/imposter-go/pkg/wsdlmsg"
 	"net/http"
 	"strings"
 
 	"github.com/antchfx/xmlquery"
 	"github.com/imposter-project/imposter-go/internal/capture"
 	"github.com/imposter-project/imposter-go/internal/config"
-	"github.com/imposter-project/imposter-go/internal/logger"
 	"github.com/imposter-project/imposter-go/internal/matcher"
 	"github.com/imposter-project/imposter-go/internal/response"
 	"github.com/imposter-project/imposter-go/internal/store"

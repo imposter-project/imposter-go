@@ -2,11 +2,11 @@ package adapter
 
 import (
 	"github.com/imposter-project/imposter-go/internal/version"
+	"github.com/imposter-project/imposter-go/pkg/logger"
 	"os"
 	"strings"
 
 	"github.com/imposter-project/imposter-go/internal/config"
-	"github.com/imposter-project/imposter-go/internal/logger"
 	"github.com/imposter-project/imposter-go/internal/store"
 	"github.com/imposter-project/imposter-go/plugin"
 )

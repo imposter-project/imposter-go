@@ -2,12 +2,12 @@ package store
 
 import (
 	"encoding/json"
+	"github.com/imposter-project/imposter-go/pkg/logger"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/go-redis/redis/v8"
-	"github.com/imposter-project/imposter-go/internal/logger"
 	"golang.org/x/net/context"
 )
 
