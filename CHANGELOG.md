@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.19.1] - 2025-02-07
+### Changed
+- ci: excludes release commit messages from release notes.
+- refactor: moves capture config out of request matcher.
+- refactor: moves some packages out of internal.
+
 ## [0.19.0] - 2025-02-04
 ### Added
 - feat: switches request matcher regex engine to github.com/dlclark/regexp2.
