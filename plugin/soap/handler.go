@@ -3,16 +3,18 @@ package soap
 import (
 	"bytes"
 	"fmt"
-	"github.com/imposter-project/imposter-go/pkg/logger"
-	"github.com/imposter-project/imposter-go/pkg/wsdlmsg"
 	"net/http"
 	"strings"
+
+	"github.com/imposter-project/imposter-go/pkg/logger"
+	"github.com/imposter-project/imposter-go/pkg/wsdlmsg"
 
 	"github.com/antchfx/xmlquery"
 	"github.com/imposter-project/imposter-go/internal/capture"
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/matcher"
 	"github.com/imposter-project/imposter-go/internal/response"
+	"github.com/imposter-project/imposter-go/internal/steps"
 	"github.com/imposter-project/imposter-go/internal/store"
 )
 
@@ -264,6 +266,23 @@ func (h *PluginHandler) HandleRequest(r *http.Request, requestStore *store.Store
 			if interceptorCfg.Capture != nil {
 				capture.CaptureRequestData(h.imposterConfig, interceptorCfg.Capture, r, body, requestStore)
 			}
+
+			// Execute steps if present
+			if len(interceptorCfg.Steps) > 0 {
+				ctx := &steps.Context{
+					Request:      r,
+					RequestBody:  body,
+					RequestStore: requestStore,
+				}
+				if err := steps.RunSteps(interceptorCfg.Steps, ctx); err != nil {
+					logger.Errorf("failed to execute interceptor steps: %v", err)
+					soapVersion := bodyHolder.GetSOAPVersion()
+					h.failWithSOAPFault(soapVersion, bodyHolder.EnvNamespace, responseState, "Failed to execute steps", http.StatusInternalServerError)
+					responseState.Handled = true
+					return
+				}
+			}
+
 			if interceptorCfg.Response != nil {
 				h.processResponse(bodyHolder, &interceptorCfg.RequestMatcher, responseState, r, interceptorCfg.Response, requestStore, op, respProc)
 			}
@@ -295,6 +314,22 @@ func (h *PluginHandler) HandleRequest(r *http.Request, requestStore *store.Store
 
 	// Capture request data
 	capture.CaptureRequestData(h.imposterConfig, best.Resource.Capture, r, body, requestStore)
+
+	// Execute steps if present
+	if len(best.Resource.Steps) > 0 {
+		ctx := &steps.Context{
+			Request:      r,
+			RequestBody:  body,
+			RequestStore: requestStore,
+		}
+		if err := steps.RunSteps(best.Resource.Steps, ctx); err != nil {
+			logger.Errorf("failed to execute resource steps: %v", err)
+			soapVersion := bodyHolder.GetSOAPVersion()
+			h.failWithSOAPFault(soapVersion, bodyHolder.EnvNamespace, responseState, "Failed to execute steps", http.StatusInternalServerError)
+			responseState.Handled = true
+			return
+		}
+	}
 
 	// Process the response
 	h.processResponse(bodyHolder, &best.Resource.RequestMatcher, responseState, r, &best.Resource.Response, requestStore, op, respProc)
