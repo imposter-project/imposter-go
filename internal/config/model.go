@@ -2,8 +2,9 @@ package config
 
 import (
 	"fmt"
-	"github.com/dlclark/regexp2"
 	"strings"
+
+	"github.com/dlclark/regexp2"
 )
 
 // Response represents an HTTP response
@@ -186,10 +187,38 @@ type RequestMatcher struct {
 	Binding    string `yaml:"binding,omitempty"`
 }
 
+// StepType represents the type of step to execute
+type StepType string
+
+const (
+	ScriptStepType StepType = "script"
+	RemoteStepType StepType = "remote"
+)
+
+// Step represents a step that can be executed when processing a request
+type Step struct {
+	Type StepType `yaml:"type"`
+
+	// Script-specific fields
+	Lang string `yaml:"lang,omitempty"`
+	Code string `yaml:"code,omitempty"`
+	File string `yaml:"file,omitempty"`
+
+	// Remote-specific fields
+	URL     string            `yaml:"url,omitempty"`
+	Method  string            `yaml:"method,omitempty"`
+	Headers map[string]string `yaml:"headers,omitempty"`
+	Body    string            `yaml:"body,omitempty"`
+	Capture map[string]struct {
+		Expression string `yaml:"expression"`
+	} `yaml:"capture,omitempty"`
+}
+
 // Resource represents an HTTP resource
 type Resource struct {
 	RequestMatcher   `yaml:",inline"`
 	Capture          map[string]Capture `yaml:"capture,omitempty"`
+	Steps            []Step             `yaml:"steps,omitempty"`
 	Response         Response           `yaml:"response"`
 	Security         *SecurityConfig    `yaml:"security,omitempty"`
 	RuntimeGenerated bool               `yaml:"-"`
@@ -199,6 +228,7 @@ type Resource struct {
 type Interceptor struct {
 	RequestMatcher   `yaml:",inline"`
 	Capture          map[string]Capture `yaml:"capture,omitempty"`
+	Steps            []Step             `yaml:"steps,omitempty"`
 	Response         *Response          `yaml:"response,omitempty"`
 	Continue         bool               `yaml:"continue"`
 	RuntimeGenerated bool               `yaml:"-"`

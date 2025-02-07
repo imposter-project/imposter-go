@@ -1,0 +1,68 @@
+plugin: rest
+basePath: /api
+
+resources:
+  # Example 1: Script step that logs request details
+  - path: /log-request
+    method: GET
+    steps:
+      - type: script
+        lang: javascript
+        code: |
+          console.log('Received request to ' + request.path);
+          console.log('Query parameters:', JSON.stringify(request.queryParams));
+    response:
+      content: Request details have been logged
+      statusCode: 200
+
+  # Example 2: Remote step that calls an external API and uses the response
+  - path: /weather/{city}
+    method: GET
+    steps:
+      - type: remote
+        url: http://api.weatherapi.com/v1/current.json
+        method: GET
+        headers:
+          key: YOUR_API_KEY
+        capture:
+          temperature:
+            expression: "${remote.response.body.current.temp_c}"
+          condition:
+            expression: "${remote.response.body.current.condition.text}"
+    response:
+      content: |
+        The current temperature in ${pathParams.city} is ${stores.request.temperature}°C
+        Current conditions: ${stores.request.condition}
+      statusCode: 200
+      template: true
+
+  # Example 3: Multiple steps with data flow between them
+  - path: /process-data
+    method: POST
+    steps:
+      # First step: Script to validate and transform input
+      - type: script
+        lang: javascript
+        code: |
+          const data = JSON.parse(request.body);
+          if (!data.name || !data.email) {
+            throw new Error('Missing required fields');
+          }
+          stores.request.transformedData = {
+            name: data.name.toUpperCase(),
+            email: data.email.toLowerCase()
+          };
+      
+      # Second step: Send transformed data to external service
+      - type: remote
+        url: http://external-service/api/users
+        method: POST
+        body: ${stores.request.transformedData}
+        capture:
+          userId:
+            expression: "${remote.response.body.id}"
+    
+    response:
+      content: User created with ID: ${stores.request.userId}
+      statusCode: 201
+      template: true 
