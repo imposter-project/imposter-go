@@ -31,10 +31,9 @@ func NewInterceptor(method, path string, headers map[string]config.MatcherUnmars
 	}
 }
 
-// NewInterceptorWithCapture creates a new Interceptor with capture configuration for testing
-func NewInterceptorWithCapture(method, path string, capture map[string]config.Capture, cont bool) config.Interceptor {
+// NewInterceptorWithResponse creates a new Interceptor with response configuration for testing
+func NewInterceptorWithResponse(method, path string, cont bool) config.Interceptor {
 	rm := NewRequestMatcher(method, path)
-	rm.Capture = capture
 	return config.Interceptor{
 		RequestMatcher: rm,
 		Continue:       cont,

@@ -66,12 +66,12 @@ func transformSecurityBlock(cfg *Config, security *SecurityConfig, prefix string
 				RequestHeaders: make(map[string]MatcherUnmarshaler),
 				QueryParams:    make(map[string]MatcherUnmarshaler),
 				FormParams:     make(map[string]MatcherUnmarshaler),
-				Capture: map[string]Capture{
-					conditionKey: {
-						Store: "request",
-						CaptureConfig: CaptureConfig{
-							Const: "met",
-						},
+			},
+			Capture: map[string]Capture{
+				conditionKey: {
+					Store: "request",
+					CaptureConfig: CaptureConfig{
+						Const: "met",
 					},
 				},
 			},

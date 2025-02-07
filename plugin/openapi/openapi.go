@@ -107,21 +107,21 @@ func augmentConfigWithOpenApiSpec(cfg *config.Config, parser OpenAPIParser) erro
 							},
 						},
 					},
-					Capture: map[string]config.Capture{
-						"_matched-openapi-operation": {
-							Store: "request",
-							CaptureConfig: config.CaptureConfig{
-								Const: op.Name,
-							},
-						},
-						"_matched-openapi-response": {
-							Store: "request",
-							CaptureConfig: config.CaptureConfig{
-								Const: resp.UniqueID,
-							},
+					// TODO check request headers, query params, etc.
+				},
+				Capture: map[string]config.Capture{
+					"_matched-openapi-operation": {
+						Store: "request",
+						CaptureConfig: config.CaptureConfig{
+							Const: op.Name,
 						},
 					},
-					// TODO check request headers, query params, etc.
+					"_matched-openapi-response": {
+						Store: "request",
+						CaptureConfig: config.CaptureConfig{
+							Const: resp.UniqueID,
+						},
+					},
 				},
 				Response: &config.Response{
 					StatusCode: responseCode,

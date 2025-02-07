@@ -180,9 +180,6 @@ type RequestMatcher struct {
 	AllOf          []ExpressionMatchCondition    `yaml:"allOf,omitempty"`
 	AnyOf          []ExpressionMatchCondition    `yaml:"anyOf,omitempty"`
 
-	// Capture request data - TODO move to a separate struct
-	Capture map[string]Capture `yaml:"capture,omitempty"`
-
 	// SOAP-specific fields
 	Operation  string `yaml:"operation,omitempty"`
 	SOAPAction string `yaml:"soapAction,omitempty"`
@@ -192,16 +189,18 @@ type RequestMatcher struct {
 // Resource represents an HTTP resource
 type Resource struct {
 	RequestMatcher   `yaml:",inline"`
-	Response         Response        `yaml:"response"`
-	Security         *SecurityConfig `yaml:"security,omitempty"`
+	Capture        map[string]Capture `yaml:"capture,omitempty"`
+	Response         Response           `yaml:"response"`
+	Security         *SecurityConfig    `yaml:"security,omitempty"`
 	RuntimeGenerated bool            `yaml:"-"`
 }
 
 // Interceptor represents an HTTP interceptor that can be executed before resources
 type Interceptor struct {
 	RequestMatcher   `yaml:",inline"`
-	Response         *Response `yaml:"response,omitempty"`
-	Continue         bool      `yaml:"continue"`
+	Capture        map[string]Capture `yaml:"capture,omitempty"`
+	Response         *Response          `yaml:"response,omitempty"`
+	Continue         bool               `yaml:"continue"`
 	RuntimeGenerated bool      `yaml:"-"`
 }
 

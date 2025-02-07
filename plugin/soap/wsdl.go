@@ -287,17 +287,17 @@ func augmentConfigWithWSDL(cfg *config.Config, parser WSDLParser) error {
 				Method:    "POST",
 				Operation: op.Name,
 				Binding:   parser.GetBindingName(op),
-				Capture: map[string]config.Capture{
-					"_matched-soap-operation": {
-						Store: "request",
-						CaptureConfig: config.CaptureConfig{
-							Const: op.Name,
-						},
-					},
-				},
 
 				// SOAPAction header is not mandatory - don't be too strict if we match the operation and binding
 				//SOAPAction: op.SOAPAction,
+			},
+			Capture: map[string]config.Capture{
+				"_matched-soap-operation": {
+					Store: "request",
+					CaptureConfig: config.CaptureConfig{
+						Const: op.Name,
+					},
+				},
 			},
 			Response: &config.Response{
 				StatusCode: 200,
