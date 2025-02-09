@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/imposter-project/imposter-go/internal/config"
+	"github.com/imposter-project/imposter-go/internal/exchange"
 	"github.com/imposter-project/imposter-go/internal/store"
 	"github.com/stretchr/testify/assert"
 )
@@ -202,6 +203,134 @@ func TestStoreValueReplacement(t *testing.T) {
 			req.Body = io.NopCloser(strings.NewReader(""))
 			imposterConfig := &config.ImposterConfig{ServerPort: "8080"}
 			got := ProcessTemplate(tt.template, req, imposterConfig, &tt.requestStore)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestResponseTemplates(t *testing.T) {
+	tests := []struct {
+		name     string
+		template string
+		setup    func() *exchange.Exchange
+		want     string
+	}{
+		{
+			name:     "response body",
+			template: "Response: ${context.response.body}",
+			setup: func() *exchange.Exchange {
+				req, _ := http.NewRequest("GET", "/", nil)
+				return &exchange.Exchange{
+					Request: &exchange.RequestContext{
+						Request: req,
+						Body:    []byte(""),
+					},
+					Response: &exchange.ResponseContext{
+						Response: &http.Response{StatusCode: 200},
+						Body:     []byte(`{"message":"success"}`),
+					},
+				}
+			},
+			want: `Response: {"message":"success"}`,
+		},
+		{
+			name:     "response headers",
+			template: "Content-Type: ${context.response.headers.Content-Type}",
+			setup: func() *exchange.Exchange {
+				req, _ := http.NewRequest("GET", "/", nil)
+				resp := &http.Response{StatusCode: 200, Header: http.Header{}}
+				resp.Header.Set("Content-Type", "application/json")
+				return &exchange.Exchange{
+					Request: &exchange.RequestContext{
+						Request: req,
+						Body:    []byte(""),
+					},
+					Response: &exchange.ResponseContext{
+						Response: resp,
+						Body:     []byte{},
+					},
+				}
+			},
+			want: "Content-Type: application/json",
+		},
+		{
+			name:     "response status code",
+			template: "Status: ${context.response.statusCode}",
+			setup: func() *exchange.Exchange {
+				req, _ := http.NewRequest("GET", "/", nil)
+				return &exchange.Exchange{
+					Request: &exchange.RequestContext{
+						Request: req,
+						Body:    []byte(""),
+					},
+					Response: &exchange.ResponseContext{
+						Response: &http.Response{StatusCode: 201},
+						Body:     []byte{},
+					},
+				}
+			},
+			want: "Status: 201",
+		},
+		{
+			name:     "response body with JSONPath",
+			template: "Message: ${context.response.body:$.message}",
+			setup: func() *exchange.Exchange {
+				req, _ := http.NewRequest("GET", "/", nil)
+				return &exchange.Exchange{
+					Request: &exchange.RequestContext{
+						Request: req,
+						Body:    []byte(""),
+					},
+					Response: &exchange.ResponseContext{
+						Response: &http.Response{StatusCode: 200},
+						Body:     []byte(`{"message":"success"}`),
+					},
+				}
+			},
+			want: "Message: success",
+		},
+		{
+			name:     "response body with XPath",
+			template: "Name: ${context.response.body:/root/name}",
+			setup: func() *exchange.Exchange {
+				req, _ := http.NewRequest("GET", "/", nil)
+				return &exchange.Exchange{
+					Request: &exchange.RequestContext{
+						Request: req,
+						Body:    []byte(""),
+					},
+					Response: &exchange.ResponseContext{
+						Response: &http.Response{StatusCode: 200},
+						Body:     []byte(`<root><name>test</name></root>`),
+					},
+				}
+			},
+			want: "Name: test",
+		},
+		{
+			name:     "response header with default value",
+			template: "${context.response.headers.X-Missing:-default}",
+			setup: func() *exchange.Exchange {
+				req, _ := http.NewRequest("GET", "/", nil)
+				return &exchange.Exchange{
+					Request: &exchange.RequestContext{
+						Request: req,
+						Body:    []byte(""),
+					},
+					Response: &exchange.ResponseContext{
+						Response: &http.Response{StatusCode: 200, Header: http.Header{}},
+						Body:     []byte{},
+					},
+				}
+			},
+			want: "default",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			exch := tt.setup()
+			got := ProcessTemplateWithContext(tt.template, exch, nil)
 			assert.Equal(t, tt.want, got)
 		})
 	}

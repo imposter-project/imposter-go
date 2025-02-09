@@ -2,6 +2,7 @@ package capture
 
 import (
 	"bytes"
+	"github.com/imposter-project/imposter-go/internal/exchange"
 	"net/http"
 	"strings"
 	"testing"
@@ -220,7 +221,8 @@ func TestCaptureRequestData(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			requestStore := store.Store{}
 			req, body := tt.setupRequest()
-			CaptureRequestData(tt.imposterConfig, tt.resource.Capture, req, body, &requestStore)
+			exch := exchange.NewExchangeFromRequest(req, body, &requestStore)
+			CaptureRequestData(tt.imposterConfig, tt.resource.Capture, exch)
 			tt.validate(t, requestStore)
 		})
 	}

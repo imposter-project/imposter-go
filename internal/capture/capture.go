@@ -2,6 +2,7 @@ package capture
 
 import (
 	"fmt"
+	"github.com/imposter-project/imposter-go/internal/exchange"
 	"github.com/imposter-project/imposter-go/internal/query"
 	"net/http"
 
@@ -12,18 +13,18 @@ import (
 )
 
 // CaptureRequestData captures elements of the request and stores them in the specified store.
-func CaptureRequestData(imposterConfig *config.ImposterConfig, captureMap map[string]config.Capture, r *http.Request, body []byte, requestStore *store.Store) {
+func CaptureRequestData(imposterConfig *config.ImposterConfig, captureMap map[string]config.Capture, exch *exchange.Exchange) {
 	for key, capture := range captureMap {
 		if capture.Enabled != nil && !*capture.Enabled {
 			continue
 		}
 
-		itemName := getValueFromCaptureKey(capture.Key, key, r, body, imposterConfig, requestStore)
-		value := getValueFromCaptureKey(capture.CaptureConfig, "", r, body, imposterConfig, requestStore)
+		itemName := getValueFromCaptureKey(capture.Key, key, exch.Request.Request, exch.Request.Body, imposterConfig, exch.RequestStore)
+		value := getValueFromCaptureKey(capture.CaptureConfig, "", exch.Request.Request, exch.Request.Body, imposterConfig, exch.RequestStore)
 
 		if value != "" {
 			if capture.Store == "request" {
-				(*requestStore)[itemName] = value
+				(*exch.RequestStore)[itemName] = value
 			} else {
 				store.StoreValue(capture.Store, itemName, value)
 			}

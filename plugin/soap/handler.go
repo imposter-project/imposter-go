@@ -12,6 +12,7 @@ import (
 	"github.com/antchfx/xmlquery"
 	"github.com/imposter-project/imposter-go/internal/capture"
 	"github.com/imposter-project/imposter-go/internal/config"
+	"github.com/imposter-project/imposter-go/internal/exchange"
 	"github.com/imposter-project/imposter-go/internal/matcher"
 	"github.com/imposter-project/imposter-go/internal/response"
 	"github.com/imposter-project/imposter-go/internal/steps"
@@ -239,6 +240,15 @@ func (h *PluginHandler) HandleRequest(r *http.Request, requestStore *store.Store
 		return
 	}
 
+	// Create exchange once at the top
+	exch := &exchange.Exchange{
+		Request: &exchange.RequestContext{
+			Request: r,
+			Body:    body,
+		},
+		RequestStore: requestStore,
+	}
+
 	// Parse the SOAP body first since we need it for both interceptors and resources
 	bodyHolder, err := h.parseBody(body)
 	if err != nil {
@@ -264,17 +274,12 @@ func (h *PluginHandler) HandleRequest(r *http.Request, requestStore *store.Store
 		if score > 0 {
 			logger.Infof("matched interceptor - method:%s, path:%s", r.Method, r.URL.Path)
 			if interceptorCfg.Capture != nil {
-				capture.CaptureRequestData(h.imposterConfig, interceptorCfg.Capture, r, body, requestStore)
+				capture.CaptureRequestData(h.imposterConfig, interceptorCfg.Capture, exch)
 			}
 
 			// Execute steps if present
 			if len(interceptorCfg.Steps) > 0 {
-				ctx := &steps.Context{
-					Request:      r,
-					RequestBody:  body,
-					RequestStore: requestStore,
-				}
-				if err := steps.RunSteps(interceptorCfg.Steps, ctx); err != nil {
+				if err := steps.RunSteps(interceptorCfg.Steps, exch); err != nil {
 					logger.Errorf("failed to execute interceptor steps: %v", err)
 					soapVersion := bodyHolder.GetSOAPVersion()
 					h.failWithSOAPFault(soapVersion, bodyHolder.EnvNamespace, responseState, "Failed to execute steps", http.StatusInternalServerError)
@@ -313,16 +318,11 @@ func (h *PluginHandler) HandleRequest(r *http.Request, requestStore *store.Store
 	}
 
 	// Capture request data
-	capture.CaptureRequestData(h.imposterConfig, best.Resource.Capture, r, body, requestStore)
+	capture.CaptureRequestData(h.imposterConfig, best.Resource.Capture, exch)
 
 	// Execute steps if present
 	if len(best.Resource.Steps) > 0 {
-		ctx := &steps.Context{
-			Request:      r,
-			RequestBody:  body,
-			RequestStore: requestStore,
-		}
-		if err := steps.RunSteps(best.Resource.Steps, ctx); err != nil {
+		if err := steps.RunSteps(best.Resource.Steps, exch); err != nil {
 			logger.Errorf("failed to execute resource steps: %v", err)
 			soapVersion := bodyHolder.GetSOAPVersion()
 			h.failWithSOAPFault(soapVersion, bodyHolder.EnvNamespace, responseState, "Failed to execute steps", http.StatusInternalServerError)

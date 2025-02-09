@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/imposter-project/imposter-go/internal/query"
 	"io"
 	"net/http"
 	"regexp"
@@ -13,6 +12,8 @@ import (
 	"time"
 
 	"github.com/imposter-project/imposter-go/internal/config"
+	"github.com/imposter-project/imposter-go/internal/exchange"
+	"github.com/imposter-project/imposter-go/internal/query"
 	"github.com/imposter-project/imposter-go/internal/store"
 	"github.com/imposter-project/imposter-go/pkg/utils"
 	uuid "github.com/satori/go.uuid"
@@ -20,106 +21,262 @@ import (
 )
 
 // ProcessTemplate processes a template string, replacing placeholders with actual values.
+// This is the legacy version that will be deprecated in favor of ProcessTemplateWithContext.
 func ProcessTemplate(template string, r *http.Request, imposterConfig *config.ImposterConfig, requestStore *store.Store) string {
-	// Replace request method
-	template = strings.ReplaceAll(template, "${context.request.method}", r.Method)
-
-	// Replace request path parameters
-	for key, value := range r.URL.Query() {
-		placeholder := fmt.Sprintf("${context.request.queryParams.%s}", key)
-		template = replaceOrUseDefault(template, placeholder, func(plainExpr string) string {
-			return value[0]
-		})
-	}
-
-	// Replace request headers
-	for key, value := range r.Header {
-		placeholder := fmt.Sprintf("${context.request.headers.%s}", key)
-		template = replaceOrUseDefault(template, placeholder, func(plainExpr string) string {
-			return value[0]
-		})
-	}
-
-	// Replace form parameters
-	if err := r.ParseForm(); err == nil {
-		for key, values := range r.Form {
-			placeholder := fmt.Sprintf("${context.request.formParams.%s}", key)
-			template = replaceOrUseDefault(template, placeholder, func(plainExpr string) string {
-				return values[0]
-			})
-		}
-	}
-
-	// Replace path parameters
-	pathParams := utils.ExtractPathParams(r.URL.Path, r.URL.Path)
-	for key, value := range pathParams {
-		placeholder := fmt.Sprintf("${context.request.pathParams.%s}", key)
-		template = replaceOrUseDefault(template, placeholder, func(plainExpr string) string {
-			return value
-		})
-	}
-
-	// Replace request body
+	// Read request body
 	body, _ := io.ReadAll(r.Body)
 	r.Body = io.NopCloser(bytes.NewReader(body))
-	template = strings.ReplaceAll(template, "${context.request.body}", string(body))
 
-	// Replace request path
-	template = strings.ReplaceAll(template, "${context.request.path}", r.URL.Path)
-
-	// Replace request URI
-	template = strings.ReplaceAll(template, "${context.request.uri}", r.URL.String())
-
-	// Replace datetime placeholders
-	now := time.Now()
-	template = strings.ReplaceAll(template, "${datetime.now.iso8601_date}", now.Format("2006-01-02"))
-	template = strings.ReplaceAll(template, "${datetime.now.iso8601_datetime}", now.Format(time.RFC3339))
-	template = strings.ReplaceAll(template, "${datetime.now.millis}", fmt.Sprintf("%d", now.UnixMilli()))
-	template = strings.ReplaceAll(template, "${datetime.now.nanos}", fmt.Sprintf("%d", now.UnixNano()))
-
-	// Replace random placeholders
-	template = replaceRandomPlaceholders(template)
-
-	// Replace system/server placeholders
-	template = strings.ReplaceAll(template, "${system.server.port}", imposterConfig.ServerPort)
-	template = strings.ReplaceAll(template, "${system.server.url}", fmt.Sprintf("http://%s%s", r.Host, r.URL.Path))
-
-	template = replaceStorePlaceholders(template, requestStore)
-	return template
+	exch := &exchange.Exchange{
+		Request: &exchange.RequestContext{
+			Request: r,
+			Body:    body,
+		},
+		RequestStore: requestStore,
+	}
+	return ProcessTemplateWithContext(template, exch, imposterConfig)
 }
 
-// replaceRandomPlaceholders handles random value placeholders.
-func replaceRandomPlaceholders(template string) string {
-	re := regexp.MustCompile(`\$\{random\.(\w+)\(([^)]*)\)\}`)
+// ProcessTemplateWithContext processes a template string using the provided context.
+// This is the new version that should be used going forward.
+func ProcessTemplateWithContext(template string, exch *exchange.Exchange, imposterConfig *config.ImposterConfig) string {
+	if template == "" {
+		return ""
+	}
+
+	// Handle both formats:
+	// 1. ${category.subcategory.field}
+	// 2. ${category.function(param=value,...)}
+	re := regexp.MustCompile(`\$\{([^\.]+)\.([^\.}(]+)(?:\.([^}]+)|(?:\(([^)]*)\)))\}`)
 	return re.ReplaceAllStringFunc(template, func(match string) string {
 		groups := re.FindStringSubmatch(match)
-		function := groups[1]
-		params := parseParams(groups[2])
+		if len(groups) < 5 {
+			return match
+		}
 
-		switch function {
-		case "alphabetic":
-			length := getIntParam(params, "length", 1)
-			uppercase := getBoolParam(params, "uppercase", false)
-			return randomAlphabetic(length, uppercase)
-		case "alphanumeric":
-			length := getIntParam(params, "length", 1)
-			uppercase := getBoolParam(params, "uppercase", false)
-			return randomAlphanumeric(length, uppercase)
-		case "any":
-			chars := getStringParam(params, "chars", "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
-			length := getIntParam(params, "length", 1)
-			uppercase := getBoolParam(params, "uppercase", false)
-			return randomAny(chars, length, uppercase)
-		case "numeric":
-			length := getIntParam(params, "length", 1)
-			return randomNumeric(length)
-		case "uuid":
-			uppercase := getBoolParam(params, "uppercase", false)
-			return randomUUID(uppercase)
+		category := groups[1]
+		subcategory := groups[2]
+		field := groups[3]      // For dot notation
+		parameters := groups[4] // For function call notation
+
+		// Handle random functions differently
+		if category == "random" {
+			return handleRandomReplacement(subcategory, parameters)
+		}
+
+		// Extract any trailer (default value or query expression) for dot notation
+		var trailer string
+		if field != "" {
+			trailer, field = extractTrailer(field)
+		}
+
+		// Get the raw value based on category
+		var rawValue string
+		switch category {
+		case "context":
+			rawValue = handleContextReplacement(subcategory, field, exch)
+		case "stores":
+			rawValue = handleStoreReplacement(subcategory, field, exch.RequestStore)
+		case "datetime":
+			rawValue = handleDatetimeReplacement(subcategory, field)
+		case "system":
+			rawValue = handleSystemReplacement(subcategory, field, exch, imposterConfig)
 		default:
 			return match
 		}
+
+		// Process the raw value with any trailer
+		return processWithTrailer(rawValue, trailer)
 	})
+}
+
+// extractTrailer extracts any trailer (default value or query expression) from a field
+func extractTrailer(field string) (trailer, cleanField string) {
+	parts := strings.SplitN(field, ":", 2)
+	if len(parts) == 2 {
+		return parts[1], parts[0]
+	}
+	return "", field
+}
+
+// processWithTrailer processes a value with a trailer (default value or query expression)
+func processWithTrailer(value, trailer string) string {
+	if value == "" {
+		// Handle default value
+		if strings.HasPrefix(trailer, "-") {
+			return strings.TrimPrefix(trailer, "-")
+		}
+		return ""
+	}
+
+	// Handle query expressions
+	if strings.HasPrefix(trailer, "$") {
+		// JSONPath expression
+		result, ok := query.JsonPathQuery([]byte(value), trailer)
+		if ok && result != nil {
+			return fmt.Sprintf("%v", result)
+		}
+		return ""
+	} else if strings.HasPrefix(trailer, "/") {
+		// XPath expression
+		result, ok := query.XPathQuery([]byte(value), trailer, nil)
+		if ok {
+			return result
+		}
+		return ""
+	}
+
+	return value
+}
+
+// handleContextReplacement handles replacements for context.request.* and context.response.*
+func handleContextReplacement(subcategory, field string, exch *exchange.Exchange) string {
+	switch subcategory {
+	case "request":
+		return handleRequestReplacement(field, exch)
+	case "response":
+		return handleResponseReplacement(field, exch)
+	default:
+		return ""
+	}
+}
+
+// handleRequestReplacement handles replacements for context.request.*
+func handleRequestReplacement(field string, exch *exchange.Exchange) string {
+	switch {
+	case field == "method":
+		return exch.Request.Request.Method
+	case field == "path":
+		return exch.Request.Request.URL.Path
+	case field == "uri":
+		return exch.Request.Request.URL.String()
+	case field == "body":
+		return string(exch.Request.Body)
+	case strings.HasPrefix(field, "queryParams."):
+		key := strings.TrimPrefix(field, "queryParams.")
+		return exch.Request.Request.URL.Query().Get(key)
+	case strings.HasPrefix(field, "headers."):
+		key := strings.TrimPrefix(field, "headers.")
+		return exch.Request.Request.Header.Get(key)
+	case strings.HasPrefix(field, "pathParams."):
+		key := strings.TrimPrefix(field, "pathParams.")
+		params := utils.ExtractPathParams(exch.Request.Request.URL.Path, exch.Request.Request.URL.Path)
+		return params[key]
+	case strings.HasPrefix(field, "formParams."):
+		key := strings.TrimPrefix(field, "formParams.")
+		_ = exch.Request.Request.ParseForm()
+		return exch.Request.Request.FormValue(key)
+	default:
+		return ""
+	}
+}
+
+// handleResponseReplacement handles replacements for context.response.*
+func handleResponseReplacement(field string, exch *exchange.Exchange) string {
+	if exch.Response == nil {
+		return ""
+	}
+
+	switch {
+	case field == "body":
+		return string(exch.Response.Body)
+	case field == "statusCode":
+		return fmt.Sprintf("%d", exch.Response.Response.StatusCode)
+	case strings.HasPrefix(field, "headers."):
+		key := strings.TrimPrefix(field, "headers.")
+		return exch.Response.Response.Header.Get(key)
+	default:
+		return ""
+	}
+}
+
+// handleStoreReplacement handles replacements for stores.*
+func handleStoreReplacement(storeName, key string, requestStore *store.Store) string {
+	val, found := getStoreValue(storeName, key, requestStore)
+	if !found {
+		return ""
+	}
+	switch v := val.(type) {
+	case string:
+		return v
+	default:
+		jsonBytes, err := json.Marshal(v)
+		if err != nil {
+			return ""
+		}
+		return string(jsonBytes)
+	}
+}
+
+// handleDatetimeReplacement handles replacements for datetime.*
+func handleDatetimeReplacement(subcategory, field string) string {
+	if subcategory != "now" {
+		return ""
+	}
+
+	now := time.Now()
+	switch field {
+	case "iso8601_date":
+		return now.Format("2006-01-02")
+	case "iso8601_datetime":
+		return now.Format(time.RFC3339)
+	case "millis":
+		return fmt.Sprintf("%d", now.UnixMilli())
+	case "nanos":
+		return fmt.Sprintf("%d", now.UnixNano())
+	default:
+		return ""
+	}
+}
+
+// handleRandomReplacement handles replacements for random.*
+func handleRandomReplacement(function, params string) string {
+	// Extract parameters from the field string
+	paramMap := parseParams(params)
+
+	switch function {
+	case "alphabetic":
+		length := getIntParam(paramMap, "length", 1)
+		uppercase := getBoolParam(paramMap, "uppercase", false)
+		return randomAlphabetic(length, uppercase)
+	case "alphanumeric":
+		length := getIntParam(paramMap, "length", 1)
+		uppercase := getBoolParam(paramMap, "uppercase", false)
+		return randomAlphanumeric(length, uppercase)
+	case "any":
+		chars := getStringParam(paramMap, "chars", "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+		length := getIntParam(paramMap, "length", 1)
+		uppercase := getBoolParam(paramMap, "uppercase", false)
+		return randomAny(chars, length, uppercase)
+	case "numeric":
+		length := getIntParam(paramMap, "length", 1)
+		return randomNumeric(length)
+	case "uuid":
+		uppercase := getBoolParam(paramMap, "uppercase", false)
+		return randomUUID(uppercase)
+	default:
+		return ""
+	}
+}
+
+// handleSystemReplacement handles replacements for system.*
+func handleSystemReplacement(subcategory, field string, exch *exchange.Exchange, imposterConfig *config.ImposterConfig) string {
+	if imposterConfig == nil {
+		return ""
+	}
+
+	if subcategory != "server" {
+		return ""
+	}
+
+	switch field {
+	case "port":
+		return imposterConfig.ServerPort
+	case "url":
+		return fmt.Sprintf("http://%s%s", exch.Request.Request.Host, exch.Request.Request.URL.Path)
+	default:
+		return ""
+	}
 }
 
 // randomUUID generates a random UUID string.
@@ -215,32 +372,6 @@ func randomStringFromCharset(length int, charset string) string {
 	return string(result)
 }
 
-// replaceStorePlaceholders replaces store placeholders in a template with actual values.
-func replaceStorePlaceholders(tmpl string, requestStore *store.Store) string {
-	re := regexp.MustCompile(`\$\{stores\.([^\.]+)\.([^}]+)\}`)
-	return re.ReplaceAllStringFunc(tmpl, func(match string) string {
-		return replaceOrUseDefault(match, match, func(plainExpr string) string {
-			groups := re.FindStringSubmatch(plainExpr)
-			storeName := groups[1]
-			key := groups[2]
-			val, found := getStoreValue(storeName, key, requestStore)
-			if !found {
-				return ""
-			}
-			switch v := val.(type) {
-			case string:
-				return v
-			default:
-				jsonBytes, err := json.Marshal(v)
-				if err != nil {
-					return ""
-				}
-				return string(jsonBytes)
-			}
-		})
-	})
-}
-
 // getStoreValue retrieves a value from a store, or from the request store if the store is "request".
 func getStoreValue(storeName, key string, requestStore *store.Store) (interface{}, bool) {
 	if storeName == "request" {
@@ -248,46 +379,4 @@ func getStoreValue(storeName, key string, requestStore *store.Store) (interface{
 		return val, found
 	}
 	return store.GetValue(storeName, key)
-}
-
-// extractTrailerFromExpr extracts the trailer from an expression, where
-// the expression is of the form ${expr:trailer}.
-// Both the trailer and the bare expression, without ${} or the trailer, are returned.
-func extractTrailerFromExpr(expr string) (defaultVal string, plainExpr string) {
-	inner := strings.Trim(expr, "${}")
-	parts := strings.Split(inner, ":")
-	if len(parts) == 2 {
-		return parts[1], "${" + parts[0] + "}"
-	}
-	return "", expr
-}
-
-// replaceOrUseDefault replaces an expression in a template with a value, or a default value if the value is empty.
-func replaceOrUseDefault(template string, expr string, repl func(plainExpr string) string) string {
-	trailer, plainExpr := extractTrailerFromExpr(expr)
-	actualVal := repl(plainExpr)
-
-	var replacement string
-	if actualVal == "" {
-		// trailer was a default value in the form ${expr:-default}
-		if strings.HasPrefix(trailer, "-") {
-			replacement = strings.TrimPrefix("-", trailer)
-		}
-	} else {
-		replacement = actualVal
-	}
-
-	// process query expressions
-	if strings.HasPrefix(trailer, "$") {
-		// jsonPath was provided in the form ${expr:jsonPath}
-		result, _ := query.JsonPathQuery([]byte(actualVal), trailer)
-		if result != nil {
-			replacement = fmt.Sprintf("%v", result)
-		}
-	} else if strings.HasPrefix(trailer, "/") {
-		// xPath was provided in the form ${expr:xPath}
-		result, _ := query.XPathQuery([]byte(actualVal), trailer, nil)
-		replacement = result
-	}
-	return strings.ReplaceAll(template, expr, replacement)
 }
