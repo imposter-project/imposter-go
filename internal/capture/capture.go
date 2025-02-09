@@ -2,9 +2,9 @@ package capture
 
 import (
 	"fmt"
+
 	"github.com/imposter-project/imposter-go/internal/exchange"
 	"github.com/imposter-project/imposter-go/internal/query"
-	"net/http"
 
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/store"
@@ -19,8 +19,8 @@ func CaptureRequestData(imposterConfig *config.ImposterConfig, captureMap map[st
 			continue
 		}
 
-		itemName := getValueFromCaptureKey(capture.Key, key, exch.Request.Request, exch.Request.Body, imposterConfig, exch.RequestStore)
-		value := getValueFromCaptureKey(capture.CaptureConfig, "", exch.Request.Request, exch.Request.Body, imposterConfig, exch.RequestStore)
+		itemName := getValueFromCaptureKey(capture.Key, key, exch, imposterConfig)
+		value := getValueFromCaptureKey(capture.CaptureConfig, "", exch, imposterConfig)
 
 		if value != "" {
 			if capture.Store == "request" {
@@ -33,25 +33,25 @@ func CaptureRequestData(imposterConfig *config.ImposterConfig, captureMap map[st
 }
 
 // getValueFromCaptureKey retrieves the value based on the capture key configuration.
-func getValueFromCaptureKey(key config.CaptureConfig, defaultKey string, r *http.Request, body []byte, imposterConfig *config.ImposterConfig, requestStore *store.Store) string {
+func getValueFromCaptureKey(key config.CaptureConfig, defaultKey string, exch *exchange.Exchange, imposterConfig *config.ImposterConfig) string {
 	if key.PathParam != "" {
-		return utils.ExtractPathParams(r.URL.Path, r.URL.Path)[key.PathParam]
+		return utils.ExtractPathParams(exch.Request.Request.URL.Path, exch.Request.Request.URL.Path)[key.PathParam]
 	} else if key.QueryParam != "" {
-		return r.URL.Query().Get(key.QueryParam)
+		return exch.Request.Request.URL.Query().Get(key.QueryParam)
 	} else if key.FormParam != "" {
-		if err := r.ParseForm(); err == nil {
-			return r.FormValue(key.FormParam)
+		if err := exch.Request.Request.ParseForm(); err == nil {
+			return exch.Request.Request.FormValue(key.FormParam)
 		}
 	} else if key.RequestHeader != "" {
-		return r.Header.Get(key.RequestHeader)
+		return exch.Request.Request.Header.Get(key.RequestHeader)
 	} else if key.Expression != "" {
-		return template.ProcessTemplate(key.Expression, r, imposterConfig, requestStore)
+		return template.ProcessTemplateWithContext(key.Expression, exch, imposterConfig)
 	} else if key.Const != "" {
 		return key.Const
 	} else if key.RequestBody.JSONPath != "" {
-		return extractJSONPath(body, key.RequestBody.JSONPath)
+		return extractJSONPath(exch.Request.Body, key.RequestBody.JSONPath)
 	} else if key.RequestBody.XPath != "" {
-		return extractXPath(body, key.RequestBody.XPath, key.RequestBody.XMLNamespaces)
+		return extractXPath(exch.Request.Body, key.RequestBody.XPath, key.RequestBody.XMLNamespaces)
 	}
 	return defaultKey
 }

@@ -54,7 +54,7 @@ func (h *PluginHandler) HandleRequest(
 
 			// Execute steps if present
 			if len(interceptorCfg.Steps) > 0 {
-				if err := steps.RunSteps(interceptorCfg.Steps, exch); err != nil {
+				if err := steps.RunSteps(interceptorCfg.Steps, exch, h.imposterConfig); err != nil {
 					logger.Errorf("failed to execute interceptor steps: %v", err)
 					responseState.StatusCode = http.StatusInternalServerError
 					responseState.Body = []byte("Failed to execute steps")
@@ -96,7 +96,7 @@ func (h *PluginHandler) HandleRequest(
 
 	// Execute steps if present
 	if len(best.Resource.Steps) > 0 {
-		if err := steps.RunSteps(best.Resource.Steps, exch); err != nil {
+		if err := steps.RunSteps(best.Resource.Steps, exch, h.imposterConfig); err != nil {
 			logger.Errorf("failed to execute resource steps: %v", err)
 			responseState.StatusCode = http.StatusInternalServerError
 			responseState.Body = []byte("Failed to execute steps")

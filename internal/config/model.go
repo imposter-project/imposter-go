@@ -205,13 +205,11 @@ type Step struct {
 	File string `yaml:"file,omitempty"`
 
 	// Remote-specific fields
-	URL     string            `yaml:"url,omitempty"`
-	Method  string            `yaml:"method,omitempty"`
-	Headers map[string]string `yaml:"headers,omitempty"`
-	Body    string            `yaml:"body,omitempty"`
-	Capture map[string]struct {
-		Expression string `yaml:"expression"`
-	} `yaml:"capture,omitempty"`
+	URL     string             `yaml:"url,omitempty"`
+	Method  string             `yaml:"method,omitempty"`
+	Headers map[string]string  `yaml:"headers,omitempty"`
+	Body    string             `yaml:"body,omitempty"`
+	Capture map[string]Capture `yaml:"capture,omitempty"`
 }
 
 // Resource represents an HTTP resource
