@@ -9,11 +9,12 @@ A Go implementation of the [Imposter Mock Engine](https://www.imposter.sh).
 - ✅ [REST/HTTP API mock](https://docs.imposter.sh/rest_plugin/) support
 - ✅ [SOAP/WSDL mock](https://docs.imposter.sh/soap_plugin/) support
 - ✅ [OpenAPI/Swagger mock](https://docs.imposter.sh/openapi_plugin/) support
+- ✅ JavaScript [scripting](https://docs.imposter.sh/scripting/)
+- ✅ Remote HTTP call [steps](https://docs.imposter.sh/steps/)
 
 ## ⚠️ Limitations
 
-- No support for [scripting](https://docs.imposter.sh/scripting/)
-- No support for [steps](https://docs.imposter.sh/steps/)
+- No support for Groovy [scripting](https://docs.imposter.sh/scripting/)
 - No support (yet) for some SOAP styles (https://github.com/imposter-project/imposter-go/issues/7)
 
 ## Getting Started
