@@ -90,6 +90,15 @@ func LoadConfig(configDir string) []Config {
 				if fileConfig.BasePath != "" {
 					fileConfig.Resources[i].Path = filepath.Join(fileConfig.BasePath, fileConfig.Resources[i].Path)
 				}
+
+				// Prefix step script files with relative directory
+				if fileConfig.Resources[i].Steps != nil {
+					for j := range fileConfig.Resources[i].Steps {
+						if fileConfig.Resources[i].Steps[j].File != "" {
+							fileConfig.Resources[i].Steps[j].File = filepath.Join(relDir, fileConfig.Resources[i].Steps[j].File)
+						}
+					}
+				}
 			}
 
 			if fileConfig.Plugin == "soap" {

@@ -8,9 +8,55 @@ import (
 	"github.com/dop251/goja"
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/exchange"
+	"github.com/imposter-project/imposter-go/internal/response"
 	"github.com/imposter-project/imposter-go/internal/store"
 	"github.com/imposter-project/imposter-go/pkg/logger"
+	"github.com/imposter-project/imposter-go/pkg/utils"
 )
+
+// ResponseBuilder provides a fluent API for building responses in scripts
+type ResponseBuilder struct {
+	runtime *goja.Runtime
+	state   *response.ResponseState
+	obj     *goja.Object
+}
+
+func (rb *ResponseBuilder) withStatusCode(statusCode int) goja.Value {
+	rb.state.StatusCode = statusCode
+	return rb.obj
+}
+
+func (rb *ResponseBuilder) withContent(content string) goja.Value {
+	rb.state.Body = []byte(content)
+	return rb.obj
+}
+
+func (rb *ResponseBuilder) withHeader(name, value string) goja.Value {
+	if rb.state.Headers == nil {
+		rb.state.Headers = make(map[string]string)
+	}
+	rb.state.Headers[name] = value
+	return rb.obj
+}
+
+func (rb *ResponseBuilder) withEmpty() goja.Value {
+	rb.state.Body = []byte{}
+	return rb.obj
+}
+
+func (rb *ResponseBuilder) usingDefaultBehaviour() goja.Value {
+	rb.state.Handled = false
+	return rb.obj
+}
+
+func (rb *ResponseBuilder) skipDefaultBehaviour() goja.Value {
+	rb.state.Handled = true
+	return rb.obj
+}
+
+func (rb *ResponseBuilder) and() goja.Value {
+	return rb.obj
+}
 
 // storeWrapper provides a JavaScript-friendly interface to a store
 type storeWrapper struct {
@@ -71,7 +117,7 @@ func (sw *storeWrapper) hasItemWithKey(key string) bool {
 }
 
 // executeScriptStep executes a script step
-func executeScriptStep(step *config.Step, exch *exchange.Exchange) error {
+func executeScriptStep(step *config.Step, exch *exchange.Exchange, responseState *response.ResponseState, configDir string) error {
 	// Validate step configuration
 	if step.Lang != "" && step.Lang != "javascript" {
 		return fmt.Errorf("unsupported script language: %s", step.Lang)
@@ -81,15 +127,23 @@ func executeScriptStep(step *config.Step, exch *exchange.Exchange) error {
 	var scriptContent string
 	if step.Code != "" {
 		scriptContent = step.Code
+		logger.Infoln("executing inline script")
 	} else if step.File != "" {
-		content, err := os.ReadFile(step.File)
+		scriptFile, err := utils.ValidatePath(step.File, configDir)
 		if err != nil {
-			return fmt.Errorf("failed to read script file %s: %w", step.File, err)
+			return fmt.Errorf("failed to validate script file path: %w", err)
+		}
+		content, err := os.ReadFile(scriptFile)
+		if err != nil {
+			return fmt.Errorf("failed to read script file %s: %w", scriptFile, err)
 		}
 		scriptContent = string(content)
+		logger.Infof("executing script from file %s", step.File)
 	} else {
 		return fmt.Errorf("either code or file must be specified for script step")
 	}
+
+	logger.Tracef("script content: %s", scriptContent)
 
 	// Create JavaScript runtime
 	vm := goja.New()
@@ -158,6 +212,24 @@ func executeScriptStep(step *config.Step, exch *exchange.Exchange) error {
 	}
 	vm.Set("stores", stores)
 
+	// Set up respond function
+	vm.Set("respond", func(call goja.FunctionCall) goja.Value {
+		obj := vm.NewObject()
+		rb := &ResponseBuilder{
+			runtime: vm,
+			state:   responseState,
+			obj:     obj,
+		}
+		_ = obj.Set("withStatusCode", rb.withStatusCode)
+		_ = obj.Set("withContent", rb.withContent)
+		_ = obj.Set("withHeader", rb.withHeader)
+		_ = obj.Set("withEmpty", rb.withEmpty)
+		_ = obj.Set("usingDefaultBehaviour", rb.usingDefaultBehaviour)
+		_ = obj.Set("skipDefaultBehaviour", rb.skipDefaultBehaviour)
+		_ = obj.Set("and", rb.and)
+		return obj
+	})
+
 	// Run the script
 	_, err := vm.RunString(scriptContent)
 	if err != nil {
@@ -167,5 +239,6 @@ func executeScriptStep(step *config.Step, exch *exchange.Exchange) error {
 		return fmt.Errorf("script execution failed: %w", err)
 	}
 
+	logger.Debugln("script execution completed successfully")
 	return nil
 }

@@ -7,6 +7,7 @@ import (
 
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/exchange"
+	"github.com/imposter-project/imposter-go/internal/response"
 	"github.com/imposter-project/imposter-go/internal/store"
 	"github.com/stretchr/testify/assert"
 )
@@ -17,7 +18,7 @@ func TestExecuteScriptStep(t *testing.T) {
 		step        config.Step
 		setupExch   func() *exchange.Exchange
 		setupStore  func()
-		validate    func(t *testing.T)
+		validate    func(t *testing.T, responseState *response.ResponseState)
 		expectError bool
 	}{
 		{
@@ -110,6 +111,64 @@ func TestExecuteScriptStep(t *testing.T) {
 			},
 		},
 		{
+			name: "response builder with skipDefaultBehaviour",
+			step: config.Step{
+				Type: config.ScriptStepType,
+				Lang: "javascript",
+				Code: `
+					respond()
+						.withStatusCode(201)
+						.withContent('{"status":"created"}')
+						.withHeader("X-Custom", "test")
+						.skipDefaultBehaviour()
+				`,
+			},
+			setupExch: func() *exchange.Exchange {
+				req, _ := http.NewRequest("GET", "/test", nil)
+				return &exchange.Exchange{
+					Request: &exchange.RequestContext{
+						Request: req,
+						Body:    []byte{},
+					},
+				}
+			},
+			validate: func(t *testing.T, rs *response.ResponseState) {
+				assert.Equal(t, 201, rs.StatusCode)
+				assert.Equal(t, `{"status":"created"}`, string(rs.Body))
+				assert.Equal(t, "test", rs.Headers["X-Custom"])
+				assert.True(t, rs.Handled, "response should be marked as handled")
+			},
+		},
+		{
+			name: "response builder with usingDefaultBehaviour",
+			step: config.Step{
+				Type: config.ScriptStepType,
+				Lang: "javascript",
+				Code: `
+					respond()
+						.withStatusCode(201)
+						.withContent('{"status":"created"}')
+						.withHeader("X-Custom", "test")
+						.usingDefaultBehaviour()
+				`,
+			},
+			setupExch: func() *exchange.Exchange {
+				req, _ := http.NewRequest("GET", "/test", nil)
+				return &exchange.Exchange{
+					Request: &exchange.RequestContext{
+						Request: req,
+						Body:    []byte{},
+					},
+				}
+			},
+			validate: func(t *testing.T, rs *response.ResponseState) {
+				assert.Equal(t, 201, rs.StatusCode)
+				assert.Equal(t, `{"status":"created"}`, string(rs.Body))
+				assert.Equal(t, "test", rs.Headers["X-Custom"])
+				assert.False(t, rs.Handled, "response should not be marked as handled")
+			},
+		},
+		{
 			name: "invalid language",
 			step: config.Step{
 				Type: config.ScriptStepType,
@@ -171,7 +230,8 @@ func TestExecuteScriptStep(t *testing.T) {
 			}
 
 			exch := tt.setupExch()
-			err := executeScriptStep(&tt.step, exch)
+			responseState := response.NewResponseState()
+			err := executeScriptStep(&tt.step, exch, responseState, "")
 
 			if tt.expectError {
 				assert.Error(t, err)
@@ -180,7 +240,7 @@ func TestExecuteScriptStep(t *testing.T) {
 			}
 
 			if tt.validate != nil {
-				tt.validate(t)
+				tt.validate(t, responseState)
 			}
 		})
 	}
