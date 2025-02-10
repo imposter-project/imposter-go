@@ -68,7 +68,8 @@ func hasLegacyResourceFields(config map[string]interface{}) bool {
 	if response, ok := config["response"].(map[string]interface{}); ok {
 		_, hasStaticFile := response["staticFile"]
 		_, hasStaticContent := response["staticContent"]
-		if hasStaticFile || hasStaticContent {
+		_, hasScriptFile := response["scriptFile"]
+		if hasStaticFile || hasStaticContent || hasScriptFile {
 			return true
 		}
 	}

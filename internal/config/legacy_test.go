@@ -61,6 +61,16 @@ response:
 			envVar:   "true",
 		},
 		{
+			name: "legacy config with scriptFile",
+			config: `
+plugin: rest
+response:
+  statusCode: 200
+  scriptFile: example.js`,
+			expected: true,
+			envVar:   "true",
+		},
+		{
 			name: "legacy config with root level properties",
 			config: `
 plugin: rest
