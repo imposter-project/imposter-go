@@ -2,9 +2,10 @@ package config
 
 import (
 	"fmt"
-	"github.com/imposter-project/imposter-go/pkg/logger"
 	"os"
 	"strings"
+
+	"github.com/imposter-project/imposter-go/pkg/logger"
 
 	"gopkg.in/yaml.v3"
 )
@@ -75,6 +76,54 @@ func hasLegacyResourceFields(config map[string]interface{}) bool {
 	return false
 }
 
+// transformResponseConfig handles the transformation of response configuration
+func transformResponseConfig(response *Response, rawResponse map[string]interface{}) ([]Step, error) {
+	var steps []Step
+
+	// Handle scriptFile to script step conversion
+	if scriptFile, ok := rawResponse["scriptFile"].(string); ok {
+		steps = []Step{
+			{
+				Type: "script",
+				Lang: "javascript",
+				File: scriptFile,
+			},
+		}
+	}
+
+	// Handle staticFile to file conversion
+	if staticFile, ok := rawResponse["staticFile"].(string); ok {
+		response.File = staticFile
+	}
+
+	// Copy other response fields if they exist
+	if content, ok := rawResponse["content"].(string); ok {
+		response.Content = content
+	}
+	// Handle legacy staticContent field
+	if staticContent, ok := rawResponse["staticContent"].(string); ok {
+		response.Content = staticContent
+	}
+	if statusCode, ok := rawResponse["statusCode"].(int); ok {
+		response.StatusCode = statusCode
+	}
+	if file, ok := rawResponse["file"].(string); ok {
+		response.File = file
+	}
+	if headers, ok := rawResponse["headers"].(map[string]interface{}); ok {
+		if response.Headers == nil {
+			response.Headers = make(map[string]string)
+		}
+		for k, v := range headers {
+			if strVal, ok := v.(string); ok {
+				response.Headers[k] = strVal
+			}
+		}
+	}
+
+	return steps, nil
+}
+
 // transformLegacyConfig converts a legacy config format to the current format
 func transformLegacyConfig(data []byte) ([]byte, error) {
 	logger.Tracef("transforming legacy config format")
@@ -109,8 +158,12 @@ func transformLegacyConfig(data []byte) ([]byte, error) {
 		resource.Response.Headers["Content-Type"] = contentType
 	}
 	if response, ok := rawConfig["response"].(map[string]interface{}); ok {
-		if err := transformResponseConfig(&resource.Response, response); err != nil {
+		steps, err := transformResponseConfig(&resource.Response, response)
+		if err != nil {
 			return nil, err
+		}
+		if steps != nil {
+			resource.Steps = steps
 		}
 	}
 	currentConfig.Resources = []Resource{resource}
@@ -140,8 +193,12 @@ func transformLegacyConfig(data []byte) ([]byte, error) {
 
 			// Handle response if present
 			if response, ok := resMap["response"].(map[string]interface{}); ok {
-				if err := transformResponseConfig(&resource.Response, response); err != nil {
+				steps, err := transformResponseConfig(&resource.Response, response)
+				if err != nil {
 					return nil, err
+				}
+				if steps != nil {
+					resource.Steps = steps
 				}
 			}
 
@@ -159,39 +216,4 @@ func transformLegacyConfig(data []byte) ([]byte, error) {
 	logger.Tracef("transformed config: %s", string(newData))
 
 	return newData, nil
-}
-
-// transformResponseConfig handles the transformation of response configuration
-func transformResponseConfig(response *Response, rawResponse map[string]interface{}) error {
-	// Handle staticFile to file conversion
-	if staticFile, ok := rawResponse["staticFile"].(string); ok {
-		response.File = staticFile
-	}
-
-	// Copy other response fields if they exist
-	if content, ok := rawResponse["content"].(string); ok {
-		response.Content = content
-	}
-	// Handle legacy staticContent field
-	if staticContent, ok := rawResponse["staticContent"].(string); ok {
-		response.Content = staticContent
-	}
-	if statusCode, ok := rawResponse["statusCode"].(int); ok {
-		response.StatusCode = statusCode
-	}
-	if file, ok := rawResponse["file"].(string); ok {
-		response.File = file
-	}
-	if headers, ok := rawResponse["headers"].(map[string]interface{}); ok {
-		if response.Headers == nil {
-			response.Headers = make(map[string]string)
-		}
-		for k, v := range headers {
-			if strVal, ok := v.(string); ok {
-				response.Headers[k] = strVal
-			}
-		}
-	}
-
-	return nil
 }

@@ -256,6 +256,95 @@ resources:
     headers: {}`,
 		},
 		{
+			name: "legacy config with root level scriptFile",
+			config: `
+plugin: rest
+path: /script
+response:
+  scriptFile: script.js`,
+			expectedConfig: `
+plugin: rest
+resources:
+- path: /script
+  steps:
+  - type: script
+    lang: javascript
+    file: script.js
+  response:
+    headers: {}`,
+		},
+		{
+			name: "legacy config with resource level scriptFile",
+			config: `
+plugin: rest
+resources:
+  - path: /script
+    method: POST
+    response:
+      scriptFile: script.js`,
+			expectedConfig: `
+plugin: rest
+resources:
+- path: /script
+  method: POST
+  steps:
+  - type: script
+    lang: javascript
+    file: script.js
+  response:
+    headers: {}`,
+		},
+		{
+			name: "legacy config with scriptFile and other response fields",
+			config: `
+plugin: rest
+resources:
+  - path: /script
+    response:
+      scriptFile: script.js
+      headers:
+        Content-Type: application/json
+      statusCode: 201`,
+			expectedConfig: `
+plugin: rest
+resources:
+- path: /script
+  steps:
+  - type: script
+    lang: javascript
+    file: script.js
+  response:
+    statusCode: 201
+    headers:
+      Content-Type: application/json`,
+		},
+		{
+			name: "legacy config with both scriptFile and staticFile",
+			config: `
+plugin: rest
+resources:
+  - path: /script-and-file
+    response:
+      scriptFile: script.js
+      staticFile: data.json
+      headers:
+        Content-Type: application/json
+      statusCode: 201`,
+			expectedConfig: `
+plugin: rest
+resources:
+- path: /script-and-file
+  steps:
+  - type: script
+    lang: javascript
+    file: script.js
+  response:
+    statusCode: 201
+    file: data.json
+    headers:
+      Content-Type: application/json`,
+		},
+		{
 			name:        "invalid yaml",
 			config:      "invalid: [yaml",
 			expectError: true,
@@ -289,6 +378,14 @@ resources:
 				assert.Equal(t, expectedConfig.Resources[i].Response.Content, actualConfig.Resources[i].Response.Content)
 				assert.Equal(t, expectedConfig.Resources[i].Response.File, actualConfig.Resources[i].Response.File)
 				assert.Equal(t, expectedConfig.Resources[i].Response.Headers, actualConfig.Resources[i].Response.Headers)
+				assert.Equal(t, len(expectedConfig.Resources[i].Steps), len(actualConfig.Resources[i].Steps))
+				if len(expectedConfig.Resources[i].Steps) > 0 {
+					for j := range expectedConfig.Resources[i].Steps {
+						assert.Equal(t, expectedConfig.Resources[i].Steps[j].Type, actualConfig.Resources[i].Steps[j].Type)
+						assert.Equal(t, expectedConfig.Resources[i].Steps[j].Lang, actualConfig.Resources[i].Steps[j].Lang)
+						assert.Equal(t, expectedConfig.Resources[i].Steps[j].File, actualConfig.Resources[i].Steps[j].File)
+					}
+				}
 			}
 		})
 	}
