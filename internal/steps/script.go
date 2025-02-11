@@ -119,7 +119,7 @@ func (sw *storeWrapper) hasItemWithKey(key string) bool {
 // executeScriptStep executes a script step
 func executeScriptStep(step *config.Step, exch *exchange.Exchange, responseState *response.ResponseState, configDir string) error {
 	// Validate step configuration
-	if step.Lang != "" && step.Lang != "javascript" {
+	if step.Lang != "" && step.Lang != "js" && step.Lang != "javascript" {
 		return fmt.Errorf("unsupported script language: %s", step.Lang)
 	}
 
