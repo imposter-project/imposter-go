@@ -10,7 +10,7 @@ A Go implementation of the [Imposter Mock Engine](https://www.imposter.sh).
 - ✅ [SOAP/WSDL mock](https://docs.imposter.sh/soap_plugin/) support
 - ✅ [OpenAPI/Swagger mock](https://docs.imposter.sh/openapi_plugin/) support
 - ✅ JavaScript [scripting](https://docs.imposter.sh/scripting/)
-- ✅ Remote HTTP call [steps](https://docs.imposter.sh/steps/)
+- ✅ Support for [steps](https://docs.imposter.sh/steps/)
 
 ## ⚠️ Limitations
 
