@@ -15,8 +15,8 @@ import (
 // executeRemoteStep executes a remote HTTP request step
 func executeRemoteStep(step *config.Step, exch *exchange.Exchange, imposterConfig *config.ImposterConfig) error {
 	// Process templates in URL, headers, and body
-	url := template.ProcessTemplateWithContext(step.URL, exch, nil)
-	body := template.ProcessTemplateWithContext(step.Body, exch, nil)
+	url := template.ProcessTemplateWithContext(step.URL, exch, imposterConfig, &config.RequestMatcher{})
+	body := template.ProcessTemplateWithContext(step.Body, exch, imposterConfig, &config.RequestMatcher{})
 
 	// Create request
 	req, err := http.NewRequest(step.Method, url, bytes.NewReader([]byte(body)))
@@ -26,7 +26,7 @@ func executeRemoteStep(step *config.Step, exch *exchange.Exchange, imposterConfi
 
 	// Process and set headers
 	for key, value := range step.Headers {
-		processedValue := template.ProcessTemplateWithContext(value, exch, nil)
+		processedValue := template.ProcessTemplateWithContext(value, exch, imposterConfig, &config.RequestMatcher{})
 		req.Header.Set(key, processedValue)
 	}
 
@@ -57,7 +57,7 @@ func executeRemoteStep(step *config.Step, exch *exchange.Exchange, imposterConfi
 
 	// Process captures using the common capture logic
 	if len(step.Capture) > 0 {
-		capture.CaptureRequestData(imposterConfig, step.Capture, exch)
+		capture.CaptureRequestData(imposterConfig, &config.RequestMatcher{}, step.Capture, exch)
 	}
 
 	return nil

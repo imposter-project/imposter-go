@@ -17,7 +17,7 @@ func TestCaptureRequestData(t *testing.T) {
 	tests := []struct {
 		name           string
 		resource       config.Resource
-		setupRequest   func() (*http.Request, []byte)
+		setupRequest   func() (*http.Request, *config.RequestMatcher, []byte)
 		imposterConfig *config.ImposterConfig
 		validate       func(t *testing.T, requestStore *store.Store)
 	}{
@@ -37,9 +37,35 @@ func TestCaptureRequestData(t *testing.T) {
 					},
 				},
 			},
-			setupRequest: func() (*http.Request, []byte) {
+			setupRequest: func() (*http.Request, *config.RequestMatcher, []byte) {
 				req, _ := http.NewRequest("GET", "/?param=value", nil)
-				return req, nil
+				return req, &config.RequestMatcher{}, nil
+			},
+			imposterConfig: &config.ImposterConfig{},
+			validate: func(t *testing.T, requestStore *store.Store) {
+				val, _ := requestStore.GetValue("myKey")
+				assert.Equal(t, "value", val)
+			},
+		},
+		{
+			name: "capture path parameter",
+			resource: config.Resource{
+				Capture: map[string]config.Capture{
+					"test": {
+						Enabled: boolPtr(true),
+						Key: config.CaptureConfig{
+							Const: "myKey",
+						},
+						CaptureConfig: config.CaptureConfig{
+							PathParam: "param",
+						},
+						Store: "request",
+					},
+				},
+			},
+			setupRequest: func() (*http.Request, *config.RequestMatcher, []byte) {
+				req, _ := http.NewRequest("GET", "/value", nil)
+				return req, &config.RequestMatcher{Path: "/{param}"}, nil
 			},
 			imposterConfig: &config.ImposterConfig{},
 			validate: func(t *testing.T, requestStore *store.Store) {
@@ -63,10 +89,10 @@ func TestCaptureRequestData(t *testing.T) {
 					},
 				},
 			},
-			setupRequest: func() (*http.Request, []byte) {
+			setupRequest: func() (*http.Request, *config.RequestMatcher, []byte) {
 				req, _ := http.NewRequest("GET", "/", nil)
 				req.Header.Set("X-Test-Header", "test-value")
-				return req, nil
+				return req, &config.RequestMatcher{}, nil
 			},
 			imposterConfig: &config.ImposterConfig{},
 			validate: func(t *testing.T, requestStore *store.Store) {
@@ -90,11 +116,11 @@ func TestCaptureRequestData(t *testing.T) {
 					},
 				},
 			},
-			setupRequest: func() (*http.Request, []byte) {
+			setupRequest: func() (*http.Request, *config.RequestMatcher, []byte) {
 				body := strings.NewReader("field=form-data")
 				req, _ := http.NewRequest("POST", "/", body)
 				req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-				return req, []byte("field=form-data")
+				return req, &config.RequestMatcher{}, []byte("field=form-data")
 			},
 			imposterConfig: &config.ImposterConfig{},
 			validate: func(t *testing.T, requestStore *store.Store) {
@@ -124,11 +150,11 @@ func TestCaptureRequestData(t *testing.T) {
 					},
 				},
 			},
-			setupRequest: func() (*http.Request, []byte) {
+			setupRequest: func() (*http.Request, *config.RequestMatcher, []byte) {
 				jsonBody := []byte(`{"name": "test-name"}`)
 				req, _ := http.NewRequest("POST", "/", bytes.NewReader(jsonBody))
 				req.Header.Set("Content-Type", "application/json")
-				return req, jsonBody
+				return req, &config.RequestMatcher{}, jsonBody
 			},
 			imposterConfig: &config.ImposterConfig{},
 			validate: func(t *testing.T, requestStore *store.Store) {
@@ -158,11 +184,11 @@ func TestCaptureRequestData(t *testing.T) {
 					},
 				},
 			},
-			setupRequest: func() (*http.Request, []byte) {
+			setupRequest: func() (*http.Request, *config.RequestMatcher, []byte) {
 				xmlBody := []byte(`<?xml version="1.0" encoding="UTF-8"?><root><name>test-name</name></root>`)
 				req, _ := http.NewRequest("POST", "/", bytes.NewReader(xmlBody))
 				req.Header.Set("Content-Type", "application/xml")
-				return req, xmlBody
+				return req, &config.RequestMatcher{}, xmlBody
 			},
 			imposterConfig: &config.ImposterConfig{},
 			validate: func(t *testing.T, requestStore *store.Store) {
@@ -186,9 +212,9 @@ func TestCaptureRequestData(t *testing.T) {
 					},
 				},
 			},
-			setupRequest: func() (*http.Request, []byte) {
+			setupRequest: func() (*http.Request, *config.RequestMatcher, []byte) {
 				req, _ := http.NewRequest("GET", "/?param=value", nil)
-				return req, nil
+				return req, &config.RequestMatcher{}, nil
 			},
 			imposterConfig: &config.ImposterConfig{},
 			validate: func(t *testing.T, requestStore *store.Store) {
@@ -211,9 +237,9 @@ func TestCaptureRequestData(t *testing.T) {
 					},
 				},
 			},
-			setupRequest: func() (*http.Request, []byte) {
+			setupRequest: func() (*http.Request, *config.RequestMatcher, []byte) {
 				req, _ := http.NewRequest("GET", "/?param=value", nil)
-				return req, nil
+				return req, &config.RequestMatcher{}, nil
 			},
 			imposterConfig: &config.ImposterConfig{},
 			validate: func(t *testing.T, requestStore *store.Store) {
@@ -226,9 +252,9 @@ func TestCaptureRequestData(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			requestStore := store.NewRequestStore()
-			req, body := tt.setupRequest()
+			req, reqMatcher, body := tt.setupRequest()
 			exch := exchange.NewExchangeFromRequest(req, body, requestStore)
-			CaptureRequestData(tt.imposterConfig, tt.resource.Capture, exch)
+			CaptureRequestData(tt.imposterConfig, reqMatcher, tt.resource.Capture, exch)
 			tt.validate(t, requestStore)
 		})
 	}

@@ -175,7 +175,7 @@ func processResponse(
 
 		// Process template if enabled
 		if resp.Template {
-			responseContent = template.ProcessTemplate(responseContent, req, imposterConfig, requestStore)
+			responseContent = template.ProcessTemplate(responseContent, req, imposterConfig, reqMatcher, requestStore)
 		}
 
 		rs.Body = []byte(responseContent)

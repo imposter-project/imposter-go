@@ -142,7 +142,7 @@ func CalculateMatchScore(matcher *config.RequestMatcher, r *http.Request, body [
 	if len(matcher.AllOf) > 0 {
 		for _, expr := range matcher.AllOf {
 			// Evaluate the expression using the template engine
-			result, err := evaluateExpression(expr.Expression, r, imposterConfig, requestStore)
+			result, err := evaluateExpression(expr.Expression, r, imposterConfig, matcher, requestStore)
 			if err != nil {
 				return NegativeMatchScore, false
 			}
@@ -157,7 +157,7 @@ func CalculateMatchScore(matcher *config.RequestMatcher, r *http.Request, body [
 		matched := false
 		for _, expr := range matcher.AnyOf {
 			// Evaluate the expression using the template engine
-			result, err := evaluateExpression(expr.Expression, r, imposterConfig, requestStore)
+			result, err := evaluateExpression(expr.Expression, r, imposterConfig, matcher, requestStore)
 			if err != nil {
 				continue
 			}
@@ -183,9 +183,9 @@ func hasSingleBodyMatcher(matcher *config.RequestMatcher) bool {
 }
 
 // evaluateExpression evaluates a template expression in the context of the request
-func evaluateExpression(expression string, r *http.Request, imposterConfig *config.ImposterConfig, requestStore *store.Store) (string, error) {
+func evaluateExpression(expression string, r *http.Request, imposterConfig *config.ImposterConfig, reqMatcher *config.RequestMatcher, requestStore *store.Store) (string, error) {
 	// Simply evaluate the expression and return its value
-	return template.ProcessTemplate(expression, r, imposterConfig, requestStore), nil
+	return template.ProcessTemplate(expression, r, imposterConfig, reqMatcher, requestStore), nil
 }
 
 // matchBodyCondition checks if a body condition matches the request body

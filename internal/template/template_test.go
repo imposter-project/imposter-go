@@ -16,7 +16,7 @@ func TestProcessTemplate(t *testing.T) {
 	tests := []struct {
 		name           string
 		template       string
-		setupRequest   func() *http.Request
+		setupRequest   func() (*http.Request, *config.RequestMatcher)
 		imposterConfig *config.ImposterConfig
 		requestStore   *store.Store
 		want           string
@@ -24,10 +24,10 @@ func TestProcessTemplate(t *testing.T) {
 		{
 			name:     "request method",
 			template: "Method: ${context.request.method}",
-			setupRequest: func() *http.Request {
+			setupRequest: func() (*http.Request, *config.RequestMatcher) {
 				req, _ := http.NewRequest("POST", "/", nil)
 				req.Body = io.NopCloser(strings.NewReader(""))
-				return req
+				return req, &config.RequestMatcher{}
 			},
 			imposterConfig: &config.ImposterConfig{ServerPort: "8080"},
 			requestStore:   store.NewRequestStore(),
@@ -36,23 +36,35 @@ func TestProcessTemplate(t *testing.T) {
 		{
 			name:     "query parameters",
 			template: "Hello ${context.request.queryParams.name}!",
-			setupRequest: func() *http.Request {
+			setupRequest: func() (*http.Request, *config.RequestMatcher) {
 				req, _ := http.NewRequest("GET", "/?name=World", nil)
 				req.Body = io.NopCloser(strings.NewReader(""))
-				return req
+				return req, &config.RequestMatcher{}
 			},
 			imposterConfig: &config.ImposterConfig{ServerPort: "8080"},
 			requestStore:   store.NewRequestStore(),
 			want:           "Hello World!",
 		},
 		{
+			name:     "path parameters",
+			template: "Hello ${context.request.pathParams.name}!",
+			setupRequest: func() (*http.Request, *config.RequestMatcher) {
+				req, _ := http.NewRequest("GET", "/param", nil)
+				req.Body = io.NopCloser(strings.NewReader(""))
+				return req, &config.RequestMatcher{Path: "/{name}"}
+			},
+			imposterConfig: &config.ImposterConfig{ServerPort: "8080"},
+			requestStore:   store.NewRequestStore(),
+			want:           "Hello param!",
+		},
+		{
 			name:     "request headers",
 			template: "User-Agent: ${context.request.headers.User-Agent}",
-			setupRequest: func() *http.Request {
+			setupRequest: func() (*http.Request, *config.RequestMatcher) {
 				req, _ := http.NewRequest("GET", "/", nil)
 				req.Header.Set("User-Agent", "test-agent")
 				req.Body = io.NopCloser(strings.NewReader(""))
-				return req
+				return req, &config.RequestMatcher{}
 			},
 			imposterConfig: &config.ImposterConfig{ServerPort: "8080"},
 			requestStore:   store.NewRequestStore(),
@@ -61,11 +73,11 @@ func TestProcessTemplate(t *testing.T) {
 		{
 			name:     "form parameters",
 			template: "Form value: ${context.request.formParams.key}",
-			setupRequest: func() *http.Request {
+			setupRequest: func() (*http.Request, *config.RequestMatcher) {
 				body := strings.NewReader("key=value")
 				req, _ := http.NewRequest("POST", "/", body)
 				req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-				return req
+				return req, &config.RequestMatcher{}
 			},
 			imposterConfig: &config.ImposterConfig{ServerPort: "8080"},
 			requestStore:   store.NewRequestStore(),
@@ -74,10 +86,10 @@ func TestProcessTemplate(t *testing.T) {
 		{
 			name:     "request body",
 			template: "Body: ${context.request.body}",
-			setupRequest: func() *http.Request {
+			setupRequest: func() (*http.Request, *config.RequestMatcher) {
 				body := strings.NewReader("test body")
 				req, _ := http.NewRequest("POST", "/", body)
-				return req
+				return req, &config.RequestMatcher{}
 			},
 			imposterConfig: &config.ImposterConfig{ServerPort: "8080"},
 			requestStore:   store.NewRequestStore(),
@@ -86,10 +98,10 @@ func TestProcessTemplate(t *testing.T) {
 		{
 			name:     "request path and uri",
 			template: "Path: ${context.request.path}, URI: ${context.request.uri}",
-			setupRequest: func() *http.Request {
+			setupRequest: func() (*http.Request, *config.RequestMatcher) {
 				req, _ := http.NewRequest("GET", "/test?param=value", nil)
 				req.Body = io.NopCloser(strings.NewReader(""))
-				return req
+				return req, &config.RequestMatcher{}
 			},
 			imposterConfig: &config.ImposterConfig{ServerPort: "8080"},
 			requestStore:   store.NewRequestStore(),
@@ -98,11 +110,11 @@ func TestProcessTemplate(t *testing.T) {
 		{
 			name:     "system server placeholders",
 			template: "Port: ${system.server.port}",
-			setupRequest: func() *http.Request {
+			setupRequest: func() (*http.Request, *config.RequestMatcher) {
 				req, _ := http.NewRequest("GET", "/", nil)
 				req.Host = "localhost:8080"
 				req.Body = io.NopCloser(strings.NewReader(""))
-				return req
+				return req, &config.RequestMatcher{}
 			},
 			imposterConfig: &config.ImposterConfig{ServerPort: "8080"},
 			requestStore:   store.NewRequestStore(),
@@ -112,7 +124,8 @@ func TestProcessTemplate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := ProcessTemplate(tt.template, tt.setupRequest(), tt.imposterConfig, tt.requestStore)
+			req, reqMatcher := tt.setupRequest()
+			got := ProcessTemplate(tt.template, req, tt.imposterConfig, reqMatcher, tt.requestStore)
 			assert.Equal(t, tt.want, got)
 		})
 	}
@@ -170,7 +183,7 @@ func TestRandomPlaceholders(t *testing.T) {
 			req, _ := http.NewRequest("GET", "/", nil)
 			req.Body = io.NopCloser(strings.NewReader(""))
 			imposterConfig := &config.ImposterConfig{ServerPort: "8080"}
-			result := ProcessTemplate(tt.template, req, imposterConfig, store.NewRequestStore())
+			result := ProcessTemplate(tt.template, req, imposterConfig, &config.RequestMatcher{}, store.NewRequestStore())
 			tt.validate(t, result)
 		})
 	}
@@ -209,7 +222,7 @@ func TestStoreValueReplacement(t *testing.T) {
 			req, _ := http.NewRequest("GET", "/", nil)
 			req.Body = io.NopCloser(strings.NewReader(""))
 			imposterConfig := &config.ImposterConfig{ServerPort: "8080"}
-			got := ProcessTemplate(tt.template, req, imposterConfig, tt.requestStore())
+			got := ProcessTemplate(tt.template, req, imposterConfig, &config.RequestMatcher{}, tt.requestStore())
 			assert.Equal(t, tt.want, got)
 		})
 	}
@@ -337,7 +350,7 @@ func TestResponseTemplates(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			exch := tt.setup()
-			got := ProcessTemplateWithContext(tt.template, exch, nil)
+			got := ProcessTemplateWithContext(tt.template, exch, nil, &config.RequestMatcher{})
 			assert.Equal(t, tt.want, got)
 		})
 	}

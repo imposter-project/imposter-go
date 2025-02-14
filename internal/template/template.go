@@ -22,7 +22,7 @@ import (
 
 // ProcessTemplate processes a template string, replacing placeholders with actual values.
 // This is the legacy version that will be deprecated in favor of ProcessTemplateWithContext.
-func ProcessTemplate(template string, r *http.Request, imposterConfig *config.ImposterConfig, requestStore *store.Store) string {
+func ProcessTemplate(template string, r *http.Request, imposterConfig *config.ImposterConfig, reqMatcher *config.RequestMatcher, requestStore *store.Store) string {
 	// Read request body
 	body, _ := io.ReadAll(r.Body)
 	r.Body = io.NopCloser(bytes.NewReader(body))
@@ -34,12 +34,12 @@ func ProcessTemplate(template string, r *http.Request, imposterConfig *config.Im
 		},
 		RequestStore: requestStore,
 	}
-	return ProcessTemplateWithContext(template, exch, imposterConfig)
+	return ProcessTemplateWithContext(template, exch, imposterConfig, reqMatcher)
 }
 
 // ProcessTemplateWithContext processes a template string using the provided context.
 // This is the new version that should be used going forward.
-func ProcessTemplateWithContext(template string, exch *exchange.Exchange, imposterConfig *config.ImposterConfig) string {
+func ProcessTemplateWithContext(template string, exch *exchange.Exchange, imposterConfig *config.ImposterConfig, reqMatcher *config.RequestMatcher) string {
 	if template == "" {
 		return ""
 	}
@@ -74,7 +74,7 @@ func ProcessTemplateWithContext(template string, exch *exchange.Exchange, impost
 		var rawValue string
 		switch category {
 		case "context":
-			rawValue = handleContextReplacement(subcategory, field, exch)
+			rawValue = handleContextReplacement(subcategory, field, reqMatcher, exch)
 		case "stores":
 			rawValue = handleStoreReplacement(subcategory, field, exch.RequestStore)
 		case "datetime":
@@ -130,10 +130,10 @@ func processWithTrailer(value, trailer string) string {
 }
 
 // handleContextReplacement handles replacements for context.request.* and context.response.*
-func handleContextReplacement(subcategory, field string, exch *exchange.Exchange) string {
+func handleContextReplacement(subcategory, field string, reqMatcher *config.RequestMatcher, exch *exchange.Exchange) string {
 	switch subcategory {
 	case "request":
-		return handleRequestReplacement(field, exch)
+		return handleRequestReplacement(field, reqMatcher, exch)
 	case "response":
 		return handleResponseReplacement(field, exch)
 	default:
@@ -142,7 +142,7 @@ func handleContextReplacement(subcategory, field string, exch *exchange.Exchange
 }
 
 // handleRequestReplacement handles replacements for context.request.*
-func handleRequestReplacement(field string, exch *exchange.Exchange) string {
+func handleRequestReplacement(field string, reqMatcher *config.RequestMatcher, exch *exchange.Exchange) string {
 	switch {
 	case field == "method":
 		return exch.Request.Request.Method
@@ -160,7 +160,7 @@ func handleRequestReplacement(field string, exch *exchange.Exchange) string {
 		return exch.Request.Request.Header.Get(key)
 	case strings.HasPrefix(field, "pathParams."):
 		key := strings.TrimPrefix(field, "pathParams.")
-		params := utils.ExtractPathParams(exch.Request.Request.URL.Path, exch.Request.Request.URL.Path)
+		params := utils.ExtractPathParams(exch.Request.Request.URL.Path, reqMatcher.Path)
 		return params[key]
 	case strings.HasPrefix(field, "formParams."):
 		key := strings.TrimPrefix(field, "formParams.")

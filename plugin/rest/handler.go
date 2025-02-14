@@ -49,7 +49,7 @@ func (h *PluginHandler) HandleRequest(
 		if score > 0 {
 			logger.Infof("matched interceptor - method:%s, path:%s", r.Method, r.URL.Path)
 			if interceptorCfg.Capture != nil {
-				capture.CaptureRequestData(h.imposterConfig, interceptorCfg.Capture, exch)
+				capture.CaptureRequestData(h.imposterConfig, &interceptorCfg.RequestMatcher, interceptorCfg.Capture, exch)
 			}
 
 			// Execute steps if present
@@ -96,7 +96,7 @@ func (h *PluginHandler) HandleRequest(
 	}
 
 	// Capture request data
-	capture.CaptureRequestData(h.imposterConfig, best.Resource.Capture, exch)
+	capture.CaptureRequestData(h.imposterConfig, &best.Resource.RequestMatcher, best.Resource.Capture, exch)
 
 	// Execute steps if present
 	if len(best.Resource.Steps) > 0 {
