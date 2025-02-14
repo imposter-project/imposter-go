@@ -33,7 +33,7 @@ func TestExecuteScriptStep(t *testing.T) {
 					if (context.request.path !== "/test") {
 						throw new Error("Expected /test path");
 					}
-					if (context.request.body !== "test body") {
+					if (context.request.body !== "key1=value1&key2=value2") {
 						throw new Error("Expected test body");
 					}
 					if (context.request.queryParams.foo !== "bar") {
@@ -42,15 +42,23 @@ func TestExecuteScriptStep(t *testing.T) {
 					if (context.request.headers["X-Test"] !== "test-value") {
 						throw new Error("Expected X-Test header");
 					}
+					if (context.request.formParams.key1 !== "value1") {
+						throw new Error("Expected key1=value1 form param");
+					}
+					if (context.request.formParams.key2 !== "value2") {
+						throw new Error("Expected key2=value2 form param");
+					}
 				`,
 			},
 			setupExch: func() *exchange.Exchange {
-				req, _ := http.NewRequest("POST", "/test?foo=bar", strings.NewReader("test body"))
+				body := "key1=value1&key2=value2"
+				req, _ := http.NewRequest("POST", "/test?foo=bar", strings.NewReader(body))
 				req.Header.Set("X-Test", "test-value")
+				req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 				return &exchange.Exchange{
 					Request: &exchange.RequestContext{
 						Request: req,
-						Body:    []byte("test body"),
+						Body:    []byte(body),
 					},
 				}
 			},
