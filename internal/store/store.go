@@ -59,17 +59,8 @@ func (s *Store) DeleteValue(key string) {
 	s.provider.DeleteValue(s.name, key)
 }
 
-// inMemoryStoreProvider is a shared in-memory store provider
-var inMemoryStoreProvider StoreProvider
-
 // storeProvider is the global store provider
 var storeProvider StoreProvider
-
-func init() {
-	// in-memory store provider is always required (for request store)
-	inMemoryStoreProvider = &InMemoryStoreProvider{}
-	inMemoryStoreProvider.InitStores()
-}
 
 func InitStoreProvider() {
 	driver := os.Getenv("IMPOSTER_STORE_DRIVER")
@@ -79,7 +70,7 @@ func InitStoreProvider() {
 	case "store-redis":
 		storeProvider = &RedisStoreProvider{}
 	default:
-		storeProvider = inMemoryStoreProvider
+		storeProvider = &InMemoryStoreProvider{}
 	}
 	storeProvider.InitStores()
 }
