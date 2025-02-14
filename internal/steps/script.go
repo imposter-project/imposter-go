@@ -117,7 +117,7 @@ func (sw *storeWrapper) hasItemWithKey(key string) bool {
 }
 
 // executeScriptStep executes a script step
-func executeScriptStep(step *config.Step, exch *exchange.Exchange, responseState *response.ResponseState, configDir string) error {
+func executeScriptStep(step *config.Step, exch *exchange.Exchange, responseState *response.ResponseState, configDir string, reqMatcher *config.RequestMatcher) error {
 	// Validate step configuration
 	if step.Lang != "" && step.Lang != "js" && step.Lang != "javascript" {
 		return fmt.Errorf("unsupported script language: %s", step.Lang)
@@ -182,6 +182,13 @@ func executeScriptStep(step *config.Step, exch *exchange.Exchange, responseState
 		}
 	}
 	reqContext["queryParams"] = queryParams
+
+	// Extract path parameters using the request matcher
+	pathParams := make(map[string]string)
+	if reqMatcher != nil && reqMatcher.Path != "" {
+		pathParams = utils.ExtractPathParams(exch.Request.Request.URL.Path, reqMatcher.Path)
+	}
+	reqContext["pathParams"] = pathParams
 
 	// Parse and convert form parameters to a simple map
 	formParams := make(map[string]string)

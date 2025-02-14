@@ -20,6 +20,7 @@ func TestExecuteScriptStep(t *testing.T) {
 		setupStore  func()
 		validate    func(t *testing.T, responseState *response.ResponseState)
 		expectError bool
+		reqMatcher  *config.RequestMatcher
 	}{
 		{
 			name: "inline script accessing request context",
@@ -38,6 +39,9 @@ func TestExecuteScriptStep(t *testing.T) {
 					}
 					if (context.request.queryParams.foo !== "bar") {
 						throw new Error("Expected foo=bar query param");
+					}
+					if (context.request.pathParams['path-param'] !== "test") {
+						throw new Error("Expected baz=test path param");
 					}
 					if (context.request.headers["X-Test"] !== "test-value") {
 						throw new Error("Expected X-Test header");
@@ -61,6 +65,9 @@ func TestExecuteScriptStep(t *testing.T) {
 						Body:    []byte(body),
 					},
 				}
+			},
+			reqMatcher: &config.RequestMatcher{
+				Path: "/{path-param}",
 			},
 		},
 		{
@@ -117,6 +124,9 @@ func TestExecuteScriptStep(t *testing.T) {
 			setupStore: func() {
 				store.InitStoreProvider()
 			},
+			reqMatcher: &config.RequestMatcher{
+				Path: "/test",
+			},
 		},
 		{
 			name: "response builder with skipDefaultBehaviour",
@@ -145,6 +155,9 @@ func TestExecuteScriptStep(t *testing.T) {
 				assert.Equal(t, `{"status":"created"}`, string(rs.Body))
 				assert.Equal(t, "test", rs.Headers["X-Custom"])
 				assert.True(t, rs.Handled, "response should be marked as handled")
+			},
+			reqMatcher: &config.RequestMatcher{
+				Path: "/test",
 			},
 		},
 		{
@@ -175,6 +188,9 @@ func TestExecuteScriptStep(t *testing.T) {
 				assert.Equal(t, "test", rs.Headers["X-Custom"])
 				assert.False(t, rs.Handled, "response should not be marked as handled")
 			},
+			reqMatcher: &config.RequestMatcher{
+				Path: "/test",
+			},
 		},
 		{
 			name: "invalid language",
@@ -192,6 +208,9 @@ func TestExecuteScriptStep(t *testing.T) {
 					},
 				}
 			},
+			reqMatcher: &config.RequestMatcher{
+				Path: "/test",
+			},
 			expectError: true,
 		},
 		{
@@ -208,6 +227,9 @@ func TestExecuteScriptStep(t *testing.T) {
 						Body:    []byte{},
 					},
 				}
+			},
+			reqMatcher: &config.RequestMatcher{
+				Path: "/test",
 			},
 			expectError: true,
 		},
@@ -227,6 +249,9 @@ func TestExecuteScriptStep(t *testing.T) {
 					},
 				}
 			},
+			reqMatcher: &config.RequestMatcher{
+				Path: "/test",
+			},
 			expectError: true,
 		},
 	}
@@ -239,7 +264,7 @@ func TestExecuteScriptStep(t *testing.T) {
 
 			exch := tt.setupExch()
 			responseState := response.NewResponseState()
-			err := executeScriptStep(&tt.step, exch, responseState, "")
+			err := executeScriptStep(&tt.step, exch, responseState, "", tt.reqMatcher)
 
 			if tt.expectError {
 				assert.Error(t, err)
