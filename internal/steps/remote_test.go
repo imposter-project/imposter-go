@@ -47,7 +47,7 @@ func TestExecuteRemoteStep(t *testing.T) {
 						Request: req,
 						Body:    []byte{},
 					},
-					RequestStore: &store.Store{},
+					RequestStore: store.NewRequestStore(),
 				}
 			},
 		},
@@ -71,7 +71,7 @@ func TestExecuteRemoteStep(t *testing.T) {
 						Request: req,
 						Body:    []byte("test data"),
 					},
-					RequestStore: &store.Store{},
+					RequestStore: store.NewRequestStore(),
 				}
 			},
 		},
@@ -102,20 +102,20 @@ func TestExecuteRemoteStep(t *testing.T) {
 			},
 			setupExch: func() *exchange.Exchange {
 				req, _ := http.NewRequest("POST", "/create", strings.NewReader(`{"name": "test"}`))
-				s := store.Store{}
+				s := store.NewRequestStore()
 				return &exchange.Exchange{
 					Request: &exchange.RequestContext{
 						Request: req,
 						Body:    []byte(`{"name": "test"}`),
 					},
-					RequestStore: &s,
+					RequestStore: s,
 				}
 			},
 			validate: func(t *testing.T, s *store.Store) {
-				status, exists := (*s)["status"]
+				status, exists := s.GetValue("status")
 				assert.True(t, exists)
 				assert.Equal(t, "created", status)
-				code, exists := (*s)["code"]
+				code, exists := s.GetValue("code")
 				assert.True(t, exists)
 				assert.Equal(t, "201", code)
 			},
@@ -134,7 +134,7 @@ func TestExecuteRemoteStep(t *testing.T) {
 						Request: req,
 						Body:    []byte{},
 					},
-					RequestStore: &store.Store{},
+					RequestStore: store.NewRequestStore(),
 				}
 			},
 			expectError: true,
@@ -153,7 +153,7 @@ func TestExecuteRemoteStep(t *testing.T) {
 						Request: req,
 						Body:    []byte{},
 					},
-					RequestStore: &store.Store{},
+					RequestStore: store.NewRequestStore(),
 				}
 			},
 		},

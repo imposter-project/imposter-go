@@ -49,11 +49,11 @@ func TestHandler_HandleRequest_NoMatchingResource(t *testing.T) {
 	req := httptest.NewRequest("GET", "/nonexistent", nil)
 
 	// Initialise store and response state
-	requestStore := make(store.Store)
+	requestStore := store.NewRequestStore()
 	responseState := response.NewResponseState()
 
 	// Handle request
-	handler.HandleRequest(req, &requestStore, responseState, nil)
+	handler.HandleRequest(req, requestStore, responseState, nil)
 
 	// Check response
 	if responseState.Handled {
@@ -95,12 +95,12 @@ func TestHandler_HandleRequest_MatchingResource(t *testing.T) {
 	req := httptest.NewRequest("GET", "/test", nil)
 
 	// Initialise store and response state
-	requestStore := make(store.Store)
+	requestStore := store.NewRequestStore()
 	responseState := response.NewResponseState()
 	responseProc := response.NewProcessor(&config.ImposterConfig{}, tempDir)
 
 	// Handle request
-	handler.HandleRequest(req, &requestStore, responseState, responseProc)
+	handler.HandleRequest(req, requestStore, responseState, responseProc)
 
 	// Check response
 	if !responseState.Handled {
@@ -162,12 +162,12 @@ func TestHandler_HandleRequest_WithInterceptor(t *testing.T) {
 	req := httptest.NewRequest("GET", "/test", nil)
 
 	// Initialise store and response state
-	requestStore := make(store.Store)
+	requestStore := store.NewRequestStore()
 	responseState := response.NewResponseState()
 	responseProc := response.NewProcessor(&config.ImposterConfig{}, tempDir)
 
 	// Handle request
-	handler.HandleRequest(req, &requestStore, responseState, responseProc)
+	handler.HandleRequest(req, requestStore, responseState, responseProc)
 
 	// Check response
 	if !responseState.Handled {
@@ -225,12 +225,12 @@ func TestHandler_HandleRequest_WithPathParams(t *testing.T) {
 	req := httptest.NewRequest("GET", "/users/123", nil)
 
 	// Initialise store and response state
-	requestStore := make(store.Store)
+	requestStore := store.NewRequestStore()
 	responseState := response.NewResponseState()
 	responseProc := response.NewProcessor(&config.ImposterConfig{}, tempDir)
 
 	// Handle request
-	handler.HandleRequest(req, &requestStore, responseState, responseProc)
+	handler.HandleRequest(req, requestStore, responseState, responseProc)
 
 	// Check response
 	if !responseState.Handled {
@@ -287,12 +287,12 @@ func TestHandler_HandleRequest_WithResponseFile(t *testing.T) {
 	req := httptest.NewRequest("GET", "/test", nil)
 
 	// Initialise store and response state
-	requestStore := make(store.Store)
+	requestStore := store.NewRequestStore()
 	responseState := response.NewResponseState()
 	responseProc := response.NewProcessor(&config.ImposterConfig{}, tempDir)
 
 	// Handle request
-	handler.HandleRequest(req, &requestStore, responseState, responseProc)
+	handler.HandleRequest(req, requestStore, responseState, responseProc)
 
 	// Check response
 	if !responseState.Handled {
@@ -350,12 +350,12 @@ func TestHandler_HandleRequest_WithRequestBody(t *testing.T) {
 	req := httptest.NewRequest("POST", "/test", bytes.NewBufferString("test body"))
 
 	// Initialise store and response state
-	requestStore := make(store.Store)
+	requestStore := store.NewRequestStore()
 	responseState := response.NewResponseState()
 	responseProc := response.NewProcessor(&config.ImposterConfig{}, tempDir)
 
 	// Handle request
-	handler.HandleRequest(req, &requestStore, responseState, responseProc)
+	handler.HandleRequest(req, requestStore, responseState, responseProc)
 
 	// Check response
 	if !responseState.Handled {
@@ -423,12 +423,12 @@ func TestHandler_HandleRequest_WithXMLNamespaces(t *testing.T) {
 	req.Header.Set("Content-Type", "application/xml")
 
 	// Initialise store and response state
-	requestStore := make(store.Store)
+	requestStore := store.NewRequestStore()
 	responseState := response.NewResponseState()
 	responseProc := response.NewProcessor(&config.ImposterConfig{}, tempDir)
 
 	// Handle request
-	handler.HandleRequest(req, &requestStore, responseState, responseProc)
+	handler.HandleRequest(req, requestStore, responseState, responseProc)
 
 	// Check response
 	if !responseState.Handled {

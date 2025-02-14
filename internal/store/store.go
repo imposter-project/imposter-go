@@ -3,17 +3,16 @@ package store
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/imposter-project/imposter-go/pkg/logger"
-	"github.com/imposter-project/imposter-go/pkg/utils"
 	"os"
 	"strings"
+
+	"github.com/imposter-project/imposter-go/pkg/logger"
+	"github.com/imposter-project/imposter-go/pkg/utils"
 
 	"github.com/imposter-project/imposter-go/internal/config"
 )
 
-// Store represents a key-value store with string keys and arbitrary values
-type Store map[string]interface{}
-
+// StoreProvider interface defines the contract for store implementations
 type StoreProvider interface {
 	InitStores()
 	GetValue(storeName, key string) (interface{}, bool)
@@ -23,7 +22,54 @@ type StoreProvider interface {
 	DeleteStore(storeName string)
 }
 
+// Store represents a handle to a specific named store
+type Store struct {
+	name     string
+	provider StoreProvider
+}
+
+// Open returns a handle to a specific store
+func Open(storeName string, requestStore *Store) *Store {
+	if storeName == "request" {
+		return requestStore
+	}
+	return &Store{
+		name:     storeName,
+		provider: storeProvider,
+	}
+}
+
+// GetValue retrieves a value from the store
+func (s *Store) GetValue(key string) (interface{}, bool) {
+	return s.provider.GetValue(s.name, key)
+}
+
+// StoreValue stores a value in the store
+func (s *Store) StoreValue(key string, value interface{}) {
+	s.provider.StoreValue(s.name, key, value)
+}
+
+// GetAllValues retrieves all values from the store with an optional prefix
+func (s *Store) GetAllValues(keyPrefix string) map[string]interface{} {
+	return s.provider.GetAllValues(s.name, keyPrefix)
+}
+
+// DeleteValue removes a value from the store
+func (s *Store) DeleteValue(key string) {
+	s.provider.DeleteValue(s.name, key)
+}
+
+// inMemoryStoreProvider is a shared in-memory store provider
+var inMemoryStoreProvider StoreProvider
+
+// storeProvider is the global store provider
 var storeProvider StoreProvider
+
+func init() {
+	// in-memory store provider is always required (for request store)
+	inMemoryStoreProvider = &InMemoryStoreProvider{}
+	inMemoryStoreProvider.InitStores()
+}
 
 func InitStoreProvider() {
 	driver := os.Getenv("IMPOSTER_STORE_DRIVER")
@@ -33,7 +79,7 @@ func InitStoreProvider() {
 	case "store-redis":
 		storeProvider = &RedisStoreProvider{}
 	default:
-		storeProvider = &InMemoryStoreProvider{}
+		storeProvider = inMemoryStoreProvider
 	}
 	storeProvider.InitStores()
 }
@@ -72,34 +118,21 @@ func preloadFromFile(storeName string, path string) {
 		return
 	}
 
+	store := Open(storeName, nil)
 	for k, v := range items {
-		storeProvider.StoreValue(storeName, k, v)
+		store.StoreValue(k, v)
 	}
 }
 
 func preloadFromInline(storeName string, data map[string]interface{}) {
 	logger.Infof("preloading store '%s' from inline data", storeName)
+	store := Open(storeName, nil)
 	for k, v := range data {
-		storeProvider.StoreValue(storeName, k, v)
+		store.StoreValue(k, v)
 	}
 }
 
-func GetValue(storeName, key string) (interface{}, bool) {
-	return storeProvider.GetValue(storeName, key)
-}
-
-func StoreValue(storeName, key string, value interface{}) {
-	storeProvider.StoreValue(storeName, key, value)
-}
-
-func GetAllValues(storeName, keyPrefix string) map[string]interface{} {
-	return storeProvider.GetAllValues(storeName, keyPrefix)
-}
-
-func DeleteValue(storeName, key string) {
-	storeProvider.DeleteValue(storeName, key)
-}
-
+// DeleteStore removes the entire store
 func DeleteStore(storeName string) {
 	storeProvider.DeleteStore(storeName)
 }

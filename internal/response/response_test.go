@@ -353,10 +353,10 @@ func TestProcessResponse(t *testing.T) {
 				reqPath = tt.requestPath
 			}
 			req := httptest.NewRequest(http.MethodGet, reqPath, nil)
-			requestStore := make(store.Store)
+			requestStore := store.NewRequestStore()
 			imposterConfig := &config.ImposterConfig{}
 
-			processResponse(tt.requestMatcher, rs, req, &tt.response, tmpDir, &requestStore, imposterConfig)
+			processResponse(tt.requestMatcher, rs, req, &tt.response, tmpDir, requestStore, imposterConfig)
 
 			assert.Equal(t, tt.expectedStatus, rs.StatusCode)
 			if tt.expectedBody != "" {

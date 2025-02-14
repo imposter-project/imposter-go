@@ -23,11 +23,8 @@ func CaptureRequestData(imposterConfig *config.ImposterConfig, captureMap map[st
 		value := getValueFromCaptureKey(capture.CaptureConfig, "", exch, imposterConfig)
 
 		if value != "" {
-			if capture.Store == "request" {
-				(*exch.RequestStore)[itemName] = value
-			} else {
-				store.StoreValue(capture.Store, itemName, value)
-			}
+			s := store.Open(capture.Store, exch.RequestStore)
+			s.StoreValue(itemName, value)
 		}
 	}
 }

@@ -14,7 +14,7 @@ func TestCalculateMatchScore_AllOfConditions(t *testing.T) {
 		name               string
 		allOf              []config.ExpressionMatchCondition
 		request            *http.Request
-		requestStore       store.Store
+		requestStore       func() *store.Store
 		imposterConfig     *config.ImposterConfig
 		expectedScore      int
 		expectedIsWildcard bool
@@ -40,7 +40,7 @@ func TestCalculateMatchScore_AllOfConditions(t *testing.T) {
 			request: createTestRequest("GET", "/test?region=EU", nil, map[string]string{
 				"X-User-Role": "admin",
 			}),
-			requestStore:       store.Store{},
+			requestStore:       func() *store.Store { return store.NewRequestStore() },
 			imposterConfig:     &config.ImposterConfig{},
 			expectedScore:      2,
 			expectedIsWildcard: false,
@@ -66,7 +66,7 @@ func TestCalculateMatchScore_AllOfConditions(t *testing.T) {
 			request: createTestRequest("GET", "/test?region=US", nil, map[string]string{
 				"X-User-Role": "admin",
 			}),
-			requestStore:       store.Store{},
+			requestStore:       func() *store.Store { return store.NewRequestStore() },
 			imposterConfig:     &config.ImposterConfig{},
 			expectedScore:      NegativeMatchScore,
 			expectedIsWildcard: false,
@@ -92,7 +92,7 @@ func TestCalculateMatchScore_AllOfConditions(t *testing.T) {
 			request: createTestRequest("GET", "/test?region=US", nil, map[string]string{
 				"X-User-Role": "user",
 			}),
-			requestStore:       store.Store{},
+			requestStore:       func() *store.Store { return store.NewRequestStore() },
 			imposterConfig:     &config.ImposterConfig{},
 			expectedScore:      NegativeMatchScore,
 			expectedIsWildcard: false,
@@ -101,7 +101,7 @@ func TestCalculateMatchScore_AllOfConditions(t *testing.T) {
 			name:               "empty conditions list",
 			allOf:              []config.ExpressionMatchCondition{},
 			request:            createTestRequest("GET", "/test", nil, nil),
-			requestStore:       store.Store{},
+			requestStore:       func() *store.Store { return store.NewRequestStore() },
 			imposterConfig:     &config.ImposterConfig{},
 			expectedScore:      0,
 			expectedIsWildcard: false,
@@ -124,8 +124,13 @@ func TestCalculateMatchScore_AllOfConditions(t *testing.T) {
 					},
 				},
 			},
-			request:            createTestRequest("GET", "/test", nil, nil),
-			requestStore:       store.Store{"user_role": "admin", "region": "EU"},
+			request: createTestRequest("GET", "/test", nil, nil),
+			requestStore: func() *store.Store {
+				s := store.NewRequestStore()
+				s.StoreValue("user_role", "admin")
+				s.StoreValue("region", "EU")
+				return s
+			},
 			imposterConfig:     &config.ImposterConfig{},
 			expectedScore:      2,
 			expectedIsWildcard: false,
@@ -138,7 +143,7 @@ func TestCalculateMatchScore_AllOfConditions(t *testing.T) {
 				AllOf: tt.allOf,
 			}
 
-			score, isWildcard := CalculateMatchScore(matcher, tt.request, nil, map[string]string{}, tt.imposterConfig, &tt.requestStore)
+			score, isWildcard := CalculateMatchScore(matcher, tt.request, nil, map[string]string{}, tt.imposterConfig, tt.requestStore())
 			require.Equal(t, tt.expectedScore, score)
 			require.Equal(t, tt.expectedIsWildcard, isWildcard)
 		})

@@ -46,22 +46,24 @@ func TestPreloadStores(t *testing.T) {
 	PreloadStores(tmpDir, configs)
 
 	t.Run("PreloadedFileStore", func(t *testing.T) {
-		val, found := GetValue("fileStore", "key1")
+		s := Open("fileStore", nil)
+		val, found := s.GetValue("key1")
 		if !found || val != "value1" {
 			t.Error("File preload failed")
 		}
-		val, found = GetValue("fileStore", "key2")
+		val, found = s.GetValue("key2")
 		if !found || val != "value2" {
 			t.Error("File preload failed")
 		}
 	})
 
 	t.Run("PreloadedInlineStore", func(t *testing.T) {
-		val, found := GetValue("inlineStore", "key3")
+		s := Open("inlineStore", nil)
+		val, found := s.GetValue("key3")
 		if !found || val != "value3" {
 			t.Error("Inline preload failed")
 		}
-		val, found = GetValue("inlineStore", "key4")
+		val, found = s.GetValue("key4")
 		if !found || val != "value4" {
 			t.Error("Inline preload failed")
 		}
@@ -75,8 +77,9 @@ func TestStoreKeyPrefix(t *testing.T) {
 
 	t.Run("WithoutPrefix", func(t *testing.T) {
 		os.Unsetenv("IMPOSTER_STORE_KEY_PREFIX")
-		StoreValue("test", "key1", "value1")
-		val, found := GetValue("test", "key1")
+		s := Open("test", nil)
+		s.StoreValue("key1", "value1")
+		val, found := s.GetValue("key1")
 		if !found || val != "value1" {
 			t.Error("Store without prefix failed")
 		}
@@ -86,14 +89,15 @@ func TestStoreKeyPrefix(t *testing.T) {
 		os.Setenv("IMPOSTER_STORE_KEY_PREFIX", "prefix")
 		defer os.Unsetenv("IMPOSTER_STORE_KEY_PREFIX")
 
-		StoreValue("test", "key1", "value1")
-		val, found := GetValue("test", "key1")
+		s := Open("test", nil)
+		s.StoreValue("key1", "value1")
+		val, found := s.GetValue("key1")
 		if !found || val != "value1" {
 			t.Error("Store with prefix failed")
 		}
 
 		// Test GetAllValues with prefix
-		values := GetAllValues("test", "key")
+		values := s.GetAllValues("key")
 		if len(values) != 1 {
 			t.Error("GetAllValues with prefix failed")
 		}
@@ -156,12 +160,13 @@ func TestStore_ThreadSafety(t *testing.T) {
 		done := make(chan bool)
 		for i := 0; i < 10; i++ {
 			go func(id int) {
+				s := Open("test", nil)
 				// Write
-				StoreValue("test", fmt.Sprintf("key%d", id), fmt.Sprintf("value%d", id))
+				s.StoreValue(fmt.Sprintf("key%d", id), fmt.Sprintf("value%d", id))
 				// Read
-				_, _ = GetValue("test", fmt.Sprintf("key%d", id))
+				_, _ = s.GetValue(fmt.Sprintf("key%d", id))
 				// Read all
-				_ = GetAllValues("test", "key")
+				_ = s.GetAllValues("key")
 				done <- true
 			}(i)
 		}

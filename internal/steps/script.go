@@ -61,15 +61,15 @@ func (rb *ResponseBuilder) and() goja.Value {
 // storeWrapper provides a JavaScript-friendly interface to a store
 type storeWrapper struct {
 	runtime *goja.Runtime
-	name    string
+	store   *store.Store
 }
 
 func (sw *storeWrapper) save(key string, value interface{}) {
-	store.StoreValue(sw.name, key, value)
+	sw.store.StoreValue(key, value)
 }
 
 func (sw *storeWrapper) load(key string) interface{} {
-	val, found := store.GetValue(sw.name, key)
+	val, found := sw.store.GetValue(key)
 	if !found {
 		return nil
 	}
@@ -77,7 +77,7 @@ func (sw *storeWrapper) load(key string) interface{} {
 }
 
 func (sw *storeWrapper) loadAsJson(key string) interface{} {
-	val, found := store.GetValue(sw.name, key)
+	val, found := sw.store.GetValue(key)
 	if !found {
 		return nil
 	}
@@ -104,15 +104,15 @@ func (sw *storeWrapper) loadAsJson(key string) interface{} {
 }
 
 func (sw *storeWrapper) delete(key string) {
-	store.DeleteValue(sw.name, key)
+	sw.store.DeleteValue(key)
 }
 
 func (sw *storeWrapper) loadAll() interface{} {
-	return store.GetAllValues(sw.name, "") // Empty string means no prefix filter
+	return sw.store.GetAllValues("") // Empty string means no prefix filter
 }
 
 func (sw *storeWrapper) hasItemWithKey(key string) bool {
-	_, found := store.GetValue(sw.name, key)
+	_, found := sw.store.GetValue(key)
 	return found
 }
 
@@ -197,7 +197,7 @@ func executeScriptStep(step *config.Step, exch *exchange.Exchange, responseState
 		storeName := call.Arguments[0].String()
 		wrapper := &storeWrapper{
 			runtime: vm,
-			name:    storeName,
+			store:   store.Open(storeName, exch.RequestStore),
 		}
 
 		obj := vm.NewObject()

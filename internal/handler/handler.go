@@ -14,7 +14,7 @@ import (
 // HandleRequest processes incoming HTTP requests and routes them to the appropriate handler
 func HandleRequest(imposterConfig *config.ImposterConfig, w http.ResponseWriter, req *http.Request, plugins []plugin.Plugin) {
 	// Initialise request-scoped store and response state
-	requestStore := make(store.Store)
+	requestStore := store.NewRequestStore()
 	responseState := response.NewResponseState()
 
 	// Handle system endpoints
@@ -28,7 +28,7 @@ func HandleRequest(imposterConfig *config.ImposterConfig, w http.ResponseWriter,
 		responseProc := response.NewProcessor(imposterConfig, plg.GetConfigDir())
 
 		// Process request with handler
-		plg.HandleRequest(req, &requestStore, responseState, responseProc)
+		plg.HandleRequest(req, requestStore, responseState, responseProc)
 
 		// If the response has been handled by the handler, break the loop
 		if responseState.Handled {

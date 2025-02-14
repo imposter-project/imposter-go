@@ -189,12 +189,12 @@ func TestSOAPHandler_HandleRequest(t *testing.T) {
 			req.Header.Set("SOAPAction", "getPetById")
 
 			// Initialise store and response state
-			requestStore := make(store.Store)
+			requestStore := store.NewRequestStore()
 			responseState := response.NewResponseState()
 			responseProc := response.NewProcessor(&config.ImposterConfig{}, tempDir)
 
 			// Handle request
-			handler.HandleRequest(req, &requestStore, responseState, responseProc)
+			handler.HandleRequest(req, requestStore, responseState, responseProc)
 
 			// Check response
 			if !responseState.Handled {
@@ -281,11 +281,11 @@ func TestSOAPHandler_HandleRequest_InvalidMethod(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/pets/", nil)
 
 			// Initialise store and response state
-			requestStore := make(store.Store)
+			requestStore := store.NewRequestStore()
 			responseState := response.NewResponseState()
 
 			// Handle request
-			handler.HandleRequest(req, &requestStore, responseState, nil)
+			handler.HandleRequest(req, requestStore, responseState, nil)
 
 			// Check response - should not be handled by SOAP handler
 			if responseState.Handled {
@@ -370,11 +370,11 @@ func TestSOAPHandler_HandleRequest_NoMatchingOperation(t *testing.T) {
 			req.Header.Set("SOAPAction", "unknownOperation")
 
 			// Initialise store and response state
-			requestStore := make(store.Store)
+			requestStore := store.NewRequestStore()
 			responseState := response.NewResponseState()
 
 			// Handle request
-			handler.HandleRequest(req, &requestStore, responseState, nil)
+			handler.HandleRequest(req, requestStore, responseState, nil)
 
 			// Check response
 			if responseState.Handled {
@@ -443,12 +443,12 @@ func TestSOAPHandler_HandleRequest_WithInterceptor(t *testing.T) {
 	req.Header.Set("X-Test-Header", "test-value")
 
 	// Initialise store and response state
-	requestStore := make(store.Store)
+	requestStore := store.NewRequestStore()
 	responseState := response.NewResponseState()
 	responseProc := response.NewProcessor(&config.ImposterConfig{}, configDir)
 
 	// Handle request
-	handler.HandleRequest(req, &requestStore, responseState, responseProc)
+	handler.HandleRequest(req, requestStore, responseState, responseProc)
 
 	// Check response
 	if !responseState.Handled {
@@ -545,12 +545,12 @@ func TestSOAPHandler_HandleRequest_WithPassthroughInterceptor(t *testing.T) {
 	req.Header.Set("X-Test-Header", "test-value")
 
 	// Initialise store and response state
-	requestStore := make(store.Store)
+	requestStore := store.NewRequestStore()
 	responseState := response.NewResponseState()
 	responseProc := response.NewProcessor(&config.ImposterConfig{}, configDir)
 
 	// Handle request
-	handler.HandleRequest(req, &requestStore, responseState, responseProc)
+	handler.HandleRequest(req, requestStore, responseState, responseProc)
 
 	// Check response
 	if !responseState.Handled {
@@ -621,11 +621,11 @@ func TestSOAPHandler_HandleRequest_InvalidXML(t *testing.T) {
 			req.Header.Set("Content-Type", "application/soap+xml")
 
 			// Initialise store and response state
-			requestStore := make(store.Store)
+			requestStore := store.NewRequestStore()
 			responseState := response.NewResponseState()
 
 			// Handle request
-			handler.HandleRequest(req, &requestStore, responseState, nil)
+			handler.HandleRequest(req, requestStore, responseState, nil)
 
 			// Check response
 			if !responseState.Handled {
@@ -691,11 +691,11 @@ func TestSOAPHandler_HandleRequest_MissingBody(t *testing.T) {
 			req.Header.Set("Content-Type", "application/soap+xml")
 
 			// Initialise store and response state
-			requestStore := make(store.Store)
+			requestStore := store.NewRequestStore()
 			responseState := response.NewResponseState()
 
 			// Handle request
-			handler.HandleRequest(req, &requestStore, responseState, nil)
+			handler.HandleRequest(req, requestStore, responseState, nil)
 
 			// Check response
 			if !responseState.Handled {
@@ -875,12 +875,12 @@ func TestSOAPHandler_SOAPFault(t *testing.T) {
 			req.Header.Set("SOAPAction", "getPetById")
 
 			// Initialise store and response state
-			requestStore := make(store.Store)
+			requestStore := store.NewRequestStore()
 			responseState := response.NewResponseState()
 			responseProc := response.NewProcessor(&config.ImposterConfig{}, configDir)
 
 			// Handle request
-			handler.HandleRequest(req, &requestStore, responseState, responseProc)
+			handler.HandleRequest(req, requestStore, responseState, responseProc)
 
 			// Check response
 			if !responseState.Handled {

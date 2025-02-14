@@ -374,9 +374,6 @@ func randomStringFromCharset(length int, charset string) string {
 
 // getStoreValue retrieves a value from a store, or from the request store if the store is "request".
 func getStoreValue(storeName, key string, requestStore *store.Store) (interface{}, bool) {
-	if storeName == "request" {
-		val, found := (*requestStore)[key]
-		return val, found
-	}
-	return store.GetValue(storeName, key)
+	s := store.Open(storeName, requestStore)
+	return s.GetValue(key)
 }

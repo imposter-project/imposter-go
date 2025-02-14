@@ -250,11 +250,11 @@ Content-Type: image/jpeg
 
 			// Create response recorder
 			responseState := response.NewResponseState()
-			requestStore := make(store.Store)
+			requestStore := store.NewRequestStore()
 			responseProc := response.NewProcessor(&config.ImposterConfig{}, tt.configDir)
 
 			// Handle request
-			handler.HandleRequest(tt.request, &requestStore, responseState, responseProc)
+			handler.HandleRequest(tt.request, requestStore, responseState, responseProc)
 
 			// Assert status code
 			assert.Equal(t, tt.wantStatus, responseState.StatusCode, "Unexpected status code")

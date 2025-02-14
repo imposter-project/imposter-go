@@ -18,7 +18,7 @@ func TestProcessTemplate(t *testing.T) {
 		template       string
 		setupRequest   func() *http.Request
 		imposterConfig *config.ImposterConfig
-		requestStore   store.Store
+		requestStore   *store.Store
 		want           string
 	}{
 		{
@@ -30,7 +30,7 @@ func TestProcessTemplate(t *testing.T) {
 				return req
 			},
 			imposterConfig: &config.ImposterConfig{ServerPort: "8080"},
-			requestStore:   store.Store{},
+			requestStore:   store.NewRequestStore(),
 			want:           "Method: POST",
 		},
 		{
@@ -42,7 +42,7 @@ func TestProcessTemplate(t *testing.T) {
 				return req
 			},
 			imposterConfig: &config.ImposterConfig{ServerPort: "8080"},
-			requestStore:   store.Store{},
+			requestStore:   store.NewRequestStore(),
 			want:           "Hello World!",
 		},
 		{
@@ -55,7 +55,7 @@ func TestProcessTemplate(t *testing.T) {
 				return req
 			},
 			imposterConfig: &config.ImposterConfig{ServerPort: "8080"},
-			requestStore:   store.Store{},
+			requestStore:   store.NewRequestStore(),
 			want:           "User-Agent: test-agent",
 		},
 		{
@@ -68,7 +68,7 @@ func TestProcessTemplate(t *testing.T) {
 				return req
 			},
 			imposterConfig: &config.ImposterConfig{ServerPort: "8080"},
-			requestStore:   store.Store{},
+			requestStore:   store.NewRequestStore(),
 			want:           "Form value: value",
 		},
 		{
@@ -80,7 +80,7 @@ func TestProcessTemplate(t *testing.T) {
 				return req
 			},
 			imposterConfig: &config.ImposterConfig{ServerPort: "8080"},
-			requestStore:   store.Store{},
+			requestStore:   store.NewRequestStore(),
 			want:           "Body: test body",
 		},
 		{
@@ -92,7 +92,7 @@ func TestProcessTemplate(t *testing.T) {
 				return req
 			},
 			imposterConfig: &config.ImposterConfig{ServerPort: "8080"},
-			requestStore:   store.Store{},
+			requestStore:   store.NewRequestStore(),
 			want:           "Path: /test, URI: /test?param=value",
 		},
 		{
@@ -105,14 +105,14 @@ func TestProcessTemplate(t *testing.T) {
 				return req
 			},
 			imposterConfig: &config.ImposterConfig{ServerPort: "8080"},
-			requestStore:   store.Store{},
+			requestStore:   store.NewRequestStore(),
 			want:           "Port: 8080",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := ProcessTemplate(tt.template, tt.setupRequest(), tt.imposterConfig, &tt.requestStore)
+			got := ProcessTemplate(tt.template, tt.setupRequest(), tt.imposterConfig, tt.requestStore)
 			assert.Equal(t, tt.want, got)
 		})
 	}
@@ -170,7 +170,7 @@ func TestRandomPlaceholders(t *testing.T) {
 			req, _ := http.NewRequest("GET", "/", nil)
 			req.Body = io.NopCloser(strings.NewReader(""))
 			imposterConfig := &config.ImposterConfig{ServerPort: "8080"}
-			result := ProcessTemplate(tt.template, req, imposterConfig, &store.Store{})
+			result := ProcessTemplate(tt.template, req, imposterConfig, store.NewRequestStore())
 			tt.validate(t, result)
 		})
 	}
@@ -180,20 +180,27 @@ func TestStoreValueReplacement(t *testing.T) {
 	tests := []struct {
 		name         string
 		template     string
-		requestStore store.Store
+		requestStore func() *store.Store
 		want         string
 	}{
 		{
-			name:         "request store value",
-			template:     "${stores.request.key}",
-			requestStore: store.Store{"key": "value"},
-			want:         "value",
+			name:     "request store value",
+			template: "${stores.request.key}",
+			requestStore: func() *store.Store {
+				s := store.NewRequestStore()
+				s.StoreValue("key", "value")
+				return s
+			},
+			want: "value",
 		},
 		{
-			name:         "missing store value",
-			template:     "${stores.request.missing}",
-			requestStore: store.Store{},
-			want:         "",
+			name:     "missing store value",
+			template: "${stores.request.missing}",
+			requestStore: func() *store.Store {
+				s := store.NewRequestStore()
+				return s
+			},
+			want: "",
 		},
 	}
 
@@ -202,7 +209,7 @@ func TestStoreValueReplacement(t *testing.T) {
 			req, _ := http.NewRequest("GET", "/", nil)
 			req.Body = io.NopCloser(strings.NewReader(""))
 			imposterConfig := &config.ImposterConfig{ServerPort: "8080"}
-			got := ProcessTemplate(tt.template, req, imposterConfig, &tt.requestStore)
+			got := ProcessTemplate(tt.template, req, imposterConfig, tt.requestStore())
 			assert.Equal(t, tt.want, got)
 		})
 	}

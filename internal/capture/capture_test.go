@@ -19,7 +19,7 @@ func TestCaptureRequestData(t *testing.T) {
 		resource       config.Resource
 		setupRequest   func() (*http.Request, []byte)
 		imposterConfig *config.ImposterConfig
-		validate       func(t *testing.T, requestStore store.Store)
+		validate       func(t *testing.T, requestStore *store.Store)
 	}{
 		{
 			name: "capture query parameter",
@@ -42,8 +42,9 @@ func TestCaptureRequestData(t *testing.T) {
 				return req, nil
 			},
 			imposterConfig: &config.ImposterConfig{},
-			validate: func(t *testing.T, requestStore store.Store) {
-				assert.Equal(t, "value", requestStore["myKey"])
+			validate: func(t *testing.T, requestStore *store.Store) {
+				val, _ := requestStore.GetValue("myKey")
+				assert.Equal(t, "value", val)
 			},
 		},
 		{
@@ -68,8 +69,9 @@ func TestCaptureRequestData(t *testing.T) {
 				return req, nil
 			},
 			imposterConfig: &config.ImposterConfig{},
-			validate: func(t *testing.T, requestStore store.Store) {
-				assert.Equal(t, "test-value", requestStore["headerValue"])
+			validate: func(t *testing.T, requestStore *store.Store) {
+				val, _ := requestStore.GetValue("headerValue")
+				assert.Equal(t, "test-value", val)
 			},
 		},
 		{
@@ -95,8 +97,9 @@ func TestCaptureRequestData(t *testing.T) {
 				return req, []byte("field=form-data")
 			},
 			imposterConfig: &config.ImposterConfig{},
-			validate: func(t *testing.T, requestStore store.Store) {
-				assert.Equal(t, "form-data", requestStore["formValue"])
+			validate: func(t *testing.T, requestStore *store.Store) {
+				val, _ := requestStore.GetValue("formValue")
+				assert.Equal(t, "form-data", val)
 			},
 		},
 		{
@@ -128,8 +131,9 @@ func TestCaptureRequestData(t *testing.T) {
 				return req, jsonBody
 			},
 			imposterConfig: &config.ImposterConfig{},
-			validate: func(t *testing.T, requestStore store.Store) {
-				assert.Equal(t, "test-name", requestStore["jsonValue"])
+			validate: func(t *testing.T, requestStore *store.Store) {
+				val, _ := requestStore.GetValue("jsonValue")
+				assert.Equal(t, "test-name", val)
 			},
 		},
 		{
@@ -161,8 +165,9 @@ func TestCaptureRequestData(t *testing.T) {
 				return req, xmlBody
 			},
 			imposterConfig: &config.ImposterConfig{},
-			validate: func(t *testing.T, requestStore store.Store) {
-				assert.Equal(t, "test-name", requestStore["xmlValue"])
+			validate: func(t *testing.T, requestStore *store.Store) {
+				val, _ := requestStore.GetValue("xmlValue")
+				assert.Equal(t, "test-name", val)
 			},
 		},
 		{
@@ -186,8 +191,8 @@ func TestCaptureRequestData(t *testing.T) {
 				return req, nil
 			},
 			imposterConfig: &config.ImposterConfig{},
-			validate: func(t *testing.T, requestStore store.Store) {
-				_, exists := requestStore["disabled"]
+			validate: func(t *testing.T, requestStore *store.Store) {
+				_, exists := requestStore.GetValue("disabled")
 				assert.False(t, exists)
 			},
 		},
@@ -211,17 +216,18 @@ func TestCaptureRequestData(t *testing.T) {
 				return req, nil
 			},
 			imposterConfig: &config.ImposterConfig{},
-			validate: func(t *testing.T, requestStore store.Store) {
-				assert.Equal(t, "value", requestStore["enabled_not_set"])
+			validate: func(t *testing.T, requestStore *store.Store) {
+				val, _ := requestStore.GetValue("enabled_not_set")
+				assert.Equal(t, "value", val)
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			requestStore := store.Store{}
+			requestStore := store.NewRequestStore()
 			req, body := tt.setupRequest()
-			exch := exchange.NewExchangeFromRequest(req, body, &requestStore)
+			exch := exchange.NewExchangeFromRequest(req, body, requestStore)
 			CaptureRequestData(tt.imposterConfig, tt.resource.Capture, exch)
 			tt.validate(t, requestStore)
 		})

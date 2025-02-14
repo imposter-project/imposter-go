@@ -38,14 +38,14 @@ func (h *PluginHandler) processResponse(
 
 // lookupSpecResponse gets the matched OpenAPI response for the request
 func (h *PluginHandler) lookupSpecResponse(r *http.Request, requestStore store.Store) *Response {
-	operationId := requestStore["_matched-openapi-operation"]
+	operationId, _ := requestStore.GetValue("_matched-openapi-operation")
 	if operationId == nil {
 		logger.Tracef("no OpenAPI operation matched for request %s %s", r.Method, r.URL.Path)
 		return nil
 	}
 	op := h.openApiParser.GetOperation(operationId.(string))
 
-	responseId := requestStore["_matched-openapi-response"]
+	responseId, _ := requestStore.GetValue("_matched-openapi-response")
 	if responseId == nil {
 		// if an operation is matched, a response should also be matched
 		logger.Errorf("no OpenAPI response matched for request %s %s", r.Method, r.URL.Path)

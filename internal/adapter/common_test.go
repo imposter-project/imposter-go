@@ -162,11 +162,12 @@ system:
 	stores := []string{"testStore"}
 	for _, storeName := range stores {
 		// Verify preloaded data
-		value, exists := store.GetValue(storeName, "key1")
+		s := store.Open(storeName, nil)
+		value, exists := s.GetValue("key1")
 		require.True(t, exists)
 		assert.Equal(t, "value1", value)
 
-		value, exists = store.GetValue(storeName, "key2")
+		value, exists = s.GetValue("key2")
 		require.True(t, exists)
 		assert.Equal(t, "value2", value)
 	}
