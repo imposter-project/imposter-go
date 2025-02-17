@@ -50,6 +50,7 @@ func executeRemoteStep(step *config.Step, exch *exchange.Exchange, imposterConfi
 	}
 
 	// Create response context
+	// TODO: create a new exchange instead of updating the existing one
 	exch.Response = &exchange.ResponseContext{
 		Response: resp,
 		Body:     respBody,

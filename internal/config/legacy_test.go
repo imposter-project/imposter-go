@@ -329,6 +329,138 @@ resources:
       Content-Type: application/json`,
 		},
 		{
+			name: "legacy config with fail and delay",
+			config: `
+plugin: rest
+response:
+  fail: connection-reset
+  delay:
+    exact: 1000
+    min: 500
+    max: 2000`,
+			expectedConfig: `
+plugin: rest
+resources:
+- response:
+    fail: connection-reset
+    delay:
+      exact: 1000
+      min: 500
+      max: 2000
+    headers: {}`,
+		},
+		{
+			name: "legacy config with dir and template",
+			config: `
+plugin: rest
+response:
+  dir: responses/dynamic
+  template: true`,
+			expectedConfig: `
+plugin: rest
+resources:
+- response:
+    dir: responses/dynamic
+    template: true
+    headers: {}`,
+		},
+		{
+			name: "legacy config with SOAP and OpenAPI fields",
+			config: `
+plugin: rest
+response:
+  soapFault: true
+  exampleName: error-response`,
+			expectedConfig: `
+plugin: rest
+resources:
+- response:
+    soapFault: true
+    exampleName: error-response
+    headers: {}`,
+		},
+		{
+			name: "legacy config with all response fields",
+			config: `
+plugin: rest
+response:
+  content: example response
+  statusCode: 500
+  dir: responses/errors
+  file: error.json
+  fail: connection-reset
+  delay:
+    exact: 1000
+    min: 500
+    max: 2000
+  headers:
+    Content-Type: application/json
+  template: true
+  soapFault: true
+  exampleName: error-example`,
+			expectedConfig: `
+plugin: rest
+resources:
+- response:
+    content: example response
+    statusCode: 500
+    dir: responses/errors
+    file: error.json
+    fail: connection-reset
+    delay:
+      exact: 1000
+      min: 500
+      max: 2000
+    headers:
+      Content-Type: application/json
+    template: true
+    soapFault: true
+    exampleName: error-example`,
+		},
+		{
+			name: "legacy config with resource level response fields",
+			config: `
+plugin: rest
+resources:
+  - path: /complex
+    method: POST
+    response:
+      content: example response
+      statusCode: 500
+      dir: responses/errors
+      file: error.json
+      fail: connection-reset
+      delay:
+        exact: 1000
+        min: 500
+        max: 2000
+      headers:
+        Content-Type: application/json
+      template: true
+      soapFault: true
+      exampleName: error-example`,
+			expectedConfig: `
+plugin: rest
+resources:
+- path: /complex
+  method: POST
+  response:
+    content: example response
+    statusCode: 500
+    dir: responses/errors
+    file: error.json
+    fail: connection-reset
+    delay:
+      exact: 1000
+      min: 500
+      max: 2000
+    headers:
+      Content-Type: application/json
+    template: true
+    soapFault: true
+    exampleName: error-example`,
+		},
+		{
 			name:        "invalid yaml",
 			config:      "invalid: [yaml",
 			expectError: true,
@@ -361,7 +493,13 @@ resources:
 				assert.Equal(t, expectedConfig.Resources[i].Response.StatusCode, actualConfig.Resources[i].Response.StatusCode)
 				assert.Equal(t, expectedConfig.Resources[i].Response.Content, actualConfig.Resources[i].Response.Content)
 				assert.Equal(t, expectedConfig.Resources[i].Response.File, actualConfig.Resources[i].Response.File)
+				assert.Equal(t, expectedConfig.Resources[i].Response.Dir, actualConfig.Resources[i].Response.Dir)
+				assert.Equal(t, expectedConfig.Resources[i].Response.Fail, actualConfig.Resources[i].Response.Fail)
+				assert.Equal(t, expectedConfig.Resources[i].Response.Delay, actualConfig.Resources[i].Response.Delay)
 				assert.Equal(t, expectedConfig.Resources[i].Response.Headers, actualConfig.Resources[i].Response.Headers)
+				assert.Equal(t, expectedConfig.Resources[i].Response.Template, actualConfig.Resources[i].Response.Template)
+				assert.Equal(t, expectedConfig.Resources[i].Response.SoapFault, actualConfig.Resources[i].Response.SoapFault)
+				assert.Equal(t, expectedConfig.Resources[i].Response.ExampleName, actualConfig.Resources[i].Response.ExampleName)
 				assert.Equal(t, len(expectedConfig.Resources[i].Steps), len(actualConfig.Resources[i].Steps))
 				if len(expectedConfig.Resources[i].Steps) > 0 {
 					for j := range expectedConfig.Resources[i].Steps {

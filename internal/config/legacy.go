@@ -124,6 +124,32 @@ func transformResponseConfig(response *Response, rawResponse map[string]interfac
 			}
 		}
 	}
+	if fail, ok := rawResponse["fail"].(string); ok {
+		response.Fail = fail
+	}
+	if delay, ok := rawResponse["delay"].(map[string]interface{}); ok {
+		if exact, ok := delay["exact"].(int); ok {
+			response.Delay.Exact = exact
+		}
+		if min, ok := delay["min"].(int); ok {
+			response.Delay.Min = min
+		}
+		if max, ok := delay["max"].(int); ok {
+			response.Delay.Max = max
+		}
+	}
+	if dir, ok := rawResponse["dir"].(string); ok {
+		response.Dir = dir
+	}
+	if template, ok := rawResponse["template"].(bool); ok {
+		response.Template = template
+	}
+	if soapFault, ok := rawResponse["soapFault"].(bool); ok {
+		response.SoapFault = soapFault
+	}
+	if exampleName, ok := rawResponse["exampleName"].(string); ok {
+		response.ExampleName = exampleName
+	}
 
 	return steps, nil
 }
