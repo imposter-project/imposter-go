@@ -7,9 +7,8 @@ import (
 	"net/http"
 	"strings"
 
-	"log"
-
 	"github.com/imposter-project/imposter-go/internal/store"
+	"github.com/imposter-project/imposter-go/pkg/logger"
 )
 
 // HandleStoreRequest handles requests to the /system/store API.
@@ -45,24 +44,24 @@ func handleGetStore(w http.ResponseWriter, r *http.Request, storeName, key strin
 	if key == "" {
 		query := r.URL.Query().Get("keyPrefix")
 		items := s.GetAllValues(query)
-		log.Printf("Listing all items in store: %s", storeName)
+		logger.Infof("Listing all items in store: %s", storeName)
 		if err := json.NewEncoder(w).Encode(items); err != nil {
-			log.Printf("Failed to encode items: %v", err)
+			logger.Errorf("Failed to encode items: %v", err)
 			http.Error(w, "Failed to encode items", http.StatusInternalServerError)
 		}
 	} else {
 		value, found := s.GetValue(key)
 		if !found {
-			log.Printf("Item not found: %s in store: %s", key, storeName)
+			logger.Infof("Item not found: %s in store: %s", key, storeName)
 			http.Error(w, "Not found", http.StatusNotFound)
 			return
 		}
-		log.Printf("Returning item: %s from store: %s", key, storeName)
+		logger.Infof("Returning item: %s from store: %s", key, storeName)
 		if strVal, ok := value.(string); ok {
 			fmt.Fprint(w, strVal)
 		} else {
 			if err := json.NewEncoder(w).Encode(value); err != nil {
-				log.Printf("Failed to encode value: %v", err)
+				logger.Errorf("Failed to encode value: %v", err)
 				http.Error(w, "Failed to encode value", http.StatusInternalServerError)
 			}
 		}
@@ -76,20 +75,20 @@ func handlePutStore(w http.ResponseWriter, r *http.Request, storeName, key strin
 	}
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		log.Printf("Failed to read request body: %v", err)
+		logger.Errorf("Failed to read request body: %v", err)
 		http.Error(w, "Failed to read request body", http.StatusInternalServerError)
 		return
 	}
 	s := store.Open(storeName, nil)
 	s.StoreValue(key, string(body))
-	log.Printf("Saved item: %s to store: %s", key, storeName)
+	logger.Infof("Saved item: %s to store: %s", key, storeName)
 	w.WriteHeader(http.StatusNoContent)
 }
 
 func handlePostStore(w http.ResponseWriter, r *http.Request, storeName string) {
 	var items map[string]interface{}
 	if err := json.NewDecoder(r.Body).Decode(&items); err != nil {
-		log.Printf("Invalid JSON: %v", err)
+		logger.Errorf("Invalid JSON: %v", err)
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
@@ -97,18 +96,18 @@ func handlePostStore(w http.ResponseWriter, r *http.Request, storeName string) {
 	for key, value := range items {
 		s.StoreValue(key, value)
 	}
-	log.Printf("Saved %d items to store: %s", len(items), storeName)
+	logger.Infof("Saved %d items to store: %s", len(items), storeName)
 	w.WriteHeader(http.StatusNoContent)
 }
 
 func handleDeleteStore(w http.ResponseWriter, storeName, key string) {
 	if key == "" {
 		store.DeleteStore(storeName)
-		log.Printf("Deleted store: %s", storeName)
+		logger.Infof("Deleted store: %s", storeName)
 	} else {
 		s := store.Open(storeName, nil)
 		s.DeleteValue(key)
-		log.Printf("Deleted item: %s from store: %s", key, storeName)
+		logger.Infof("Deleted item: %s from store: %s", key, storeName)
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
