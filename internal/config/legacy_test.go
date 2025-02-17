@@ -41,12 +41,12 @@ response:
 			envVar:   "true",
 		},
 		{
-			name: "legacy config with staticContent",
+			name: "legacy config with staticData",
 			config: `
 plugin: rest
 response:
   statusCode: 200
-  staticContent: example response`,
+  staticData: example response`,
 			expected: true,
 			envVar:   "true",
 		},
@@ -167,12 +167,12 @@ resources:
     headers: {}`,
 		},
 		{
-			name: "legacy config with staticContent",
+			name: "legacy config with staticData",
 			config: `
 plugin: rest
 response:
   statusCode: 200
-  staticContent: example response`,
+  staticData: example response`,
 			expectedConfig: `
 plugin: rest
 resources:
@@ -248,14 +248,14 @@ resources:
       Content-Type: text/html`,
 		},
 		{
-			name: "legacy config with resource level staticContent",
+			name: "legacy config with resource level staticData",
 			config: `
 plugin: rest
 resources:
   - path: /static-multi
     method: GET
     response:
-      staticContent: example response`,
+      staticData: example response`,
 			expectedConfig: `
 plugin: rest
 resources:

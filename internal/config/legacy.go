@@ -67,9 +67,9 @@ func hasLegacyResourceFields(config map[string]interface{}) bool {
 	// Check for legacy response fields
 	if response, ok := config["response"].(map[string]interface{}); ok {
 		_, hasStaticFile := response["staticFile"]
-		_, hasStaticContent := response["staticContent"]
+		_, hasStaticData := response["staticData"]
 		_, hasScriptFile := response["scriptFile"]
-		if hasStaticFile || hasStaticContent || hasScriptFile {
+		if hasStaticFile || hasStaticData || hasScriptFile {
 			return true
 		}
 	}
@@ -101,9 +101,8 @@ func transformResponseConfig(response *Response, rawResponse map[string]interfac
 	if content, ok := rawResponse["content"].(string); ok {
 		response.Content = content
 	}
-	// Handle legacy staticContent field
-	if staticContent, ok := rawResponse["staticContent"].(string); ok {
-		response.Content = staticContent
+	if staticData, ok := rawResponse["staticData"].(string); ok {
+		response.Content = staticData
 	}
 	if statusCode, ok := rawResponse["statusCode"].(int); ok {
 		response.StatusCode = statusCode
