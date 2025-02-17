@@ -33,7 +33,7 @@ resources:
 	require.NoError(t, err)
 
 	imposterConfig := config.LoadImposterConfig()
-	configs := config.LoadConfig(tempDir)
+	configs := config.LoadConfig(tempDir, imposterConfig)
 	plugins := plugin.LoadPlugins(configs, tempDir, imposterConfig)
 
 	// Start the server
@@ -74,7 +74,7 @@ resources:
 	require.NoError(t, err)
 
 	imposterConfig := config.LoadImposterConfig()
-	configs := config.LoadConfig(tempDir)
+	configs := config.LoadConfig(tempDir, imposterConfig)
 	plugins := plugin.LoadPlugins(configs, tempDir, imposterConfig)
 
 	// Start the server
@@ -145,7 +145,7 @@ func TestInterceptors_ShortCircuit(t *testing.T) {
 
 	rec := httptest.NewRecorder()
 
-	handler.HandleRequest(nil, rec, req, plugins)
+	handler.HandleRequest(imposterConfig, rec, req, plugins)
 
 	if status := rec.Code; status != http.StatusBadRequest {
 		t.Errorf("Expected status code %d, got %d", http.StatusBadRequest, status)
@@ -159,7 +159,7 @@ func TestInterceptors_ShortCircuit(t *testing.T) {
 	// Test with valid user agent
 	req.Header.Set("User-Agent", "Some-User-Agent")
 	rec = httptest.NewRecorder()
-	handler.HandleRequest(nil, rec, req, plugins)
+	handler.HandleRequest(imposterConfig, rec, req, plugins)
 
 	if status := rec.Code; status != http.StatusOK {
 		t.Errorf("Expected status code %d, got %d", http.StatusOK, status)

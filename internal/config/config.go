@@ -19,12 +19,13 @@ func LoadImposterConfig() *ImposterConfig {
 	}
 
 	return &ImposterConfig{
-		ServerPort: port,
+		LegacyConfigSupported: isLegacyConfigEnabled(),
+		ServerPort:            port,
 	}
 }
 
 // LoadConfig loads all config files in the specified directory
-func LoadConfig(configDir string) []Config {
+func LoadConfig(configDir string, imposterConfig *ImposterConfig) []Config {
 	logger.Debugf("loading config files from %s", configDir)
 	var configs []Config
 
@@ -53,7 +54,7 @@ func LoadConfig(configDir string) []Config {
 
 		if !info.IsDir() && (strings.HasSuffix(info.Name(), "-config.json") || strings.HasSuffix(info.Name(), "-config.yaml") || strings.HasSuffix(info.Name(), "-config.yml")) {
 			logger.Infof("loading config file: %s", path)
-			fileConfig, err := parseConfig(path)
+			fileConfig, err := parseConfig(path, imposterConfig)
 			if err != nil {
 				return err
 			}
@@ -178,7 +179,7 @@ func shouldIgnorePath(path string, ignorePaths []string) bool {
 }
 
 // parseConfig loads and parses a YAML configuration file
-func parseConfig(path string) (*Config, error) {
+func parseConfig(path string, imposterConfig *ImposterConfig) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file: %w", err)
@@ -188,7 +189,7 @@ func parseConfig(path string) (*Config, error) {
 	data = []byte(substituteEnvVars(string(data)))
 
 	// Check if it's a legacy config and transform if needed
-	if isLegacyConfig(data) {
+	if imposterConfig.LegacyConfigSupported && isLegacyConfig(data) {
 		logger.Infof("detected legacy config format in %s, transforming...", path)
 		data, err = transformLegacyConfig(data)
 		if err != nil {

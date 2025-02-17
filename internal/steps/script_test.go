@@ -264,7 +264,7 @@ func TestExecuteScriptStep(t *testing.T) {
 
 			exch := tt.setupExch()
 			responseState := response.NewResponseState()
-			err := executeScriptStep(&tt.step, exch, responseState, "", tt.reqMatcher)
+			err := executeScriptStep(&tt.step, exch, &config.ImposterConfig{}, responseState, "", tt.reqMatcher)
 
 			if tt.expectError {
 				assert.Error(t, err)

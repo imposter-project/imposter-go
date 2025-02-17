@@ -40,7 +40,7 @@ resources:
 	require.NoError(t, err)
 
 	// Load the config
-	configs := LoadConfig(tempDir)
+	configs := LoadConfig(tempDir, &ImposterConfig{})
 	require.Len(t, configs, 1)
 
 	cfg := configs[0]
@@ -65,6 +65,8 @@ resources:
 func TestLoadConfig_WithCapture(t *testing.T) {
 	// Create a temporary directory for test files
 	tempDir := t.TempDir()
+
+	imposterConfig := &ImposterConfig{}
 
 	// Create a test config file with capture configuration
 	configContent := `plugin: rest
@@ -110,7 +112,7 @@ resources:
 	require.NoError(t, err)
 
 	// Load the config
-	configs := LoadConfig(tempDir)
+	configs := LoadConfig(tempDir, imposterConfig)
 	require.Len(t, configs, 1)
 
 	cfg := configs[0]
@@ -186,6 +188,8 @@ func TestLoadConfig_WithEnvVars(t *testing.T) {
 	// Create a temporary directory for test files
 	tempDir := t.TempDir()
 
+	imposterConfig := &ImposterConfig{}
+
 	// Create a test config file with environment variables
 	configContent := `plugin: rest
 basePath: ${env.TEST_PATH}
@@ -202,7 +206,7 @@ resources:
 	require.NoError(t, err)
 
 	// Load the config
-	configs := LoadConfig(tempDir)
+	configs := LoadConfig(tempDir, imposterConfig)
 	require.Len(t, configs, 1)
 
 	cfg := configs[0]
@@ -229,6 +233,8 @@ func TestLoadConfig_WithAutoBasePath(t *testing.T) {
 	subDir := filepath.Join(tempDir, "api", "v1")
 	err := os.MkdirAll(subDir, 0755)
 	require.NoError(t, err)
+
+	imposterConfig := &ImposterConfig{}
 
 	// Create test config files in different directories
 	rootConfig := `plugin: rest
@@ -262,7 +268,7 @@ system:
 	require.NoError(t, err)
 
 	// Load the configs
-	configs := LoadConfig(tempDir)
+	configs := LoadConfig(tempDir, imposterConfig)
 	require.Len(t, configs, 2)
 
 	// Check root config
@@ -296,6 +302,8 @@ func TestLoadConfig_WithInterceptors(t *testing.T) {
 	// Create a temporary directory for test files
 	tempDir := t.TempDir()
 
+	imposterConfig := &ImposterConfig{}
+
 	// Create a test config file with interceptors
 	configContent := `plugin: rest
 interceptors:
@@ -327,7 +335,7 @@ resources:
 	require.NoError(t, err)
 
 	// Load the config
-	configs := LoadConfig(tempDir)
+	configs := LoadConfig(tempDir, imposterConfig)
 	require.Len(t, configs, 1)
 
 	cfg := configs[0]
@@ -362,6 +370,8 @@ func TestLoadConfig_WithSystem(t *testing.T) {
 	// Create a temporary directory for test files
 	tempDir := t.TempDir()
 
+	imposterConfig := &ImposterConfig{}
+
 	// Create a test data file
 	dataContent := `{
 		"key1": "value1",
@@ -393,7 +403,7 @@ resources:
 	require.NoError(t, err)
 
 	// Load the config
-	configs := LoadConfig(tempDir)
+	configs := LoadConfig(tempDir, imposterConfig)
 	require.Len(t, configs, 1)
 
 	cfg := configs[0]
@@ -428,8 +438,10 @@ func TestLoadImposterConfig(t *testing.T) {
 }
 
 func TestLoadConfig_WithRequestBody(t *testing.T) {
+	imposterConfig := &ImposterConfig{}
+
 	// Load the config from testdata
-	configs := LoadConfig("testdata")
+	configs := LoadConfig("testdata", imposterConfig)
 	require.Len(t, configs, 1)
 
 	cfg := configs[0]

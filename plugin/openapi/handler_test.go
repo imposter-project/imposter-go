@@ -240,18 +240,19 @@ Content-Type: image/jpeg
 			store.InitStoreProvider()
 
 			// Load config
-			configs := config.LoadConfig(tt.configDir)
+			imposterConfig := &config.ImposterConfig{}
+			configs := config.LoadConfig(tt.configDir, imposterConfig)
 			require.Len(t, configs, 1, "Expected one config")
 			cfg := &configs[0]
 
 			// Create handler
-			handler, err := NewPluginHandler(cfg, tt.configDir, &config.ImposterConfig{})
+			handler, err := NewPluginHandler(cfg, tt.configDir, imposterConfig)
 			require.NoError(t, err, "Failed to create handler")
 
 			// Create response recorder
 			responseState := response.NewResponseState()
 			requestStore := store.NewRequestStore()
-			responseProc := response.NewProcessor(&config.ImposterConfig{}, tt.configDir)
+			responseProc := response.NewProcessor(imposterConfig, tt.configDir)
 
 			// Handle request
 			handler.HandleRequest(tt.request, requestStore, responseState, responseProc)

@@ -26,7 +26,7 @@ func InitialiseImposter(configDirArg string) (*config.ImposterConfig, []plugin.P
 			panic("Specified path is not a valid directory")
 		}
 
-		cfgs := config.LoadConfig(configDir)
+		cfgs := config.LoadConfig(configDir, imposterConfig)
 		plgs := plugin.LoadPlugins(cfgs, configDir, imposterConfig)
 
 		store.PreloadStores(configDir, cfgs)

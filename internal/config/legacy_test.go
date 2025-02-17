@@ -1,7 +1,6 @@
 package config
 
 import (
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,15 +9,10 @@ import (
 )
 
 func TestIsLegacyConfig(t *testing.T) {
-	// Set up environment for testing
-	os.Setenv("IMPOSTER_SUPPORT_LEGACY_CONFIG", "true")
-	defer os.Unsetenv("IMPOSTER_SUPPORT_LEGACY_CONFIG")
-
 	tests := []struct {
 		name     string
 		config   string
 		expected bool
-		envVar   string
 	}{
 		{
 			name: "legacy config with file",
@@ -28,7 +22,6 @@ response:
   statusCode: 200
   file: example.json`,
 			expected: true,
-			envVar:   "true",
 		},
 		{
 			name: "legacy config with content",
@@ -38,7 +31,6 @@ response:
   statusCode: 200
   content: example response`,
 			expected: true,
-			envVar:   "true",
 		},
 		{
 			name: "legacy config with staticData",
@@ -48,7 +40,6 @@ response:
   statusCode: 200
   staticData: example response`,
 			expected: true,
-			envVar:   "true",
 		},
 		{
 			name: "legacy config with staticFile",
@@ -58,7 +49,6 @@ response:
   statusCode: 200
   staticFile: example.json`,
 			expected: true,
-			envVar:   "true",
 		},
 		{
 			name: "legacy config with scriptFile",
@@ -68,7 +58,6 @@ response:
   statusCode: 200
   scriptFile: example.js`,
 			expected: true,
-			envVar:   "true",
 		},
 		{
 			name: "legacy config with root level properties",
@@ -78,7 +67,6 @@ path: /static-multi
 contentType: text/html
 method: GET`,
 			expected: true,
-			envVar:   "true",
 		},
 		{
 			name: "legacy config with resource level contentType",
@@ -89,7 +77,6 @@ resources:
     contentType: text/html
     method: GET`,
 			expected: true,
-			envVar:   "true",
 		},
 		{
 			name: "current format config",
@@ -100,29 +87,16 @@ resources:
     statusCode: 200
     file: example.json`,
 			expected: false,
-			envVar:   "true",
-		},
-		{
-			name: "legacy support disabled",
-			config: `
-plugin: rest
-response:
-  statusCode: 200
-  file: example.json`,
-			expected: false,
-			envVar:   "false",
 		},
 		{
 			name:     "invalid yaml",
 			config:   "invalid: [yaml",
 			expected: false,
-			envVar:   "true",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			os.Setenv("IMPOSTER_SUPPORT_LEGACY_CONFIG", tt.envVar)
 			result := isLegacyConfig([]byte(tt.config))
 			assert.Equal(t, tt.expected, result)
 		})

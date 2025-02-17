@@ -193,6 +193,8 @@ func TestLoadConfig_WithSecurity(t *testing.T) {
 	// Create a temporary directory for test files
 	tempDir := t.TempDir()
 
+	imposterConfig := &ImposterConfig{}
+
 	// Create a test config file with security configuration
 	configContent := `plugin: rest
 security:
@@ -222,7 +224,7 @@ resources:
 	require.NoError(t, err)
 
 	// Load the config
-	configs := LoadConfig(tempDir)
+	configs := LoadConfig(tempDir, imposterConfig)
 	require.Len(t, configs, 1)
 
 	cfg := configs[0]

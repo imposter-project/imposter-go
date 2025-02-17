@@ -117,7 +117,7 @@ func (sw *storeWrapper) hasItemWithKey(key string) bool {
 }
 
 // executeScriptStep executes a script step
-func executeScriptStep(step *config.Step, exch *exchange.Exchange, responseState *response.ResponseState, configDir string, reqMatcher *config.RequestMatcher) error {
+func executeScriptStep(step *config.Step, exch *exchange.Exchange, imposterConfig *config.ImposterConfig, responseState *response.ResponseState, configDir string, reqMatcher *config.RequestMatcher) error {
 	// Validate step configuration
 	if step.Lang != "" && step.Lang != "js" && step.Lang != "javascript" {
 		return fmt.Errorf("unsupported script language: %s", step.Lang)
@@ -245,6 +245,12 @@ func executeScriptStep(step *config.Step, exch *exchange.Exchange, responseState
 		_ = obj.Set("usingDefaultBehaviour", rb.usingDefaultBehaviour)
 		_ = obj.Set("skipDefaultBehaviour", rb.skipDefaultBehaviour)
 		_ = obj.Set("and", rb.and)
+
+		// legacy functions
+		if imposterConfig.LegacyConfigSupported {
+			_ = obj.Set("withData", rb.withContent)
+		}
+
 		return obj
 	})
 

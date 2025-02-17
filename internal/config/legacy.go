@@ -10,15 +10,19 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// isLegacyConfigEnabled returns whether legacy config support is enabled
+func isLegacyConfigEnabled() bool {
+	legacySupport := strings.ToLower(os.Getenv("IMPOSTER_SUPPORT_LEGACY_CONFIG")) == "true"
+	if legacySupport {
+		logger.Debugln("legacy config support is enabled")
+	} else {
+		logger.Traceln("legacy config support is disabled")
+	}
+	return legacySupport
+}
+
 // isLegacyConfig checks if the YAML data represents a legacy config format
 func isLegacyConfig(data []byte) bool {
-	// Check if legacy config support is enabled
-	if strings.ToLower(os.Getenv("IMPOSTER_SUPPORT_LEGACY_CONFIG")) != "true" {
-		logger.Tracef("legacy config support is disabled")
-		return false
-	}
-	logger.Tracef("legacy config support is enabled")
-
 	var rawConfig map[string]interface{}
 	if err := yaml.Unmarshal(data, &rawConfig); err != nil {
 		return false

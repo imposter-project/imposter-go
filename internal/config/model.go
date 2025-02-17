@@ -261,7 +261,8 @@ type Config struct {
 
 // ImposterConfig holds application-wide configuration
 type ImposterConfig struct {
-	ServerPort string
+	LegacyConfigSupported bool
+	ServerPort            string
 }
 
 // MatcherUnmarshaler is a helper type for unmarshaling Matcher from YAML

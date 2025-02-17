@@ -15,7 +15,7 @@ func RunSteps(steps []config.Step, exch *exchange.Exchange, imposterConfig *conf
 		var err error
 		switch step.Type {
 		case config.ScriptStepType:
-			err = executeScriptStep(&step, exch, responseState, configDir, reqMatcher)
+			err = executeScriptStep(&step, exch, imposterConfig, responseState, configDir, reqMatcher)
 		case config.RemoteStepType:
 			err = executeRemoteStep(&step, exch, imposterConfig)
 		default:
