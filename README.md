@@ -123,6 +123,38 @@ The default log level is DEBUG. Available log levels:
 - WARN - Warning messages for potentially harmful situations
 - ERROR - Error messages for serious problems
 
+### Legacy Configuration Support
+
+Imposter Go supports legacy configuration formats, for backwards compatibility with older Imposter configurations.
+
+Enable support for legacy configuration format:
+```bash
+export IMPOSTER_SUPPORT_LEGACY_CONFIG=true
+```
+
+When legacy configuration support is enabled, older configuration formats are automatically transformed. For example:
+
+```yaml
+# Legacy format (root-level fields)
+plugin: rest
+path: /hello
+contentType: text/plain
+response:
+  staticData: Hello, World!
+```
+
+```yaml
+# Legacy format (deprecated names for resource-level fields)
+plugin: rest
+resources:
+  - path: /hello
+    contentType: application/json
+    response:
+      staticFile: response.json # Deprecated, use file instead
+      staticData: Hello, World! # Deprecated, use content instead
+      scriptFile: transform.js  # Deprecated, use a script step instead
+```
+
 ---
 
 ## Building from Source

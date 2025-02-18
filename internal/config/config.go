@@ -191,9 +191,9 @@ func parseConfig(path string, imposterConfig *ImposterConfig) (*Config, error) {
 
 	var cfg *Config
 
-	// Check if it's a legacy config and transform if needed
-	if imposterConfig.LegacyConfigSupported && isLegacyConfig(data) {
-		logger.Infof("detected legacy config format in %s, transforming...", path)
+	// Transform legacy config if legacy support is enabled
+	if imposterConfig.LegacyConfigSupported {
+		logger.Debugf("legacy config support enabled for %s, attempting transformation...", path)
 		cfg, err = transformLegacyConfig(data)
 		if err != nil {
 			return nil, fmt.Errorf("failed to transform legacy config: %w", err)

@@ -21,121 +21,6 @@ func isLegacyConfigEnabled() bool {
 	return legacySupport
 }
 
-// isLegacyConfig checks if the YAML data represents a legacy config format
-func isLegacyConfig(data []byte) bool {
-	var rawConfig map[string]interface{}
-	if err := yaml.Unmarshal(data, &rawConfig); err != nil {
-		return false
-	}
-
-	return hasLegacyFields(rawConfig)
-}
-
-// hasLegacyFields checks if a map contains any legacy configuration fields
-func hasLegacyFields(config map[string]interface{}) bool {
-	if hasLegacyRootFields(config) {
-		return true
-	}
-
-	if resources, ok := config["resources"].([]interface{}); ok {
-		for _, res := range resources {
-			if resourceMap, ok := res.(map[string]interface{}); ok {
-				if hasLegacyResourceFields(resourceMap) {
-					return true
-				}
-			}
-		}
-	}
-
-	return false
-}
-
-// hasLegacyRootFields checks if a map contains any legacy root level fields
-func hasLegacyRootFields(config map[string]interface{}) bool {
-	// Check for legacy root level fields
-	_, hasPath := config["path"]
-	_, hasMethod := config["method"]
-	_, hasContentType := config["contentType"]
-	_, hasResponse := config["response"]
-
-	return hasPath || hasMethod || hasContentType || hasResponse
-}
-
-// hasLegacyResourceFields checks if a map contains any legacy resource level fields
-func hasLegacyResourceFields(config map[string]interface{}) bool {
-	_, hasContentType := config["contentType"]
-	if hasContentType {
-		return true
-	}
-
-	// Check for legacy response fields
-	if response, ok := config["response"].(map[string]interface{}); ok {
-		_, hasStaticFile := response["staticFile"]
-		_, hasStaticData := response["staticData"]
-		_, hasScriptFile := response["scriptFile"]
-		if hasStaticFile || hasStaticData || hasScriptFile {
-			return true
-		}
-	}
-
-	return false
-}
-
-// mustMarshal marshals an interface to YAML bytes, panicking on error
-func mustMarshal(v interface{}) []byte {
-	data, err := yaml.Marshal(v)
-	if err != nil {
-		panic(err)
-	}
-	return data
-}
-
-// transformResponseConfig handles the transformation of response configuration
-func transformResponseConfig(response *Response, rawResponse map[string]interface{}) ([]Step, error) {
-	var steps []Step
-
-	// First unmarshal the raw response into the Response struct to preserve all current format fields
-	if err := yaml.Unmarshal(mustMarshal(rawResponse), response); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response config: %w", err)
-	}
-
-	// Then handle legacy-specific fields that need transformation
-	if scriptFile, ok := rawResponse["scriptFile"].(string); ok {
-		steps = []Step{
-			{
-				Type: "script",
-				Lang: "javascript",
-				File: scriptFile,
-			},
-		}
-	}
-
-	// Handle legacy staticFile field
-	if staticFile, ok := rawResponse["staticFile"].(string); ok {
-		response.File = staticFile
-	}
-
-	// Handle legacy staticData field
-	if staticData, ok := rawResponse["staticData"].(string); ok {
-		response.Content = staticData
-	}
-
-	// Ensure headers map exists
-	if response.Headers == nil {
-		response.Headers = make(map[string]string)
-	}
-
-	return steps, nil
-}
-
-// transformLegacyResponse is now just a wrapper around transformResponseConfig
-func transformLegacyResponse(resource *Resource, rawResponse map[string]interface{}) {
-	steps, _ := transformResponseConfig(&resource.Response, rawResponse)
-	if steps != nil {
-		resource.Steps = append(resource.Steps, steps...)
-	}
-}
-
 // transformLegacyConfig converts a legacy config format to the current format
 func transformLegacyConfig(data []byte) (*Config, error) {
 	logger.Tracef("transforming legacy config format")
@@ -153,7 +38,11 @@ func transformLegacyConfig(data []byte) (*Config, error) {
 	}
 
 	// Handle legacy root fields
-	if hasRootLegacyFields, resource := parseRootLegacyFields(rawConfig); hasRootLegacyFields {
+	hasRootLegacyFields, resource, err := parseRootLegacyFields(rawConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse root legacy fields: %w", err)
+	}
+	if hasRootLegacyFields {
 		// Add as first resource if we found legacy fields
 		if len(currentConfig.Resources) == 0 {
 			currentConfig.Resources = []Resource{resource}
@@ -166,10 +55,32 @@ func transformLegacyConfig(data []byte) (*Config, error) {
 	if resources, ok := rawConfig["resources"].([]interface{}); ok {
 		for i, res := range resources {
 			if resMap, ok := res.(map[string]interface{}); ok {
-				// Only transform if legacy fields are present
-				if hasLegacyResourceFields(resMap) {
+				// Check for legacy fields
+				if _, hasContentType := resMap["contentType"]; hasContentType {
 					if i < len(currentConfig.Resources) {
-						transformLegacyResource(&currentConfig.Resources[i], resMap)
+						if err := transformLegacyResource(&currentConfig.Resources[i], resMap); err != nil {
+							return nil, fmt.Errorf("failed to transform legacy resource %d: %w", i, err)
+						}
+					}
+				} else if response, ok := resMap["response"].(map[string]interface{}); ok {
+					if _, hasStaticFile := response["staticFile"]; hasStaticFile {
+						if i < len(currentConfig.Resources) {
+							if err := transformLegacyResource(&currentConfig.Resources[i], resMap); err != nil {
+								return nil, fmt.Errorf("failed to transform legacy resource %d: %w", i, err)
+							}
+						}
+					} else if _, hasStaticData := response["staticData"]; hasStaticData {
+						if i < len(currentConfig.Resources) {
+							if err := transformLegacyResource(&currentConfig.Resources[i], resMap); err != nil {
+								return nil, fmt.Errorf("failed to transform legacy resource %d: %w", i, err)
+							}
+						}
+					} else if _, hasScriptFile := response["scriptFile"]; hasScriptFile {
+						if i < len(currentConfig.Resources) {
+							if err := transformLegacyResource(&currentConfig.Resources[i], resMap); err != nil {
+								return nil, fmt.Errorf("failed to transform legacy resource %d: %w", i, err)
+							}
+						}
 					}
 				}
 			}
@@ -180,7 +91,7 @@ func transformLegacyConfig(data []byte) (*Config, error) {
 }
 
 // parseRootLegacyFields handles root-level legacy fields
-func parseRootLegacyFields(rawConfig map[string]interface{}) (bool, Resource) {
+func parseRootLegacyFields(rawConfig map[string]interface{}) (bool, Resource, error) {
 	var hasRootLegacyFields bool
 	resource := Resource{
 		RequestMatcher: RequestMatcher{},
@@ -205,13 +116,15 @@ func parseRootLegacyFields(rawConfig map[string]interface{}) (bool, Resource) {
 	}
 	if response, ok := rawConfig["response"].(map[string]interface{}); ok {
 		hasRootLegacyFields = true
-		transformLegacyResponse(&resource, response)
+		if err := transformResponseConfig(&resource, response); err != nil {
+			return false, Resource{}, fmt.Errorf("failed to transform root response: %w", err)
+		}
 	}
-	return hasRootLegacyFields, resource
+	return hasRootLegacyFields, resource, nil
 }
 
 // transformLegacyResource handles legacy resource fields
-func transformLegacyResource(resource *Resource, rawResource map[string]interface{}) {
+func transformLegacyResource(resource *Resource, rawResource map[string]interface{}) error {
 	// Handle legacy contentType
 	if contentType, ok := rawResource["contentType"].(string); ok {
 		if resource.Response.Headers == nil {
@@ -222,6 +135,52 @@ func transformLegacyResource(resource *Resource, rawResource map[string]interfac
 
 	// Handle legacy response
 	if response, ok := rawResource["response"].(map[string]interface{}); ok {
-		transformLegacyResponse(resource, response)
+		if err := transformResponseConfig(resource, response); err != nil {
+			return fmt.Errorf("failed to transform response: %w", err)
+		}
 	}
+	return nil
+}
+
+// transformResponseConfig handles the transformation of response configuration
+func transformResponseConfig(resource *Resource, rawResponse map[string]interface{}) error {
+	// First unmarshal the raw response into the Response struct to preserve all current format fields
+	if err := yaml.Unmarshal(mustMarshal(rawResponse), &resource.Response); err != nil {
+		return fmt.Errorf("failed to unmarshal response config: %w", err)
+	}
+
+	// Then handle legacy-specific fields that need transformation
+	if scriptFile, ok := rawResponse["scriptFile"].(string); ok {
+		resource.Steps = append(resource.Steps, Step{
+			Type: "script",
+			Lang: "javascript",
+			File: scriptFile,
+		})
+	}
+
+	// Handle legacy staticFile field
+	if staticFile, ok := rawResponse["staticFile"].(string); ok {
+		resource.Response.File = staticFile
+	}
+
+	// Handle legacy staticData field
+	if staticData, ok := rawResponse["staticData"].(string); ok {
+		resource.Response.Content = staticData
+	}
+
+	// Ensure headers map exists
+	if resource.Response.Headers == nil {
+		resource.Response.Headers = make(map[string]string)
+	}
+
+	return nil
+}
+
+// mustMarshal marshals an interface to YAML bytes, panicking on error
+func mustMarshal(v interface{}) []byte {
+	data, err := yaml.Marshal(v)
+	if err != nil {
+		panic(err)
+	}
+	return data
 }
