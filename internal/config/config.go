@@ -2,11 +2,12 @@ package config
 
 import (
 	"fmt"
-	"github.com/imposter-project/imposter-go/pkg/logger"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/imposter-project/imposter-go/pkg/logger"
 
 	"gopkg.in/yaml.v3"
 )
@@ -188,24 +189,27 @@ func parseConfig(path string, imposterConfig *ImposterConfig) (*Config, error) {
 	// Substitute environment variables
 	data = []byte(substituteEnvVars(string(data)))
 
+	var cfg *Config
+
 	// Check if it's a legacy config and transform if needed
 	if imposterConfig.LegacyConfigSupported && isLegacyConfig(data) {
 		logger.Infof("detected legacy config format in %s, transforming...", path)
-		data, err = transformLegacyConfig(data)
+		cfg, err = transformLegacyConfig(data)
 		if err != nil {
 			return nil, fmt.Errorf("failed to transform legacy config: %w", err)
 		}
-	}
-
-	var cfg Config
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal YAML: %w", err)
+	} else {
+		// Parse as current format
+		cfg = &Config{}
+		if err := yaml.Unmarshal(data, cfg); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal YAML: %w", err)
+		}
 	}
 
 	// Transform security config into interceptors if present
-	transformSecurityConfig(&cfg)
+	transformSecurityConfig(cfg)
 
-	return &cfg, nil
+	return cfg, nil
 }
 
 // substituteEnvVars replaces ${env.VAR} and ${env.VAR:-default} with environment variable values

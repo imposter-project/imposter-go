@@ -137,7 +137,7 @@ func transformLegacyResponse(resource *Resource, rawResponse map[string]interfac
 }
 
 // transformLegacyConfig converts a legacy config format to the current format
-func transformLegacyConfig(data []byte) ([]byte, error) {
+func transformLegacyConfig(data []byte) (*Config, error) {
 	logger.Tracef("transforming legacy config format")
 
 	// First unmarshal into the main Config struct to capture all current fields
@@ -176,13 +176,7 @@ func transformLegacyConfig(data []byte) ([]byte, error) {
 		}
 	}
 
-	// Marshal back to YAML
-	newData, err := yaml.Marshal(currentConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal transformed config: %w", err)
-	}
-
-	return newData, nil
+	return &currentConfig, nil
 }
 
 // parseRootLegacyFields handles root-level legacy fields

@@ -469,18 +469,16 @@ resources:
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := transformLegacyConfig([]byte(tt.config))
+			actualConfig, err := transformLegacyConfig([]byte(tt.config))
 			if tt.expectError {
 				require.Error(t, err)
 				return
 			}
 			require.NoError(t, err)
 
-			// Normalize expected and actual configs for comparison
-			var expectedConfig, actualConfig Config
+			// Normalize expected config for comparison
+			var expectedConfig Config
 			err = yaml.Unmarshal([]byte(tt.expectedConfig), &expectedConfig)
-			require.NoError(t, err)
-			err = yaml.Unmarshal(result, &actualConfig)
 			require.NoError(t, err)
 
 			assert.Equal(t, expectedConfig.Plugin, actualConfig.Plugin)
@@ -500,13 +498,36 @@ resources:
 				assert.Equal(t, expectedConfig.Resources[i].Response.Template, actualConfig.Resources[i].Response.Template)
 				assert.Equal(t, expectedConfig.Resources[i].Response.SoapFault, actualConfig.Resources[i].Response.SoapFault)
 				assert.Equal(t, expectedConfig.Resources[i].Response.ExampleName, actualConfig.Resources[i].Response.ExampleName)
+
+				// Compare steps
 				assert.Equal(t, len(expectedConfig.Resources[i].Steps), len(actualConfig.Resources[i].Steps))
 				if len(expectedConfig.Resources[i].Steps) > 0 {
 					for j := range expectedConfig.Resources[i].Steps {
-						assert.Equal(t, expectedConfig.Resources[i].Steps[j].Type, actualConfig.Resources[i].Steps[j].Type)
-						assert.Equal(t, expectedConfig.Resources[i].Steps[j].Lang, actualConfig.Resources[i].Steps[j].Lang)
-						assert.Equal(t, expectedConfig.Resources[i].Steps[j].File, actualConfig.Resources[i].Steps[j].File)
+						assert.Equal(t, expectedConfig.Resources[i].Steps[j], actualConfig.Resources[i].Steps[j])
 					}
+				}
+
+				// Compare security configuration
+				if expectedConfig.Resources[i].Security != nil {
+					if assert.NotNil(t, actualConfig.Resources[i].Security, "Security configuration should not be nil") {
+						assert.Equal(t, expectedConfig.Resources[i].Security.Default, actualConfig.Resources[i].Security.Default)
+						assert.Equal(t, len(expectedConfig.Resources[i].Security.Conditions), len(actualConfig.Resources[i].Security.Conditions))
+						if len(expectedConfig.Resources[i].Security.Conditions) > 0 {
+							for j := range expectedConfig.Resources[i].Security.Conditions {
+								assert.Equal(t, expectedConfig.Resources[i].Security.Conditions[j].Effect, actualConfig.Resources[i].Security.Conditions[j].Effect)
+								assert.Equal(t, expectedConfig.Resources[i].Security.Conditions[j].QueryParams, actualConfig.Resources[i].Security.Conditions[j].QueryParams)
+								assert.Equal(t, expectedConfig.Resources[i].Security.Conditions[j].FormParams, actualConfig.Resources[i].Security.Conditions[j].FormParams)
+								assert.Equal(t, expectedConfig.Resources[i].Security.Conditions[j].RequestHeaders, actualConfig.Resources[i].Security.Conditions[j].RequestHeaders)
+							}
+						}
+					}
+				} else {
+					assert.Nil(t, actualConfig.Resources[i].Security, "Security configuration should be nil")
+				}
+
+				// Compare capture configuration
+				if expectedConfig.Resources[i].Capture != nil {
+					assert.Equal(t, expectedConfig.Resources[i].Capture, actualConfig.Resources[i].Capture)
 				}
 			}
 		})
