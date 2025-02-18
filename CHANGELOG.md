@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.23.0] - 2025-02-18
+### Added
+- feat: support legacy withData script function.
+
+### Changed
+- refactor: use go style for store handler logging.
+- refactor: use logger package in store handler.
+- test: adds conformance script.
+
+### Fixed
+- fix: legacy config converter should preserve response properties.
+- fix: support legacy staticData response property.
+
 ## [0.22.1] - 2025-02-14
 ### Changed
 - refactor: removes unneeded creation of in-memory store provider.
