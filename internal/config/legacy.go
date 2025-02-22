@@ -38,17 +38,12 @@ func transformLegacyConfig(data []byte) (*Config, error) {
 	}
 
 	// Handle legacy root fields
-	hasRootLegacyFields, resource, err := parseRootLegacyFields(rawConfig)
+	legacyRootResource, err := parseRootLegacyFields(rawConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse root legacy fields: %w", err)
 	}
-	if hasRootLegacyFields {
-		// Add as first resource if we found legacy fields
-		if len(currentConfig.Resources) == 0 {
-			currentConfig.Resources = []Resource{resource}
-		} else {
-			currentConfig.Resources = append([]Resource{resource}, currentConfig.Resources...)
-		}
+	if legacyRootResource != nil {
+		currentConfig.Resources = append(currentConfig.Resources, *legacyRootResource)
 	}
 
 	// Handle legacy fields in resources
@@ -91,7 +86,7 @@ func transformLegacyConfig(data []byte) (*Config, error) {
 }
 
 // parseRootLegacyFields handles root-level legacy fields
-func parseRootLegacyFields(rawConfig map[string]interface{}) (bool, Resource, error) {
+func parseRootLegacyFields(rawConfig map[string]interface{}) (*Resource, error) {
 	var hasRootLegacyFields bool
 	resource := Resource{
 		RequestMatcher: RequestMatcher{},
@@ -117,10 +112,13 @@ func parseRootLegacyFields(rawConfig map[string]interface{}) (bool, Resource, er
 	if response, ok := rawConfig["response"].(map[string]interface{}); ok {
 		hasRootLegacyFields = true
 		if err := transformResponseConfig(&resource, response); err != nil {
-			return false, Resource{}, fmt.Errorf("failed to transform root response: %w", err)
+			return nil, fmt.Errorf("failed to transform root response: %w", err)
 		}
 	}
-	return hasRootLegacyFields, resource, nil
+	if hasRootLegacyFields {
+		return &resource, nil
+	}
+	return nil, nil
 }
 
 // transformLegacyResource handles legacy resource fields
