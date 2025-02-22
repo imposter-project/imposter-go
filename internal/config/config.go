@@ -72,7 +72,7 @@ func LoadConfig(configDir string, imposterConfig *ImposterConfig) []Config {
 				}
 			}
 
-			// Prefix 'File' properties if in a subdirectory
+			// Prefix referenced files with relative directory if in a subdirectory
 			baseDir := filepath.Dir(path)
 			relDir, err := filepath.Rel(configDir, baseDir)
 			if err != nil {
@@ -103,7 +103,12 @@ func LoadConfig(configDir string, imposterConfig *ImposterConfig) []Config {
 				}
 			}
 
-			if fileConfig.Plugin == "soap" {
+			if fileConfig.Plugin == "openapi" {
+				// Resolve OpenAPI spec path relative to config file
+				if fileConfig.SpecFile != "" && !filepath.IsAbs(fileConfig.SpecFile) {
+					fileConfig.SpecFile = filepath.Join(relDir, fileConfig.SpecFile)
+				}
+			} else if fileConfig.Plugin == "soap" {
 				// Resolve WSDL file path relative to config file
 				if fileConfig.WSDLFile != "" && !filepath.IsAbs(fileConfig.WSDLFile) {
 					fileConfig.WSDLFile = filepath.Join(relDir, fileConfig.WSDLFile)
