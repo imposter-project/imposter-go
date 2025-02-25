@@ -71,6 +71,34 @@ func TestExecuteScriptStep(t *testing.T) {
 			},
 		},
 		{
+			name: "response builder with file",
+			step: config.Step{
+				Type: config.ScriptStepType,
+				Lang: "javascript",
+				Code: `
+					respond()
+						.withStatusCode(200)
+						.withFile('response.json')
+				`,
+			},
+			setupExch: func() *exchange.Exchange {
+				req, _ := http.NewRequest("GET", "/test", nil)
+				return &exchange.Exchange{
+					Request: &exchange.RequestContext{
+						Request: req,
+						Body:    []byte{},
+					},
+				}
+			},
+			validate: func(t *testing.T, rs *response.ResponseState) {
+				assert.Equal(t, 200, rs.StatusCode)
+				assert.Equal(t, "response.json", rs.File)
+			},
+			reqMatcher: &config.RequestMatcher{
+				Path: "/test",
+			},
+		},
+		{
 			name: "store operations",
 			step: config.Step{
 				Type: config.ScriptStepType,
@@ -187,6 +215,165 @@ func TestExecuteScriptStep(t *testing.T) {
 				assert.Equal(t, `{"status":"created"}`, string(rs.Body))
 				assert.Equal(t, "test", rs.Headers["X-Custom"])
 				assert.False(t, rs.Handled, "response should not be marked as handled")
+			},
+			reqMatcher: &config.RequestMatcher{
+				Path: "/test",
+			},
+		},
+		{
+			name: "response builder with exact delay",
+			step: config.Step{
+				Type: config.ScriptStepType,
+				Lang: "javascript",
+				Code: `
+					respond()
+						.withStatusCode(200)
+						.withContent('{"status":"ok"}')
+						.withDelay(1000)
+				`,
+			},
+			setupExch: func() *exchange.Exchange {
+				req, _ := http.NewRequest("GET", "/test", nil)
+				return &exchange.Exchange{
+					Request: &exchange.RequestContext{
+						Request: req,
+						Body:    []byte{},
+					},
+				}
+			},
+			validate: func(t *testing.T, rs *response.ResponseState) {
+				assert.Equal(t, 200, rs.StatusCode)
+				assert.Equal(t, `{"status":"ok"}`, string(rs.Body))
+				assert.Equal(t, 1000, rs.Delay.Exact)
+				assert.Equal(t, 0, rs.Delay.Min)
+				assert.Equal(t, 0, rs.Delay.Max)
+			},
+			reqMatcher: &config.RequestMatcher{
+				Path: "/test",
+			},
+		},
+		{
+			name: "response builder with delay range",
+			step: config.Step{
+				Type: config.ScriptStepType,
+				Lang: "javascript",
+				Code: `
+					respond()
+						.withStatusCode(200)
+						.withContent('{"status":"ok"}')
+						.withDelayRange(500, 1500)
+				`,
+			},
+			setupExch: func() *exchange.Exchange {
+				req, _ := http.NewRequest("GET", "/test", nil)
+				return &exchange.Exchange{
+					Request: &exchange.RequestContext{
+						Request: req,
+						Body:    []byte{},
+					},
+				}
+			},
+			validate: func(t *testing.T, rs *response.ResponseState) {
+				assert.Equal(t, 200, rs.StatusCode)
+				assert.Equal(t, `{"status":"ok"}`, string(rs.Body))
+				assert.Equal(t, 0, rs.Delay.Exact)
+				assert.Equal(t, 500, rs.Delay.Min)
+				assert.Equal(t, 1500, rs.Delay.Max)
+			},
+			reqMatcher: &config.RequestMatcher{
+				Path: "/test",
+			},
+		},
+		{
+			name: "response builder with failure - EmptyResponse",
+			step: config.Step{
+				Type: config.ScriptStepType,
+				Lang: "javascript",
+				Code: `
+					respond()
+						.withStatusCode(200)
+						.withContent('{"status":"ok"}')
+						.withFailure('EmptyResponse')
+				`,
+			},
+			setupExch: func() *exchange.Exchange {
+				req, _ := http.NewRequest("GET", "/test", nil)
+				return &exchange.Exchange{
+					Request: &exchange.RequestContext{
+						Request: req,
+						Body:    []byte{},
+					},
+				}
+			},
+			validate: func(t *testing.T, rs *response.ResponseState) {
+				assert.Equal(t, 200, rs.StatusCode)
+				assert.Equal(t, `{"status":"ok"}`, string(rs.Body))
+				assert.Equal(t, "EmptyResponse", rs.Fail)
+			},
+			reqMatcher: &config.RequestMatcher{
+				Path: "/test",
+			},
+		},
+		{
+			name: "response builder with failure - CloseConnection",
+			step: config.Step{
+				Type: config.ScriptStepType,
+				Lang: "javascript",
+				Code: `
+					respond()
+						.withStatusCode(200)
+						.withContent('{"status":"ok"}')
+						.withFailure('CloseConnection')
+				`,
+			},
+			setupExch: func() *exchange.Exchange {
+				req, _ := http.NewRequest("GET", "/test", nil)
+				return &exchange.Exchange{
+					Request: &exchange.RequestContext{
+						Request: req,
+						Body:    []byte{},
+					},
+				}
+			},
+			validate: func(t *testing.T, rs *response.ResponseState) {
+				assert.Equal(t, 200, rs.StatusCode)
+				assert.Equal(t, `{"status":"ok"}`, string(rs.Body))
+				assert.Equal(t, "CloseConnection", rs.Fail)
+			},
+			reqMatcher: &config.RequestMatcher{
+				Path: "/test",
+			},
+		},
+		{
+			name: "response builder with combined features",
+			step: config.Step{
+				Type: config.ScriptStepType,
+				Lang: "javascript",
+				Code: `
+					respond()
+						.withStatusCode(200)
+						.withFile('response.json')
+						.withHeader("Content-Type", "application/json")
+						.withDelay(1000)
+						.and()
+						.skipDefaultBehaviour()
+				`,
+			},
+			setupExch: func() *exchange.Exchange {
+				req, _ := http.NewRequest("GET", "/test", nil)
+				return &exchange.Exchange{
+					Request: &exchange.RequestContext{
+						Request: req,
+						Body:    []byte{},
+					},
+				}
+			},
+			validate: func(t *testing.T, rs *response.ResponseState) {
+				assert.Equal(t, 200, rs.StatusCode)
+				assert.Equal(t, "response.json", rs.File)
+				assert.Equal(t, "application/json", rs.Headers["Content-Type"])
+				assert.Equal(t, 1000, rs.Delay.Exact)
+				assert.True(t, rs.Handled)
 			},
 			reqMatcher: &config.RequestMatcher{
 				Path: "/test",

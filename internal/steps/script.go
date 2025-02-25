@@ -31,6 +31,12 @@ func (rb *ResponseBuilder) withContent(content string) goja.Value {
 	return rb.obj
 }
 
+func (rb *ResponseBuilder) withFile(filePath string) goja.Value {
+	// Set the file path on the response state
+	rb.state.File = filePath
+	return rb.obj
+}
+
 func (rb *ResponseBuilder) withHeader(name, value string) goja.Value {
 	if rb.state.Headers == nil {
 		rb.state.Headers = make(map[string]string)
@@ -41,6 +47,25 @@ func (rb *ResponseBuilder) withHeader(name, value string) goja.Value {
 
 func (rb *ResponseBuilder) withEmpty() goja.Value {
 	rb.state.Body = []byte{}
+	return rb.obj
+}
+
+func (rb *ResponseBuilder) withDelay(exactDelay int) goja.Value {
+	rb.state.Delay.Exact = exactDelay
+	rb.state.Delay.Min = 0
+	rb.state.Delay.Max = 0
+	return rb.obj
+}
+
+func (rb *ResponseBuilder) withDelayRange(minDelay, maxDelay int) goja.Value {
+	rb.state.Delay.Exact = 0
+	rb.state.Delay.Min = minDelay
+	rb.state.Delay.Max = maxDelay
+	return rb.obj
+}
+
+func (rb *ResponseBuilder) withFailure(failureType string) goja.Value {
+	rb.state.Fail = failureType
 	return rb.obj
 }
 
@@ -240,8 +265,12 @@ func executeScriptStep(step *config.Step, exch *exchange.Exchange, imposterConfi
 		}
 		_ = obj.Set("withStatusCode", rb.withStatusCode)
 		_ = obj.Set("withContent", rb.withContent)
+		_ = obj.Set("withFile", rb.withFile)
 		_ = obj.Set("withHeader", rb.withHeader)
 		_ = obj.Set("withEmpty", rb.withEmpty)
+		_ = obj.Set("withDelay", rb.withDelay)
+		_ = obj.Set("withDelayRange", rb.withDelayRange)
+		_ = obj.Set("withFailure", rb.withFailure)
 		_ = obj.Set("usingDefaultBehaviour", rb.usingDefaultBehaviour)
 		_ = obj.Set("skipDefaultBehaviour", rb.skipDefaultBehaviour)
 		_ = obj.Set("and", rb.and)

@@ -1,8 +1,6 @@
 package response
 
 import (
-	"github.com/imposter-project/imposter-go/pkg/logger"
-	"github.com/imposter-project/imposter-go/pkg/utils"
 	"math/rand"
 	"mime"
 	"net/http"
@@ -10,6 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/imposter-project/imposter-go/pkg/logger"
+	"github.com/imposter-project/imposter-go/pkg/utils"
 
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/store"
@@ -21,8 +22,11 @@ type ResponseState struct {
 	StatusCode int
 	Headers    map[string]string
 	Body       []byte
-	Stopped    bool // indicates if the response has been stopped (e.g., connection closed)
-	Handled    bool // indicates if a handler has handled the request
+	Stopped    bool         // indicates if the response has been stopped (e.g., connection closed)
+	Handled    bool         // indicates if a handler has handled the request
+	Delay      config.Delay // delay configuration for the response
+	Fail       string       // failure type for the response
+	File       string       // path to the response file
 }
 
 const defaultIndexFile = "index.html"
@@ -100,8 +104,12 @@ func processResponse(
 	requestStore *store.Store,
 	imposterConfig *config.ImposterConfig,
 ) {
-	// Handle delay if specified
-	SimulateDelay(resp.Delay, req)
+	// Handle delay if specified in ResponseState or Response config
+	if rs.Delay.Exact > 0 || (rs.Delay.Min > 0 && rs.Delay.Max > 0) {
+		SimulateDelay(rs.Delay, req)
+	} else if resp.Delay.Exact > 0 || (resp.Delay.Min > 0 && resp.Delay.Max > 0) {
+		SimulateDelay(resp.Delay, req)
+	}
 
 	// Set status code
 	if resp.StatusCode > 0 {
@@ -113,8 +121,12 @@ func processResponse(
 		rs.Headers[key] = value
 	}
 
-	// Handle failure simulation
-	if resp.Fail != "" {
+	// Handle failure simulation from ResponseState or Response config
+	if rs.Fail != "" {
+		if SimulateFailure(rs, rs.Fail, req) {
+			return
+		}
+	} else if resp.Fail != "" {
 		if SimulateFailure(rs, resp.Fail, req) {
 			return
 		}
@@ -123,6 +135,11 @@ func processResponse(
 	// Handle response file or content
 	respFile := resp.File
 	respContent := resp.Content
+
+	// Use file from ResponseState if set
+	if rs.File != "" {
+		respFile = rs.File
+	}
 
 	// Handle directory-based responses with wildcards
 	if resp.Dir != "" {
