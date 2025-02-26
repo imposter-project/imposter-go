@@ -54,8 +54,8 @@ func TestInMemoryStoreProvider(t *testing.T) {
 
 		// Check each value individually
 		expectedValues := map[string]string{
-			"key1": "value1",
-			"key2": "value2",
+			"prefix.key1": "value1",
+			"prefix.key2": "value2",
 		}
 
 		for key, expectedValue := range expectedValues {

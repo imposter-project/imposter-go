@@ -46,20 +46,19 @@ func (p *InMemoryStoreProvider) GetAllValues(storeName, keyPrefix string) map[st
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 
+	result := make(map[string]interface{})
+
 	store, ok := p.stores[storeName]
 	if !ok {
-		return nil
+		return result
 	}
 
-	result := make(map[string]interface{})
 	prefixToMatch := applyKeyPrefix(keyPrefix)
 
 	for k, v := range store.data {
 		if strings.HasPrefix(k, prefixToMatch) {
-			// Remove the prefix we're searching for from the key
-			key := strings.TrimPrefix(k, prefixToMatch)
 			// If there's a dot at the start (from the prefix), remove it
-			key = strings.TrimPrefix(key, ".")
+			key := strings.TrimPrefix(k, ".")
 			result[key] = v
 		}
 	}

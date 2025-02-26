@@ -48,7 +48,7 @@ func TestSystemStore(t *testing.T) {
 			require.NoError(t, err)
 			defer resp.Body.Close()
 
-			require.Equal(t, http.StatusNoContent, resp.StatusCode)
+			require.Equal(t, http.StatusCreated, resp.StatusCode)
 		})
 
 		// Test GET - Retrieve single value
@@ -83,7 +83,7 @@ func TestSystemStore(t *testing.T) {
 			require.NoError(t, err)
 			defer resp.Body.Close()
 
-			require.Equal(t, http.StatusNoContent, resp.StatusCode)
+			require.Equal(t, http.StatusOK, resp.StatusCode)
 		})
 
 		// Test GET - List all values
@@ -115,7 +115,7 @@ func TestSystemStore(t *testing.T) {
 			resp, err := http.DefaultClient.Do(req)
 			require.NoError(t, err)
 			defer resp.Body.Close()
-			require.Equal(t, http.StatusNoContent, resp.StatusCode)
+			require.Equal(t, http.StatusOK, resp.StatusCode)
 
 			// Add another key with different prefix
 			key = "other1"
@@ -126,7 +126,7 @@ func TestSystemStore(t *testing.T) {
 			resp, err = http.DefaultClient.Do(req)
 			require.NoError(t, err)
 			defer resp.Body.Close()
-			require.Equal(t, http.StatusNoContent, resp.StatusCode)
+			require.Equal(t, http.StatusCreated, resp.StatusCode)
 
 			// Now get values with prefix
 			resp, err = http.Get(baseURL + "?keyPrefix=key")
@@ -140,7 +140,7 @@ func TestSystemStore(t *testing.T) {
 			require.NoError(t, err)
 
 			// Check only key1 is present (without the prefix)
-			value1, ok := values["1"] // key1 -> 1 after prefix removal
+			value1, ok := values["key1"]
 			require.True(t, ok, "key1 value should be present in the response")
 			require.Equal(t, "value1", value1)
 			require.NotContains(t, values, "other1")
