@@ -1,10 +1,42 @@
 package query
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+func TestIsUnknownKeyError(t *testing.T) {
+	tests := []struct {
+		name     string
+		err      error
+		expected bool
+	}{
+		{
+			name:     "nil error",
+			err:      nil,
+			expected: false,
+		},
+		{
+			name:     "unknown key error",
+			err:      errors.New("unknown key foo"),
+			expected: true,
+		},
+		{
+			name:     "other error",
+			err:      errors.New("some other error"),
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isUnknownKeyError(tt.err)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
 
 func TestJsonPathQuery(t *testing.T) {
 	tests := []struct {
@@ -54,7 +86,7 @@ func TestJsonPathQuery(t *testing.T) {
 			json:          []byte(`{"name": "test"}`),
 			jsonPathExpr:  "$.age",
 			expectedValue: nil,
-			expectSuccess: false,
+			expectSuccess: true,
 		},
 		{
 			name:          "complex nested array",
