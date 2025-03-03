@@ -438,3 +438,123 @@ resources:
 		})
 	}
 }
+
+func TestConvertColonPathToOpenAPI(t *testing.T) {
+	tests := []struct {
+		name     string
+		path     string
+		expected string
+	}{
+		{
+			name:     "simple path with no parameters",
+			path:     "/api/test",
+			expected: "/api/test",
+		},
+		{
+			name:     "path with one parameter",
+			path:     "/api/:id",
+			expected: "/api/{id}",
+		},
+		{
+			name:     "path with multiple parameters",
+			path:     "/:version/api/:resource/:id",
+			expected: "/{version}/api/{resource}/{id}",
+		},
+		{
+			name:     "path with mixed static and parameter segments",
+			path:     "/api/v1/:resource/items/:id/details",
+			expected: "/api/v1/{resource}/items/{id}/details",
+		},
+		{
+			name:     "empty path",
+			path:     "",
+			expected: "",
+		},
+		{
+			name:     "root path",
+			path:     "/",
+			expected: "/",
+		},
+		{
+			name:     "path with trailing slash",
+			path:     "/api/:resource/",
+			expected: "/api/{resource}/",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := convertColonPathToOpenAPI(tt.path)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestTransformLegacyConfigPathConversion(t *testing.T) {
+	tests := []struct {
+		name          string
+		legacyConfig  string
+		expectedPaths []string
+		expectError   bool
+	}{
+		{
+			name: "single resource with colon path",
+			legacyConfig: `
+plugin: rest
+resources:
+  - path: /api/:version/users/:id
+    method: GET
+    response:
+      staticData: "test"`,
+			expectedPaths: []string{"/api/{version}/users/{id}"},
+			expectError:   false,
+		},
+		{
+			name: "multiple resources with colon paths",
+			legacyConfig: `
+plugin: rest
+resources:
+  - path: /api/:version/users
+    method: GET
+  - path: /api/:version/users/:id
+    method: GET
+  - path: /static/path
+    method: GET`,
+			expectedPaths: []string{
+				"/api/{version}/users",
+				"/api/{version}/users/{id}",
+				"/static/path",
+			},
+			expectError: false,
+		},
+		{
+			name: "root level path with colon",
+			legacyConfig: `
+plugin: rest
+path: /api/:version/test
+method: GET
+response:
+  staticData: "test"`,
+			expectedPaths: []string{"/api/{version}/test"},
+			expectError:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config, err := transformLegacyConfig([]byte(tt.legacyConfig))
+			if tt.expectError {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
+			assert.NotNil(t, config)
+
+			var paths []string
+			for _, resource := range config.Resources {
+				paths = append(paths, resource.Path)
+			}
+			assert.Equal(t, tt.expectedPaths, paths)
+		})
+	}
+}

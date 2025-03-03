@@ -21,6 +21,18 @@ func isLegacyConfigEnabled() bool {
 	return legacySupport
 }
 
+// convertColonPathToOpenAPI converts a path with colon-prefixed parameters to OpenAPI bracketed format
+// For example: "/:param/test/:id" becomes "/{param}/test/{id}"
+func convertColonPathToOpenAPI(path string) string {
+	segments := strings.Split(path, "/")
+	for i, segment := range segments {
+		if strings.HasPrefix(segment, ":") {
+			segments[i] = "{" + segment[1:] + "}"
+		}
+	}
+	return strings.Join(segments, "/")
+}
+
 // transformLegacyConfig converts a legacy config format to the current format
 func transformLegacyConfig(data []byte) (*Config, error) {
 	logger.Tracef("transforming legacy config format")
@@ -79,6 +91,13 @@ func transformLegacyConfig(data []byte) (*Config, error) {
 					}
 				}
 			}
+		}
+	}
+
+	// Convert all paths from colon format to OpenAPI format after other transformations
+	for i := range currentConfig.Resources {
+		if currentConfig.Resources[i].Path != "" {
+			currentConfig.Resources[i].Path = convertColonPathToOpenAPI(currentConfig.Resources[i].Path)
 		}
 	}
 
