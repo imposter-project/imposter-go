@@ -103,12 +103,17 @@ A subset of the Imposter [environment variables](https://docs.imposter.sh/enviro
 
 Set the `IMPOSTER_PORT` environment variable to change the default port:
 ```bash
-export IMPOSTER_PORT=9090
+export IMPOSTER_PORT=9090  # Default: 8080
 ```
 
 Enable recursive directory scanning for configuration files:
 ```bash
-export IMPOSTER_CONFIG_SCAN_RECURSIVE=true
+export IMPOSTER_CONFIG_SCAN_RECURSIVE=true  # Default: false
+```
+
+Set the `IMPOSTER_SERVER_URL` environment variable to override the URL reported by the server:
+```bash
+export IMPOSTER_SERVER_URL=http://example.com  # Default: http://localhost:8080
 ```
 
 Set the `IMPOSTER_LOG_LEVEL` environment variable to control logging verbosity:

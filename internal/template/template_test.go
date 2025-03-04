@@ -108,17 +108,28 @@ func TestProcessTemplate(t *testing.T) {
 			want:           "Path: /test, URI: /test?param=value",
 		},
 		{
-			name:     "system server placeholders",
+			name:     "system server port placeholder",
 			template: "Port: ${system.server.port}",
 			setupRequest: func() (*http.Request, *config.RequestMatcher) {
 				req, _ := http.NewRequest("GET", "/", nil)
-				req.Host = "localhost:8080"
 				req.Body = io.NopCloser(strings.NewReader(""))
 				return req, &config.RequestMatcher{}
 			},
 			imposterConfig: &config.ImposterConfig{ServerPort: "8080"},
 			requestStore:   store.NewRequestStore(),
 			want:           "Port: 8080",
+		},
+		{
+			name:     "system server url placeholder",
+			template: "Server URL: ${system.server.url}",
+			setupRequest: func() (*http.Request, *config.RequestMatcher) {
+				req, _ := http.NewRequest("GET", "/", nil)
+				req.Body = io.NopCloser(strings.NewReader(""))
+				return req, &config.RequestMatcher{}
+			},
+			imposterConfig: &config.ImposterConfig{ServerUrl: "http://localhost:8080"},
+			requestStore:   store.NewRequestStore(),
+			want:           "Server URL: http://localhost:8080",
 		},
 	}
 

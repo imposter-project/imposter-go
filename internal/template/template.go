@@ -273,7 +273,7 @@ func handleSystemReplacement(subcategory, field string, exch *exchange.Exchange,
 	case "port":
 		return imposterConfig.ServerPort
 	case "url":
-		return fmt.Sprintf("http://%s%s", exch.Request.Request.Host, exch.Request.Request.URL.Path)
+		return imposterConfig.ServerUrl
 	default:
 		return ""
 	}

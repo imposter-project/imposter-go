@@ -19,9 +19,19 @@ func LoadImposterConfig() *ImposterConfig {
 		port = "8080" // Default port
 	}
 
+	serverUrl := os.Getenv("IMPOSTER_SERVER_URL")
+	if serverUrl == "" {
+		var hostSuffix string
+		if port != "80" {
+			hostSuffix = fmt.Sprintf(":%s", port)
+		}
+		serverUrl = fmt.Sprintf("http://localhost%s", hostSuffix)
+	}
+
 	return &ImposterConfig{
 		LegacyConfigSupported: isLegacyConfigEnabled(),
 		ServerPort:            port,
+		ServerUrl:             serverUrl,
 	}
 }
 

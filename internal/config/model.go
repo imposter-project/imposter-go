@@ -298,6 +298,7 @@ type Config struct {
 type ImposterConfig struct {
 	LegacyConfigSupported bool
 	ServerPort            string
+	ServerUrl             string
 }
 
 // MatcherUnmarshaler is a helper type for unmarshaling Matcher from YAML
