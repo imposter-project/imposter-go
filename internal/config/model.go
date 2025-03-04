@@ -242,14 +242,49 @@ type StoreDefinition struct {
 	PreloadData map[string]interface{} `yaml:"preloadData,omitempty"`
 }
 
-// Config represents the configuration for a mock service
+// CorsConfig represents CORS configuration for the mock server
+type CorsConfig struct {
+	// AllowOrigins can be a string ("all", "*") or a list of origins
+	AllowOrigins interface{} `yaml:"allowOrigins,omitempty"`
+	// AllowHeaders is a list of allowed headers
+	AllowHeaders []string `yaml:"allowHeaders,omitempty"`
+	// AllowMethods is a list of allowed HTTP methods
+	AllowMethods []string `yaml:"allowMethods,omitempty"`
+	// MaxAge is the number of seconds to cache preflight responses
+	MaxAge int `yaml:"maxAge,omitempty"`
+	// AllowCredentials indicates whether the request can include user credentials
+	AllowCredentials bool `yaml:"allowCredentials,omitempty"`
+}
+
+// GetAllowedOrigins returns the allowed origins as a slice of strings
+func (c *CorsConfig) GetAllowedOrigins() []string {
+	switch v := c.AllowOrigins.(type) {
+	case string:
+		return []string{v}
+	case []string:
+		return v
+	case []interface{}:
+		origins := make([]string, len(v))
+		for i, origin := range v {
+			if str, ok := origin.(string); ok {
+				origins[i] = str
+			}
+		}
+		return origins
+	default:
+		return nil
+	}
+}
+
+// Config represents the configuration for an Imposter mock server
 type Config struct {
 	Plugin       string          `yaml:"plugin"`
-	BasePath     string          `yaml:"basePath"`
-	Resources    []Resource      `yaml:"resources"`
+	BasePath     string          `yaml:"basePath,omitempty"`
+	Resources    []Resource      `yaml:"resources,omitempty"`
 	Interceptors []Interceptor   `yaml:"interceptors"`
-	System       *System         `yaml:"system"`
+	System       *System         `yaml:"system,omitempty"`
 	Security     *SecurityConfig `yaml:"security"`
+	Cors         *CorsConfig     `yaml:"cors,omitempty"`
 
 	// SOAP-specific fields
 	WSDLFile string `yaml:"wsdlFile,omitempty"`
