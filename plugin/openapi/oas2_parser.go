@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/imposter-project/imposter-go/pkg/logger"
 	"github.com/pb33f/libopenapi"
+	validator "github.com/pb33f/libopenapi-validator"
 	v2 "github.com/pb33f/libopenapi/datamodel/high/v2"
 	uuid "github.com/satori/go.uuid"
 	"net/http"
@@ -12,11 +13,12 @@ import (
 )
 
 type openAPI2Parser struct {
+	openAPIParser
 	operations []Operation
 }
 
 // newOpenAPI2Parser creates a new OpenAPIParser for OpenAPI 2 documents
-func newOpenAPI2Parser(document libopenapi.Document, opts parserOptions) (*openAPI2Parser, error) {
+func newOpenAPI2Parser(document libopenapi.Document, validator *validator.Validator, opts parserOptions) (*openAPI2Parser, error) {
 	logger.Debugf("creating OpenAPI 2 parser")
 	v2Model, errors := document.BuildV2Model()
 
@@ -28,7 +30,11 @@ func newOpenAPI2Parser(document libopenapi.Document, opts parserOptions) (*openA
 		return nil, fmt.Errorf("cannot create v2 model from document: %d errors reported: %v", len(errors), errorMessages)
 	}
 
-	parser := &openAPI2Parser{}
+	parser := &openAPI2Parser{
+		openAPIParser: openAPIParser{
+			validator: validator,
+		},
+	}
 	if err := parser.parseOperations(v2Model, opts); err != nil {
 		return nil, fmt.Errorf("cannot parse operations: %e", err)
 	}

@@ -47,7 +47,7 @@ func TestNewOpenAPIParser(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			specFile := filepath.Join(workingDir, tt.specFile)
 			opts := parserOptions{}
-			parser, err := newOpenAPIParser(specFile, opts)
+			parser, err := newOpenAPIParser(specFile, false, opts)
 
 			if tt.wantErrSubstr != "" {
 				assert.Error(t, err)

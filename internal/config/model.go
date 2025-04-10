@@ -276,6 +276,12 @@ func (c *CorsConfig) GetAllowedOrigins() []string {
 	}
 }
 
+// ValidationConfig represents the validation settings for requests and responses
+type ValidationConfig struct {
+	Request  bool `yaml:"request"`
+	Response bool `yaml:"response"`
+}
+
 // Config represents the configuration for an Imposter mock server
 type Config struct {
 	Plugin       string          `yaml:"plugin"`
@@ -290,8 +296,9 @@ type Config struct {
 	WSDLFile string `yaml:"wsdlFile,omitempty"`
 
 	// OpenAPI-specific fields
-	SpecFile        string `yaml:"specFile,omitempty"`
-	StripServerPath bool   `yaml:"stripServerPath,omitempty"`
+	SpecFile        string            `yaml:"specFile,omitempty"`
+	StripServerPath bool              `yaml:"stripServerPath,omitempty"`
+	Validation      *ValidationConfig `yaml:"validation,omitempty"`
 }
 
 // ImposterConfig holds application-wide configuration

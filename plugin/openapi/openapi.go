@@ -3,9 +3,13 @@ package openapi
 import (
 	"fmt"
 	"github.com/imposter-project/imposter-go/internal/config"
+	"github.com/imposter-project/imposter-go/internal/response"
 	"github.com/imposter-project/imposter-go/pkg/logger"
 	"github.com/pb33f/libopenapi"
+	validator "github.com/pb33f/libopenapi-validator"
+	"github.com/pb33f/libopenapi-validator/errors"
 	"github.com/pb33f/libopenapi/datamodel/high/base"
+	"net/http"
 	"os"
 	"sort"
 	"strings"
@@ -49,6 +53,8 @@ type OpenAPIParser interface {
 	GetVersion() OpenAPIVersion
 	GetOperations() []Operation
 	GetOperation(opName string) *Operation
+	ValidateRequest(req *http.Request) (bool, []*errors.ValidationError)
+	ValidateResponse(rs *response.ResponseState) (bool, []*errors.ValidationError)
 }
 
 // GetResponse returns a response by its unique ID
@@ -65,7 +71,7 @@ func (o Operation) GetResponse(responseId string) *Response {
 	return openApiResp
 }
 
-func newOpenAPIParser(specFile string, opts parserOptions) (OpenAPIParser, error) {
+func newOpenAPIParser(specFile string, validate bool, opts parserOptions) (OpenAPIParser, error) {
 	logger.Tracef("loading OpenAPI spec %s", specFile)
 
 	spec, _ := os.ReadFile(specFile)
@@ -74,11 +80,24 @@ func newOpenAPIParser(specFile string, opts parserOptions) (OpenAPIParser, error
 		return nil, fmt.Errorf("cannot create new document: %e", err)
 	}
 
+	var oasValidator *validator.Validator
+	if validate {
+		highLevelValidator, validatorErrs := validator.NewValidator(document)
+		if validatorErrs != nil {
+			var errorMessages string
+			for i := range validatorErrs {
+				errorMessages += fmt.Sprintf("error: %e\n", validatorErrs[i])
+			}
+			return nil, fmt.Errorf("cannot create validator: %d errors reported: %v", len(validatorErrs), errorMessages)
+		}
+		oasValidator = &highLevelValidator
+	}
+
 	if strings.HasPrefix(document.GetSpecInfo().Version, "3") {
-		return newOpenAPI3Parser(document, opts)
+		return newOpenAPI3Parser(document, oasValidator, opts)
 	} else {
 		logger.Tracef("assuming document version is Swagger/OpenAPI 2")
-		return newOpenAPI2Parser(document, opts)
+		return newOpenAPI2Parser(document, oasValidator, opts)
 	}
 }
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/imposter-project/imposter-go/pkg/logger"
 	"github.com/pb33f/libopenapi"
+	validator "github.com/pb33f/libopenapi-validator"
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 	uuid "github.com/satori/go.uuid"
 	"net/http"
@@ -13,12 +14,13 @@ import (
 )
 
 type openAPI3Parser struct {
+	openAPIParser
 	version    OpenAPIVersion
 	operations []Operation
 }
 
 // newOpenAPI3Parser creates a new OpenAPIParser for OpenAPI 3 documents
-func newOpenAPI3Parser(document libopenapi.Document, opts parserOptions) (*openAPI3Parser, error) {
+func newOpenAPI3Parser(document libopenapi.Document, validator *validator.Validator, opts parserOptions) (*openAPI3Parser, error) {
 	logger.Debugf("creating OpenAPI 3 parser")
 	v3Model, errors := document.BuildV3Model()
 
@@ -37,6 +39,9 @@ func newOpenAPI3Parser(document libopenapi.Document, opts parserOptions) (*openA
 		version = OpenAPI30
 	}
 	parser := &openAPI3Parser{
+		openAPIParser: openAPIParser{
+			validator: validator,
+		},
 		version: version,
 	}
 	if err := parser.parseOperations(v3Model, opts); err != nil {

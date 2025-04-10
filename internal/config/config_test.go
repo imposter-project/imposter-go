@@ -502,3 +502,38 @@ func findResourceByPath(resources []Resource, path string) *Resource {
 	}
 	return nil
 }
+
+func TestLoadConfig_WithValidation(t *testing.T) {
+	// Create a temporary directory for test files
+	tempDir := t.TempDir()
+
+	imposterConfig := &ImposterConfig{}
+
+	// Create a test config file with validation configuration
+	configContent := `plugin: openapi
+specFile: petstore.yaml
+validation:
+  request: true
+  response: false
+resources:
+  - path: /test
+    response:
+      content: test response
+      statusCode: 200`
+
+	err := os.WriteFile(filepath.Join(tempDir, "test-config.yaml"), []byte(configContent), 0644)
+	require.NoError(t, err)
+
+	// Load the config
+	configs := LoadConfig(tempDir, imposterConfig)
+	require.Len(t, configs, 1)
+
+	cfg := configs[0]
+	require.Equal(t, "openapi", cfg.Plugin)
+	require.Equal(t, "petstore.yaml", cfg.SpecFile)
+
+	// Check validation configuration
+	require.NotNil(t, cfg.Validation)
+	require.True(t, cfg.Validation.Request)
+	require.False(t, cfg.Validation.Response)
+}
