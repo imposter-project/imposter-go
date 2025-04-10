@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.26.0] - 2025-04-10
+### Added
+- feat: allows validation failure behaviour to be configured.
+- feat: support request validation for OpenAPI specs.
+
+### Changed
+- docs: adds validation example project.
+
 ## [0.25.2] - 2025-04-09
 ### Changed
 - build(deps): bump golang.org/x/net from 0.33.0 to 0.36.0 (#14)
