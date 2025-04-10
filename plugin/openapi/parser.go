@@ -16,14 +16,14 @@ type openAPIParser struct {
 // ValidateRequest validates an HTTP request against the OpenAPI specification
 func (p *openAPIParser) ValidateRequest(req *http.Request) (bool, []*errors.ValidationError) {
 	if p.validator == nil {
-		logger.Debugf("No validator available for request validation")
+		logger.Debugf("no validator available for request validation")
 		return true, nil
 	}
 
 	valid, validationErrors := (*p.validator).ValidateHttpRequest(req)
 	if !valid {
 		for _, err := range validationErrors {
-			logger.Warnf("Request validation error: %s", err.Message)
+			logger.Warnf("request validation error: %s", err.Message)
 		}
 	}
 
@@ -33,6 +33,6 @@ func (p *openAPIParser) ValidateRequest(req *http.Request) (bool, []*errors.Vali
 // ValidateResponse is a placeholder for response validation against the OpenAPI specification
 // Currently not fully implemented
 func (p *openAPIParser) ValidateResponse(rs *response.ResponseState) (bool, []*errors.ValidationError) {
-	logger.Debugf("Response validation not supported")
+	logger.Debugf("response validation not supported")
 	return true, nil
 }

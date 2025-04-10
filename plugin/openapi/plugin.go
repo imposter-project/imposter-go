@@ -28,7 +28,7 @@ func NewPluginHandler(cfg *config.Config, configDir string, imposterConfig *conf
 	opts := parserOptions{
 		stripServerPath: cfg.StripServerPath,
 	}
-	validate := cfg.Validation != nil && (cfg.Validation.Request || cfg.Validation.Response)
+	validate := cfg.Validation != nil && (cfg.Validation.IsRequestValidationEnabled() || cfg.Validation.IsResponseValidationEnabled())
 	parser, err := newOpenAPIParser(specFile, validate, opts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse OpenAPI: %w", err)

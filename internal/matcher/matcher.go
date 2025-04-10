@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/imposter-project/imposter-go/internal/query"
+	"github.com/imposter-project/imposter-go/pkg/logger"
 	"io"
 	"net/http"
 	"strings"
@@ -172,7 +173,7 @@ func CalculateMatchScore(matcher *config.RequestMatcher, r *http.Request, body [
 		score++
 	}
 
-	// Return the score and wildcard status for path-based matches
+	logger.Tracef("request %s %s base match score %d for matcher %v", r.Method, r.URL.Path, score, matcher)
 	return score, isWildcard
 }
 

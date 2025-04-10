@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/dlclark/regexp2"
@@ -276,10 +277,104 @@ func (c *CorsConfig) GetAllowedOrigins() []string {
 	}
 }
 
+// ValidationBehaviour defines the behaviour when validation issues occur
+type ValidationBehaviour string
+
+const (
+	// ValidationBehaviourFail causes requests to fail when validation issues occur
+	ValidationBehaviourFail ValidationBehaviour = "fail"
+	// ValidationBehaviourLog logs validation issues but allows requests to proceed
+	ValidationBehaviourLog ValidationBehaviour = "log"
+	// ValidationBehaviourIgnore ignores validation issues
+	ValidationBehaviourIgnore ValidationBehaviour = "ignore"
+)
+
 // ValidationConfig represents the validation settings for requests and responses
 type ValidationConfig struct {
-	Request  bool `yaml:"request"`
-	Response bool `yaml:"response"`
+	Request  interface{} `yaml:"request"`
+	Response interface{} `yaml:"response"`
+}
+
+// GetRequestBehaviour returns the behaviour for request validation
+func (c *ValidationConfig) GetRequestBehaviour() ValidationBehaviour {
+	if c == nil {
+		return getDefaultValidationBehaviour()
+	}
+
+	switch v := c.Request.(type) {
+	case string:
+		switch v {
+		case "fail", "true":
+			return ValidationBehaviourFail
+		case "log":
+			return ValidationBehaviourLog
+		case "ignore", "false":
+			return ValidationBehaviourIgnore
+		default:
+			return getDefaultValidationBehaviour()
+		}
+	case bool:
+		if v {
+			return ValidationBehaviourFail
+		}
+		return ValidationBehaviourIgnore
+	default:
+		return getDefaultValidationBehaviour()
+	}
+}
+
+// GetResponseBehaviour returns the behaviour for response validation
+func (c *ValidationConfig) GetResponseBehaviour() ValidationBehaviour {
+	if c == nil {
+		return getDefaultValidationBehaviour()
+	}
+
+	switch v := c.Response.(type) {
+	case string:
+		switch v {
+		case "fail", "true":
+			return ValidationBehaviourFail
+		case "log":
+			return ValidationBehaviourLog
+		case "ignore", "false":
+			return ValidationBehaviourIgnore
+		default:
+			return getDefaultValidationBehaviour()
+		}
+	case bool:
+		if v {
+			return ValidationBehaviourFail
+		}
+		return ValidationBehaviourIgnore
+	default:
+		return getDefaultValidationBehaviour()
+	}
+}
+
+// IsRequestValidationEnabled returns true if request validation is enabled
+func (c *ValidationConfig) IsRequestValidationEnabled() bool {
+	behaviour := c.GetRequestBehaviour()
+	return behaviour == ValidationBehaviourFail || behaviour == ValidationBehaviourLog
+}
+
+// IsResponseValidationEnabled returns true if response validation is enabled
+func (c *ValidationConfig) IsResponseValidationEnabled() bool {
+	behaviour := c.GetResponseBehaviour()
+	return behaviour == ValidationBehaviourFail || behaviour == ValidationBehaviourLog
+}
+
+// getDefaultValidationBehaviour returns the default validation behaviour
+// from the IMPOSTER_OPENAPI_VALIDATION_DEFAULT_BEHAVIOUR environment variable
+func getDefaultValidationBehaviour() ValidationBehaviour {
+	behaviour := os.Getenv("IMPOSTER_OPENAPI_VALIDATION_DEFAULT_BEHAVIOUR")
+	switch behaviour {
+	case "fail", "true":
+		return ValidationBehaviourFail
+	case "log":
+		return ValidationBehaviourLog
+	default:
+		return ValidationBehaviourIgnore
+	}
 }
 
 // Config represents the configuration for an Imposter mock server

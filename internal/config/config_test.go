@@ -534,6 +534,89 @@ resources:
 
 	// Check validation configuration
 	require.NotNil(t, cfg.Validation)
-	require.True(t, cfg.Validation.Request)
-	require.False(t, cfg.Validation.Response)
+	require.Equal(t, true, cfg.Validation.Request)
+	require.Equal(t, false, cfg.Validation.Response)
+	require.Equal(t, ValidationBehaviourFail, cfg.Validation.GetRequestBehaviour())
+	require.Equal(t, ValidationBehaviourIgnore, cfg.Validation.GetResponseBehaviour())
+}
+
+func TestValidationBehaviour(t *testing.T) {
+	tests := []struct {
+		name           string
+		configContent  string
+		expectRequest  ValidationBehaviour
+		expectResponse ValidationBehaviour
+	}{
+		{
+			name: "String behaviours",
+			configContent: `plugin: openapi
+validation:
+  request: fail
+  response: log`,
+			expectRequest:  ValidationBehaviourFail,
+			expectResponse: ValidationBehaviourLog,
+		},
+		{
+			name: "Boolean behaviours",
+			configContent: `plugin: openapi
+validation:
+  request: true
+  response: false`,
+			expectRequest:  ValidationBehaviourFail,
+			expectResponse: ValidationBehaviourIgnore,
+		},
+		{
+			name: "Mixed behaviours",
+			configContent: `plugin: openapi
+validation:
+  request: log
+  response: true`,
+			expectRequest:  ValidationBehaviourLog,
+			expectResponse: ValidationBehaviourFail,
+		},
+		{
+			name: "Ignore behaviour",
+			configContent: `plugin: openapi
+validation:
+  request: ignore
+  response: ignore`,
+			expectRequest:  ValidationBehaviourIgnore,
+			expectResponse: ValidationBehaviourIgnore,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create a temporary directory for test files
+			tempDir := t.TempDir()
+			imposterConfig := &ImposterConfig{}
+
+			err := os.WriteFile(filepath.Join(tempDir, "test-config.yaml"), []byte(tt.configContent), 0644)
+			require.NoError(t, err)
+
+			// Load the config
+			configs := LoadConfig(tempDir, imposterConfig)
+			require.Len(t, configs, 1)
+
+			cfg := configs[0]
+
+			// Check validation behaviours
+			require.NotNil(t, cfg.Validation)
+			require.Equal(t, tt.expectRequest, cfg.Validation.GetRequestBehaviour())
+			require.Equal(t, tt.expectResponse, cfg.Validation.GetResponseBehaviour())
+
+			// Check if validation is enabled
+			if tt.expectRequest == ValidationBehaviourIgnore {
+				require.False(t, cfg.Validation.IsRequestValidationEnabled())
+			} else {
+				require.True(t, cfg.Validation.IsRequestValidationEnabled())
+			}
+
+			if tt.expectResponse == ValidationBehaviourIgnore {
+				require.False(t, cfg.Validation.IsResponseValidationEnabled())
+			} else {
+				require.True(t, cfg.Validation.IsResponseValidationEnabled())
+			}
+		})
+	}
 }
