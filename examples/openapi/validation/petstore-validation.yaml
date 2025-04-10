@@ -1,0 +1,158 @@
+openapi: 3.1.0
+info:
+  title: Pet Store API - Validation Example
+  description: A simple Pet Store API to demonstrate OpenAPI validation in Imposter
+  version: 1.0.0
+  
+servers:
+  - url: /api/v1
+
+paths:
+  /pets:
+    get:
+      summary: Returns all pets
+      operationId: listPets
+      parameters:
+        - name: limit
+          in: query
+          description: How many items to return at one time (max 100)
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 100
+            example: 10
+      responses:
+        '200':
+          description: A paged array of pets
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pets'
+    post:
+      summary: Creates a new pet
+      operationId: createPet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewPet'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pet'
+        '400':
+          description: Bad request
+
+  /pets/{petId}:
+    get:
+      summary: Returns a pet by ID
+      operationId: getPetById
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          description: The id of the pet to retrieve
+          schema:
+            type: string
+            example: "pet-1"
+      responses:
+        '200':
+          description: A pet
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pet'
+        '404':
+          description: Pet not found
+
+components:
+  schemas:
+    Pet:
+      type: object
+      required:
+        - id
+        - name
+        - type
+      properties:
+        id:
+          type: string
+          example: "pet-1"
+        name:
+          type: string
+          minLength: 1
+          example: "Fluffy"
+        type:
+          type: string
+          enum: ["dog", "cat", "bird", "fish"]
+          example: "cat"
+        age:
+          type: integer
+          minimum: 0
+          example: 3
+        vaccinated:
+          type: boolean
+          example: true
+        tags:
+          type: array
+          items:
+            type: string
+            example: "cute"
+          example: ["cute", "fluffy"]
+          
+    NewPet:
+      type: object
+      required:
+        - name
+        - type
+      properties:
+        name:
+          type: string
+          minLength: 1
+          example: "Rex"
+        type:
+          type: string
+          enum: ["dog", "cat", "bird", "fish"]
+          example: "dog"
+        age:
+          type: integer
+          minimum: 0
+          example: 5
+        vaccinated:
+          type: boolean
+          example: true
+        tags:
+          type: array
+          items:
+            type: string
+            example: "friendly"
+          example: ["friendly", "guard"]
+          
+    Pets:
+      type: array
+      items:
+        $ref: '#/components/schemas/Pet'
+      example:
+        - id: "pet-1"
+          name: "Fluffy"
+          type: "cat"
+          age: 3
+          vaccinated: true
+          tags: ["cute", "fluffy"]
+        - id: "pet-2"
+          name: "Rex"
+          type: "dog"
+          age: 5
+          vaccinated: true
+          tags: ["friendly", "guard"]
+        - id: "pet-3"
+          name: "Bubbles"
+          type: "fish"
+          age: 1
+          vaccinated: false
+          tags: ["colorful"]

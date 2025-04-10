@@ -1,0 +1,7 @@
+plugin: openapi
+specFile: petstore-validation.yaml
+
+# Enable request validation with "fail" behavior
+validation:
+  request: fail
+  response: log
