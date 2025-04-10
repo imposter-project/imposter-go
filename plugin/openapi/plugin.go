@@ -3,7 +3,6 @@ package openapi
 import (
 	"fmt"
 	"github.com/imposter-project/imposter-go/plugin/rest"
-	"path/filepath"
 
 	"github.com/imposter-project/imposter-go/internal/config"
 )
@@ -19,10 +18,10 @@ type PluginHandler struct {
 
 // NewPluginHandler creates a new OpenAPI plugin handler
 func NewPluginHandler(cfg *config.Config, configDir string, imposterConfig *config.ImposterConfig) (*PluginHandler, error) {
-	// If SpecFile is not absolute, make it relative to configDir
-	specFile := cfg.SpecFile
-	if !filepath.IsAbs(specFile) {
-		specFile = filepath.Join(configDir, specFile)
+	// Resolve spec file path (handles URL downloads if needed)
+	specFile, err := resolveSpecFile(cfg.SpecFile, configDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve OpenAPI spec file: %w", err)
 	}
 
 	opts := parserOptions{
