@@ -9,6 +9,7 @@ require (
 	github.com/dlclark/regexp2 v1.11.4
 	github.com/dop251/goja v0.0.0-20250125213203-5ef83b82af17
 	github.com/pb33f/libopenapi v0.21.8
+	github.com/pb33f/libopenapi-validator v0.3.1
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/exp v0.0.0-20241217172543-b2144cdd0a67
 )
@@ -26,7 +27,6 @@ require (
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/outofcoffee/xgen v0.1.2 // indirect
-	github.com/pb33f/libopenapi-validator v0.3.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1 // indirect
@@ -42,7 +42,7 @@ require (
 	github.com/aws/aws-sdk-go v1.55.5
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
-	github.com/outofcoffee/go-xml-example-generator v0.4.1
+	github.com/outofcoffee/go-xml-example-generator v0.4.2
 	github.com/satori/go.uuid v1.2.0
 	golang.org/x/net v0.36.0
 	golang.org/x/text v0.24.0 // indirect
