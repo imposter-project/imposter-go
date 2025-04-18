@@ -10,32 +10,15 @@ import (
 	"github.com/imposter-project/imposter-go/internal/matcher"
 	"github.com/imposter-project/imposter-go/internal/response"
 	"github.com/imposter-project/imposter-go/internal/steps"
-	"github.com/imposter-project/imposter-go/internal/store"
 )
 
 // HandleRequest processes incoming REST API requests
 func (h *PluginHandler) HandleRequest(
-	r *http.Request,
-	requestStore *store.Store,
-	responseState *response.ResponseState,
+	exch *exchange.Exchange,
 	respProc response.Processor,
 ) {
-	body, err := matcher.GetRequestBody(r)
-	if err != nil {
-		responseState.StatusCode = http.StatusBadRequest
-		responseState.Body = []byte("Failed to read request body")
-		responseState.Handled = true
-		return
-	}
-
-	// Create exchange once at the top
-	exch := &exchange.Exchange{
-		Request: &exchange.RequestContext{
-			Request: r,
-			Body:    body,
-		},
-		RequestStore: requestStore,
-	}
+	r := exch.Request.Request
+	responseState := exch.ResponseState
 
 	// Get system XML namespaces
 	var systemNamespaces map[string]string
@@ -45,7 +28,7 @@ func (h *PluginHandler) HandleRequest(
 
 	// Process interceptors first
 	for _, interceptorCfg := range h.config.Interceptors {
-		score, _ := matcher.CalculateMatchScore(&interceptorCfg.RequestMatcher, r, body, systemNamespaces, h.imposterConfig, requestStore)
+		score, _ := matcher.CalculateMatchScore(exch, &interceptorCfg.RequestMatcher, systemNamespaces, h.imposterConfig)
 		if score > 0 {
 			logger.Infof("matched interceptor - method:%s, path:%s", r.Method, r.URL.Path)
 			if interceptorCfg.Capture != nil {
@@ -58,7 +41,7 @@ func (h *PluginHandler) HandleRequest(
 					logger.Errorf("failed to execute interceptor steps: %v", err)
 					responseState.StatusCode = http.StatusInternalServerError
 					responseState.Body = []byte("Failed to execute steps")
-					responseState.Handled = true
+					responseState.Handled = true // Error case, no resource to attach
 					return
 				}
 				if responseState.Handled {
@@ -68,10 +51,10 @@ func (h *PluginHandler) HandleRequest(
 			}
 
 			if interceptorCfg.Response != nil {
-				h.processResponse(&interceptorCfg.RequestMatcher, responseState, r, interceptorCfg.Response, requestStore, respProc)
+				h.processResponse(exch, &interceptorCfg.RequestMatcher, interceptorCfg.Response, respProc)
 			}
 			if !interceptorCfg.Continue {
-				responseState.Handled = true
+				responseState.HandledWithResource(&interceptorCfg.BaseResource)
 				return // Short-circuit if interceptor continue is false
 			}
 		}
@@ -79,7 +62,7 @@ func (h *PluginHandler) HandleRequest(
 
 	var matches []matcher.MatchResult
 	for _, res := range h.config.Resources {
-		score, isWildcard := matcher.CalculateMatchScore(&res.RequestMatcher, r, body, systemNamespaces, h.imposterConfig, requestStore)
+		score, isWildcard := matcher.CalculateMatchScore(exch, &res.RequestMatcher, systemNamespaces, h.imposterConfig)
 		if score > 0 {
 			matches = append(matches, matcher.MatchResult{Resource: &res, Score: score, Wildcard: isWildcard, RuntimeGenerated: res.RuntimeGenerated})
 		}
@@ -104,7 +87,7 @@ func (h *PluginHandler) HandleRequest(
 			logger.Errorf("failed to execute resource steps: %v", err)
 			responseState.StatusCode = http.StatusInternalServerError
 			responseState.Body = []byte("Failed to execute steps")
-			responseState.Handled = true
+			responseState.Handled = true // Error case, no resource to attach
 			return
 		}
 		if responseState.Handled {
@@ -115,7 +98,7 @@ func (h *PluginHandler) HandleRequest(
 
 	// Process the response
 	if best.Resource.Response != nil {
-		h.processResponse(&best.Resource.RequestMatcher, responseState, r, best.Resource.Response, requestStore, respProc)
-		responseState.Handled = true
+		h.processResponse(exch, &best.Resource.RequestMatcher, best.Resource.Response, respProc)
+		responseState.HandledWithResource(&best.Resource.BaseResource)
 	}
 }

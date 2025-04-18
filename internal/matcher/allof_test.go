@@ -1,6 +1,7 @@
 package matcher
 
 import (
+	"github.com/imposter-project/imposter-go/internal/exchange"
 	"net/http"
 	"testing"
 
@@ -143,7 +144,8 @@ func TestCalculateMatchScore_AllOfConditions(t *testing.T) {
 				AllOf: tt.allOf,
 			}
 
-			score, isWildcard := CalculateMatchScore(matcher, tt.request, nil, map[string]string{}, tt.imposterConfig, tt.requestStore())
+			exch := exchange.NewExchangeFromRequest(tt.request, nil, tt.requestStore())
+			score, isWildcard := CalculateMatchScore(exch, matcher, map[string]string{}, tt.imposterConfig)
 			require.Equal(t, tt.expectedScore, score)
 			require.Equal(t, tt.expectedIsWildcard, isWildcard)
 		})

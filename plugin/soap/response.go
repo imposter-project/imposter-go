@@ -3,14 +3,14 @@ package soap
 import (
 	"fmt"
 	"github.com/imposter-project/imposter-go/internal/config"
+	"github.com/imposter-project/imposter-go/internal/exchange"
 	"github.com/imposter-project/imposter-go/internal/response"
-	"github.com/imposter-project/imposter-go/internal/store"
 	"github.com/imposter-project/imposter-go/pkg/logger"
 	"net/http"
 )
 
 // failWithSOAPFault fails the request and sends a SOAP fault response
-func (h *PluginHandler) failWithSOAPFault(soapVersion SOAPVersion, envNamespace string, rs *response.ResponseState, message string, statusCode int) {
+func (h *PluginHandler) failWithSOAPFault(soapVersion SOAPVersion, envNamespace string, rs *exchange.ResponseState, message string, statusCode int) {
 	rs.Headers["Content-Type"] = getResponseContentType(soapVersion)
 	rs.StatusCode = statusCode
 
@@ -37,17 +37,15 @@ func (h *PluginHandler) failWithSOAPFault(soapVersion SOAPVersion, envNamespace 
 
 // processResponse processes and sends the SOAP response
 func (h *PluginHandler) processResponse(
+	exch *exchange.Exchange,
 	body *MessageBodyHolder,
 	reqMatcher *config.RequestMatcher,
-	rs *response.ResponseState,
-	r *http.Request,
 	resp *config.Response,
-	requestStore *store.Store,
 	op *Operation,
 	respProc response.Processor,
 ) {
 	// Set content type for SOAP response
-	rs.Headers["Content-Type"] = getResponseContentType(body.GetSOAPVersion())
+	exch.ResponseState.Headers["Content-Type"] = getResponseContentType(body.GetSOAPVersion())
 
 	var finalResp *config.Response
 	if resp.StatusCode == http.StatusInternalServerError || resp.SoapFault {
@@ -64,7 +62,7 @@ func (h *PluginHandler) processResponse(
 	}
 
 	// Standard response processor
-	respProc(reqMatcher, rs, r, finalResp, requestStore)
+	respProc(exch, reqMatcher, finalResp)
 }
 
 // generateSoapFault applies a SOAP fault response if the response status code is 500 or if the response is marked as a SOAP fault.

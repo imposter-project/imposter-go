@@ -1,10 +1,12 @@
 package handler
 
 import (
+	"github.com/imposter-project/imposter-go/internal/matcher"
 	"net/http"
 	"strings"
 
 	"github.com/imposter-project/imposter-go/internal/config"
+	"github.com/imposter-project/imposter-go/internal/exchange"
 	"github.com/imposter-project/imposter-go/pkg/logger"
 
 	"github.com/imposter-project/imposter-go/internal/response"
@@ -36,13 +38,23 @@ func HandleRequest(imposterConfig *config.ImposterConfig, w http.ResponseWriter,
 		return
 	}
 
+	body, err := matcher.GetRequestBody(req)
+	if err != nil {
+		responseState.StatusCode = http.StatusBadRequest
+		responseState.Body = []byte("Failed to read request body")
+		responseState.Handled = true // Error case, no resource to attach
+		return
+	}
+
+	exch := exchange.NewExchange(req, body, requestStore, responseState)
+
 	// Process each plugin
 	for _, plg := range plugins {
 		// Standard response processor
 		responseProc := response.NewProcessor(imposterConfig, plg.GetConfigDir())
 
 		// Process request with handler
-		plg.HandleRequest(req, requestStore, responseState, responseProc)
+		plg.HandleRequest(exch, responseProc)
 
 		// If the response has been handled by the handler, break the loop
 		if responseState.Handled {

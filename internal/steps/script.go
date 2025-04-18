@@ -8,7 +8,6 @@ import (
 	"github.com/dop251/goja"
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/exchange"
-	"github.com/imposter-project/imposter-go/internal/response"
 	"github.com/imposter-project/imposter-go/internal/store"
 	"github.com/imposter-project/imposter-go/pkg/logger"
 	"github.com/imposter-project/imposter-go/pkg/utils"
@@ -17,7 +16,7 @@ import (
 // ResponseBuilder provides a fluent API for building responses in scripts
 type ResponseBuilder struct {
 	runtime *goja.Runtime
-	state   *response.ResponseState
+	state   *exchange.ResponseState
 	obj     *goja.Object
 }
 
@@ -142,7 +141,7 @@ func (sw *storeWrapper) hasItemWithKey(key string) bool {
 }
 
 // executeScriptStep executes a script step
-func executeScriptStep(step *config.Step, exch *exchange.Exchange, imposterConfig *config.ImposterConfig, responseState *response.ResponseState, configDir string, reqMatcher *config.RequestMatcher) error {
+func executeScriptStep(step *config.Step, exch *exchange.Exchange, imposterConfig *config.ImposterConfig, responseState *exchange.ResponseState, configDir string, reqMatcher *config.RequestMatcher) error {
 	// Validate step configuration
 	if step.Lang != "" && step.Lang != "js" && step.Lang != "javascript" {
 		return fmt.Errorf("unsupported script language: %s", step.Lang)

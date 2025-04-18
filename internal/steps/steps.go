@@ -5,12 +5,11 @@ import (
 
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/exchange"
-	"github.com/imposter-project/imposter-go/internal/response"
 	"github.com/imposter-project/imposter-go/pkg/logger"
 )
 
 // RunSteps executes a sequence of steps in order
-func RunSteps(steps []config.Step, exch *exchange.Exchange, imposterConfig *config.ImposterConfig, configDir string, responseState *response.ResponseState, reqMatcher *config.RequestMatcher) error {
+func RunSteps(steps []config.Step, exch *exchange.Exchange, imposterConfig *config.ImposterConfig, configDir string, responseState *exchange.ResponseState, reqMatcher *config.RequestMatcher) error {
 	for i, step := range steps {
 		var err error
 		switch step.Type {

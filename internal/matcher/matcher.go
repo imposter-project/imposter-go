@@ -3,6 +3,7 @@ package matcher
 import (
 	"bytes"
 	"fmt"
+	"github.com/imposter-project/imposter-go/internal/exchange"
 	"github.com/imposter-project/imposter-go/internal/query"
 	"github.com/imposter-project/imposter-go/pkg/logger"
 	"io"
@@ -10,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/imposter-project/imposter-go/internal/config"
-	"github.com/imposter-project/imposter-go/internal/store"
 	"github.com/imposter-project/imposter-go/internal/template"
 )
 
@@ -33,7 +33,9 @@ const (
 // The score is calculated based on the number of matching conditions.
 // If score is negative, the request explicitly does not match the resource.
 // If the score is zero, no conditions were specified by the resource matcher.
-func CalculateMatchScore(matcher *config.RequestMatcher, r *http.Request, body []byte, systemNamespaces map[string]string, imposterConfig *config.ImposterConfig, requestStore *store.Store) (score int, isWildcard bool) {
+func CalculateMatchScore(exch *exchange.Exchange, matcher *config.RequestMatcher, systemNamespaces map[string]string, imposterConfig *config.ImposterConfig) (score int, isWildcard bool) {
+	r := exch.Request.Request
+
 	// Method match
 	if matcher.Method != "" {
 		if !strings.EqualFold(matcher.Method, r.Method) {
@@ -114,13 +116,13 @@ func CalculateMatchScore(matcher *config.RequestMatcher, r *http.Request, body [
 
 	// Request body match
 	if hasSingleBodyMatcher(matcher) {
-		if !matchBodyCondition(body, *matcher.RequestBody.BodyMatchCondition, systemNamespaces) {
+		if !matchBodyCondition(exch.Request.Body, *matcher.RequestBody.BodyMatchCondition, systemNamespaces) {
 			return NegativeMatchScore, false
 		}
 		score++
 	} else if len(matcher.RequestBody.AllOf) > 0 {
 		for _, condition := range matcher.RequestBody.AllOf {
-			if !matchBodyCondition(body, condition, systemNamespaces) {
+			if !matchBodyCondition(exch.Request.Body, condition, systemNamespaces) {
 				return NegativeMatchScore, false
 			}
 		}
@@ -128,7 +130,7 @@ func CalculateMatchScore(matcher *config.RequestMatcher, r *http.Request, body [
 	} else if len(matcher.RequestBody.AnyOf) > 0 {
 		matched := false
 		for _, condition := range matcher.RequestBody.AnyOf {
-			if matchBodyCondition(body, condition, systemNamespaces) {
+			if matchBodyCondition(exch.Request.Body, condition, systemNamespaces) {
 				matched = true
 				break
 			}
@@ -143,7 +145,7 @@ func CalculateMatchScore(matcher *config.RequestMatcher, r *http.Request, body [
 	if len(matcher.AllOf) > 0 {
 		for _, expr := range matcher.AllOf {
 			// Evaluate the expression using the template engine
-			result, err := evaluateExpression(expr.Expression, r, imposterConfig, matcher, requestStore)
+			result, err := evaluateExpression(expr.Expression, exch, imposterConfig, matcher)
 			if err != nil {
 				return NegativeMatchScore, false
 			}
@@ -158,7 +160,7 @@ func CalculateMatchScore(matcher *config.RequestMatcher, r *http.Request, body [
 		matched := false
 		for _, expr := range matcher.AnyOf {
 			// Evaluate the expression using the template engine
-			result, err := evaluateExpression(expr.Expression, r, imposterConfig, matcher, requestStore)
+			result, err := evaluateExpression(expr.Expression, exch, imposterConfig, matcher)
 			if err != nil {
 				continue
 			}
@@ -184,9 +186,9 @@ func hasSingleBodyMatcher(matcher *config.RequestMatcher) bool {
 }
 
 // evaluateExpression evaluates a template expression in the context of the request
-func evaluateExpression(expression string, r *http.Request, imposterConfig *config.ImposterConfig, reqMatcher *config.RequestMatcher, requestStore *store.Store) (string, error) {
+func evaluateExpression(expression string, exch *exchange.Exchange, imposterConfig *config.ImposterConfig, reqMatcher *config.RequestMatcher) (string, error) {
 	// Simply evaluate the expression and return its value
-	return template.ProcessTemplate(expression, r, imposterConfig, reqMatcher, requestStore), nil
+	return template.ProcessTemplate(expression, exch, imposterConfig, reqMatcher), nil
 }
 
 // matchBodyCondition checks if a body condition matches the request body

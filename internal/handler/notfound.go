@@ -3,15 +3,15 @@ package handler
 import (
 	"fmt"
 	"github.com/imposter-project/imposter-go/internal/config"
+	"github.com/imposter-project/imposter-go/internal/exchange"
 	"net/http"
 	"strings"
 
-	"github.com/imposter-project/imposter-go/internal/response"
 	"github.com/imposter-project/imposter-go/plugin"
 )
 
 // handleNotFound generates a custom 404 page with available resources
-func handleNotFound(r *http.Request, responseState *response.ResponseState, plugins []plugin.Plugin) {
+func handleNotFound(r *http.Request, responseState *exchange.ResponseState, plugins []plugin.Plugin) {
 	responseState.StatusCode = http.StatusNotFound
 	responseState.Headers["Content-Type"] = "text/html"
 

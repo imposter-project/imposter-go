@@ -3,7 +3,7 @@ package openapi
 import (
 	"encoding/json"
 	"github.com/imposter-project/imposter-go/internal/config"
-	"github.com/imposter-project/imposter-go/internal/response"
+	"github.com/imposter-project/imposter-go/internal/exchange"
 	"github.com/imposter-project/imposter-go/pkg/logger"
 	"github.com/pb33f/libopenapi-validator/errors"
 	"net/http"
@@ -24,7 +24,7 @@ type ValidationErrorDetails struct {
 // validateRequest validates the request against the OpenAPI spec and returns if the request should continue processing
 func (h *PluginHandler) validateRequest(
 	r *http.Request,
-	responseState *response.ResponseState,
+	responseState *exchange.ResponseState,
 ) bool {
 	// If validation is not enabled, continue processing
 	if h.config.Validation == nil || !h.config.Validation.IsRequestValidationEnabled() {

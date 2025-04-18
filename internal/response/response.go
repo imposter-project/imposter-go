@@ -1,6 +1,7 @@
 package response
 
 import (
+	"github.com/imposter-project/imposter-go/internal/exchange"
 	"math/rand"
 	"mime"
 	"net/http"
@@ -13,53 +14,16 @@ import (
 	"github.com/imposter-project/imposter-go/pkg/utils"
 
 	"github.com/imposter-project/imposter-go/internal/config"
-	"github.com/imposter-project/imposter-go/internal/store"
 	"github.com/imposter-project/imposter-go/internal/template"
 )
-
-// ResponseState tracks the state of the HTTP response
-type ResponseState struct {
-	StatusCode int
-	Headers    map[string]string
-	Body       []byte
-	Stopped    bool         // indicates if the response has been stopped (e.g., connection closed)
-	Handled    bool         // indicates if a handler has handled the request
-	Delay      config.Delay // delay configuration for the response
-	Fail       string       // failure type for the response
-	File       string       // path to the response file
-}
 
 const defaultIndexFile = "index.html"
 
 // NewResponseState creates a new ResponseState with default values
-func NewResponseState() *ResponseState {
-	return &ResponseState{
+func NewResponseState() *exchange.ResponseState {
+	return &exchange.ResponseState{
 		StatusCode: http.StatusOK,
 		Headers:    make(map[string]string),
-	}
-}
-
-// WriteToResponseWriter writes the final state to the http.ResponseWriter
-func (rs *ResponseState) WriteToResponseWriter(w http.ResponseWriter) {
-	if rs.Stopped {
-		// Handle connection closing
-		if hijacker, ok := w.(http.Hijacker); ok {
-			if conn, _, err := hijacker.Hijack(); err == nil {
-				conn.Close()
-				return
-			}
-		}
-		// Fallback if hijacking is not supported
-		rs.StatusCode = http.StatusInternalServerError
-		rs.Body = []byte("HTTP server does not support connection hijacking")
-	}
-
-	for key, value := range rs.Headers {
-		w.Header().Set(key, value)
-	}
-	w.WriteHeader(rs.StatusCode)
-	if rs.Body != nil {
-		w.Write(rs.Body)
 	}
 }
 
@@ -77,7 +41,7 @@ func SimulateDelay(delay config.Delay, r *http.Request) {
 }
 
 // SimulateFailure simulates response failures based on the configuration
-func SimulateFailure(rs *ResponseState, failureType string, r *http.Request) bool {
+func SimulateFailure(rs *exchange.ResponseState, failureType string, r *http.Request) bool {
 	switch failureType {
 	case "EmptyResponse":
 		rs.Body = nil
@@ -96,14 +60,15 @@ func SimulateFailure(rs *ResponseState, failureType string, r *http.Request) boo
 
 // processResponse handles common response processing logic
 func processResponse(
+	exch *exchange.Exchange,
 	reqMatcher *config.RequestMatcher,
-	rs *ResponseState,
-	req *http.Request,
 	resp *config.Response,
 	configDir string,
-	requestStore *store.Store,
 	imposterConfig *config.ImposterConfig,
 ) {
+	req := exch.Request.Request
+	rs := exch.ResponseState
+
 	// Handle delay if specified in ResponseState or Response config
 	if rs.Delay.Exact > 0 || (rs.Delay.Min > 0 && rs.Delay.Max > 0) {
 		SimulateDelay(rs.Delay, req)
@@ -192,7 +157,7 @@ func processResponse(
 
 		// Process template if enabled
 		if resp.Template {
-			responseContent = template.ProcessTemplate(responseContent, req, imposterConfig, reqMatcher, requestStore)
+			responseContent = template.ProcessTemplate(responseContent, exch, imposterConfig, reqMatcher)
 		}
 
 		rs.Body = []byte(responseContent)

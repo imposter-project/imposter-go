@@ -1,11 +1,8 @@
 package template
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
@@ -20,26 +17,9 @@ import (
 	"golang.org/x/exp/rand"
 )
 
-// ProcessTemplate processes a template string, replacing placeholders with actual values.
-// This is the legacy version that will be deprecated in favor of ProcessTemplateWithContext.
-func ProcessTemplate(template string, r *http.Request, imposterConfig *config.ImposterConfig, reqMatcher *config.RequestMatcher, requestStore *store.Store) string {
-	// Read request body
-	body, _ := io.ReadAll(r.Body)
-	r.Body = io.NopCloser(bytes.NewReader(body))
-
-	exch := &exchange.Exchange{
-		Request: &exchange.RequestContext{
-			Request: r,
-			Body:    body,
-		},
-		RequestStore: requestStore,
-	}
-	return ProcessTemplateWithContext(template, exch, imposterConfig, reqMatcher)
-}
-
-// ProcessTemplateWithContext processes a template string using the provided context.
+// ProcessTemplate processes a template string using the provided context.
 // This is the new version that should be used going forward.
-func ProcessTemplateWithContext(template string, exch *exchange.Exchange, imposterConfig *config.ImposterConfig, reqMatcher *config.RequestMatcher) string {
+func ProcessTemplate(template string, exch *exchange.Exchange, imposterConfig *config.ImposterConfig, reqMatcher *config.RequestMatcher) string {
 	if template == "" {
 		return ""
 	}

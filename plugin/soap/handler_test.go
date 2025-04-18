@@ -2,6 +2,7 @@ package soap
 
 import (
 	"fmt"
+	"github.com/imposter-project/imposter-go/internal/exchange"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -194,9 +195,10 @@ func TestSOAPHandler_HandleRequest(t *testing.T) {
 			requestStore := store.NewRequestStore()
 			responseState := response.NewResponseState()
 			responseProc := response.NewProcessor(&config.ImposterConfig{}, tempDir)
+			exch := exchange.NewExchange(req, []byte(soapRequest), requestStore, responseState)
 
 			// Handle request
-			handler.HandleRequest(req, requestStore, responseState, responseProc)
+			handler.HandleRequest(exch, responseProc)
 
 			// Check response
 			if !responseState.Handled {
@@ -287,9 +289,10 @@ func TestSOAPHandler_HandleRequest_InvalidMethod(t *testing.T) {
 			// Initialise store and response state
 			requestStore := store.NewRequestStore()
 			responseState := response.NewResponseState()
+			exch := exchange.NewExchange(req, nil, requestStore, responseState)
 
 			// Handle request
-			handler.HandleRequest(req, requestStore, responseState, nil)
+			handler.HandleRequest(exch, nil)
 
 			// Check response - should not be handled by SOAP handler
 			if responseState.Handled {
@@ -378,9 +381,10 @@ func TestSOAPHandler_HandleRequest_NoMatchingOperation(t *testing.T) {
 			// Initialise store and response state
 			requestStore := store.NewRequestStore()
 			responseState := response.NewResponseState()
+			exch := exchange.NewExchange(req, []byte(soapRequest), requestStore, responseState)
 
 			// Handle request
-			handler.HandleRequest(req, requestStore, responseState, nil)
+			handler.HandleRequest(exch, nil)
 
 			// Check response
 			if responseState.Handled {
@@ -454,9 +458,10 @@ func TestSOAPHandler_HandleRequest_WithInterceptor(t *testing.T) {
 	requestStore := store.NewRequestStore()
 	responseState := response.NewResponseState()
 	responseProc := response.NewProcessor(&config.ImposterConfig{}, configDir)
+	exch := exchange.NewExchange(req, []byte(soapRequest), requestStore, responseState)
 
 	// Handle request
-	handler.HandleRequest(req, requestStore, responseState, responseProc)
+	handler.HandleRequest(exch, responseProc)
 
 	// Check response
 	if !responseState.Handled {
@@ -560,9 +565,10 @@ func TestSOAPHandler_HandleRequest_WithPassthroughInterceptor(t *testing.T) {
 	requestStore := store.NewRequestStore()
 	responseState := response.NewResponseState()
 	responseProc := response.NewProcessor(&config.ImposterConfig{}, configDir)
+	exch := exchange.NewExchange(req, []byte(soapRequest), requestStore, responseState)
 
 	// Handle request
-	handler.HandleRequest(req, requestStore, responseState, responseProc)
+	handler.HandleRequest(exch, responseProc)
 
 	// Check response
 	if !responseState.Handled {
@@ -635,9 +641,10 @@ func TestSOAPHandler_HandleRequest_InvalidXML(t *testing.T) {
 			// Initialise store and response state
 			requestStore := store.NewRequestStore()
 			responseState := response.NewResponseState()
+			exch := exchange.NewExchange(req, []byte(invalidXML), requestStore, responseState)
 
 			// Handle request
-			handler.HandleRequest(req, requestStore, responseState, nil)
+			handler.HandleRequest(exch, nil)
 
 			// Check response
 			if !responseState.Handled {
@@ -705,9 +712,10 @@ func TestSOAPHandler_HandleRequest_MissingBody(t *testing.T) {
 			// Initialise store and response state
 			requestStore := store.NewRequestStore()
 			responseState := response.NewResponseState()
+			exch := exchange.NewExchange(req, []byte(invalidXML), requestStore, responseState)
 
 			// Handle request
-			handler.HandleRequest(req, requestStore, responseState, nil)
+			handler.HandleRequest(exch, nil)
 
 			// Check response
 			if !responseState.Handled {
@@ -892,9 +900,10 @@ func TestSOAPHandler_SOAPFault(t *testing.T) {
 			requestStore := store.NewRequestStore()
 			responseState := response.NewResponseState()
 			responseProc := response.NewProcessor(&config.ImposterConfig{}, configDir)
+			exch := exchange.NewExchange(req, []byte(soapRequest), requestStore, responseState)
 
 			// Handle request
-			handler.HandleRequest(req, requestStore, responseState, responseProc)
+			handler.HandleRequest(exch, responseProc)
 
 			// Check response
 			if !responseState.Handled {

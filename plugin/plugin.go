@@ -2,11 +2,10 @@ package plugin
 
 import (
 	"fmt"
-	"net/http"
+	"github.com/imposter-project/imposter-go/internal/exchange"
 
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/response"
-	"github.com/imposter-project/imposter-go/internal/store"
 	"github.com/imposter-project/imposter-go/plugin/openapi"
 	"github.com/imposter-project/imposter-go/plugin/rest"
 	"github.com/imposter-project/imposter-go/plugin/soap"
@@ -21,7 +20,7 @@ type Plugin interface {
 	GetConfig() *config.Config
 
 	// HandleRequest processes incoming HTTP requests and routes them to the appropriate handler
-	HandleRequest(r *http.Request, requestStore *store.Store, responseState *response.ResponseState, respProc response.Processor)
+	HandleRequest(exch *exchange.Exchange, respProc response.Processor)
 }
 
 // LoadPlugins loads plugins from the provided configs

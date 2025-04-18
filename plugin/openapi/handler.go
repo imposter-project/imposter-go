@@ -2,33 +2,30 @@ package openapi
 
 import (
 	"github.com/imposter-project/imposter-go/internal/config"
+	"github.com/imposter-project/imposter-go/internal/exchange"
 	"github.com/imposter-project/imposter-go/internal/response"
-	"github.com/imposter-project/imposter-go/internal/store"
 	"github.com/imposter-project/imposter-go/pkg/logger"
-	"net/http"
 )
 
 func (h *PluginHandler) HandleRequest(
-	r *http.Request,
-	requestStore *store.Store,
-	responseState *response.ResponseState,
+	exch *exchange.Exchange,
 	respProc response.Processor,
 ) {
 	// Validate request against OpenAPI spec
-	if !h.validateRequest(r, responseState) {
+	if !h.validateRequest(exch.Request.Request, exch.ResponseState) {
 		return // Stop processing if validation failed
 	}
 
-	wrapped := func(reqMatcher *config.RequestMatcher, rs *response.ResponseState, r *http.Request, resp *config.Response, requestStore *store.Store) {
+	wrapped := func(exch *exchange.Exchange, reqMatcher *config.RequestMatcher, resp *config.Response) {
 		// Process the response
-		h.processResponse(reqMatcher, rs, r, resp, requestStore, respProc)
+		h.processResponse(exch, reqMatcher, resp, respProc)
 
 		// If response validation is enabled, validate the processed response
 		// Note that the response has already been sent at this point
-		if h.config.Validation != nil && h.config.Validation.IsResponseValidationEnabled() && rs.Handled {
+		if h.config.Validation != nil && h.config.Validation.IsResponseValidationEnabled() && exch.ResponseState.Handled {
 			logger.Debugf("response validation not fully implemented yet")
 		}
 	}
 
-	h.restPluginHandler.HandleRequest(r, requestStore, responseState, wrapped)
+	h.restPluginHandler.HandleRequest(exch, wrapped)
 }

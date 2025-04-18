@@ -3,7 +3,7 @@ package openapi
 import (
 	"fmt"
 	"github.com/imposter-project/imposter-go/internal/config"
-	"github.com/imposter-project/imposter-go/internal/response"
+	"github.com/imposter-project/imposter-go/internal/exchange"
 	"github.com/imposter-project/imposter-go/pkg/logger"
 	"github.com/pb33f/libopenapi"
 	validator "github.com/pb33f/libopenapi-validator"
@@ -54,7 +54,7 @@ type OpenAPIParser interface {
 	GetOperations() []Operation
 	GetOperation(opName string) *Operation
 	ValidateRequest(req *http.Request) (bool, []*errors.ValidationError)
-	ValidateResponse(rs *response.ResponseState) (bool, []*errors.ValidationError)
+	ValidateResponse(rs *exchange.ResponseState) (bool, []*errors.ValidationError)
 }
 
 // GetResponse returns a response by its unique ID

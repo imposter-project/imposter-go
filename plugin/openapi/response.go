@@ -2,6 +2,7 @@ package openapi
 
 import (
 	"github.com/imposter-project/imposter-go/internal/config"
+	"github.com/imposter-project/imposter-go/internal/exchange"
 	"github.com/imposter-project/imposter-go/internal/response"
 	"github.com/imposter-project/imposter-go/internal/store"
 	"github.com/imposter-project/imposter-go/pkg/logger"
@@ -11,33 +12,33 @@ import (
 
 // processResponse handles preparing the response state
 func (h *PluginHandler) processResponse(
+	exch *exchange.Exchange,
 	reqMatcher *config.RequestMatcher,
-	rs *response.ResponseState,
-	r *http.Request,
 	resp *config.Response,
-	requestStore *store.Store,
 	respProc response.Processor,
 ) {
+	r := exch.Request.Request
+
 	// Replace example placeholder in the response content
 	if resp.Content == openapiExamplePlaceholder || resp.ExampleName != "" {
-		specResp := h.lookupSpecResponse(r, *requestStore)
+		specResp := h.lookupSpecResponse(exch.Request.Request, exch.RequestStore)
 		if specResp == nil {
 			logger.Errorf("no OpenAPI response with ID matched for request %s %s", r.Method, r.URL.Path)
 			return
 		}
 
-		respHeaders, respContent := h.replaceExamplePlaceholder(rs.Headers, specResp, resp)
+		respHeaders, respContent := h.replaceExamplePlaceholder(exch.ResponseState.Headers, specResp, resp)
 		// note: this updates the config by reference, meaning the placeholder is replaced in the original config
 		resp.Headers = respHeaders
 		resp.Content = respContent
 	}
 
 	// Standard response processor
-	respProc(reqMatcher, rs, r, resp, requestStore)
+	respProc(exch, reqMatcher, resp)
 }
 
 // lookupSpecResponse gets the matched OpenAPI response for the request
-func (h *PluginHandler) lookupSpecResponse(r *http.Request, requestStore store.Store) *Response {
+func (h *PluginHandler) lookupSpecResponse(r *http.Request, requestStore *store.Store) *Response {
 	operationId, _ := requestStore.GetValue("_matched-openapi-operation")
 	if operationId == nil {
 		logger.Tracef("no OpenAPI operation matched for request %s %s", r.Method, r.URL.Path)

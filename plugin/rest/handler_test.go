@@ -2,6 +2,7 @@ package rest
 
 import (
 	"bytes"
+	"github.com/imposter-project/imposter-go/internal/exchange"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -53,9 +54,10 @@ func TestHandler_HandleRequest_NoMatchingResource(t *testing.T) {
 	// Initialise store and response state
 	requestStore := store.NewRequestStore()
 	responseState := response.NewResponseState()
+	exch := exchange.NewExchangeFromRequest(req, nil, requestStore)
 
 	// Handle request
-	handler.HandleRequest(req, requestStore, responseState, nil)
+	handler.HandleRequest(exch, nil)
 
 	// Check response
 	if responseState.Handled {
@@ -102,9 +104,10 @@ func TestHandler_HandleRequest_MatchingResource(t *testing.T) {
 	requestStore := store.NewRequestStore()
 	responseState := response.NewResponseState()
 	responseProc := response.NewProcessor(&config.ImposterConfig{}, tempDir)
+	exch := exchange.NewExchange(req, nil, requestStore, responseState)
 
 	// Handle request
-	handler.HandleRequest(req, requestStore, responseState, responseProc)
+	handler.HandleRequest(exch, responseProc)
 
 	// Check response
 	if !responseState.Handled {
@@ -173,9 +176,10 @@ func TestHandler_HandleRequest_WithInterceptor(t *testing.T) {
 	requestStore := store.NewRequestStore()
 	responseState := response.NewResponseState()
 	responseProc := response.NewProcessor(&config.ImposterConfig{}, tempDir)
+	exch := exchange.NewExchange(req, nil, requestStore, responseState)
 
 	// Handle request
-	handler.HandleRequest(req, requestStore, responseState, responseProc)
+	handler.HandleRequest(exch, responseProc)
 
 	// Check response
 	if !responseState.Handled {
@@ -238,9 +242,10 @@ func TestHandler_HandleRequest_WithPathParams(t *testing.T) {
 	requestStore := store.NewRequestStore()
 	responseState := response.NewResponseState()
 	responseProc := response.NewProcessor(&config.ImposterConfig{}, tempDir)
+	exch := exchange.NewExchange(req, nil, requestStore, responseState)
 
 	// Handle request
-	handler.HandleRequest(req, requestStore, responseState, responseProc)
+	handler.HandleRequest(exch, responseProc)
 
 	// Check response
 	if !responseState.Handled {
@@ -302,9 +307,10 @@ func TestHandler_HandleRequest_WithResponseFile(t *testing.T) {
 	requestStore := store.NewRequestStore()
 	responseState := response.NewResponseState()
 	responseProc := response.NewProcessor(&config.ImposterConfig{}, tempDir)
+	exch := exchange.NewExchange(req, nil, requestStore, responseState)
 
 	// Handle request
-	handler.HandleRequest(req, requestStore, responseState, responseProc)
+	handler.HandleRequest(exch, responseProc)
 
 	// Check response
 	if !responseState.Handled {
@@ -361,15 +367,17 @@ func TestHandler_HandleRequest_WithRequestBody(t *testing.T) {
 	}
 
 	// Create test request
-	req := httptest.NewRequest("POST", "/test", bytes.NewBufferString("test body"))
+	body := "test body"
+	req := httptest.NewRequest("POST", "/test", bytes.NewBufferString(body))
 
 	// Initialise store and response state
 	requestStore := store.NewRequestStore()
 	responseState := response.NewResponseState()
 	responseProc := response.NewProcessor(&config.ImposterConfig{}, tempDir)
+	exch := exchange.NewExchange(req, []byte(body), requestStore, responseState)
 
 	// Handle request
-	handler.HandleRequest(req, requestStore, responseState, responseProc)
+	handler.HandleRequest(exch, responseProc)
 
 	// Check response
 	if !responseState.Handled {
@@ -442,9 +450,10 @@ func TestHandler_HandleRequest_WithXMLNamespaces(t *testing.T) {
 	requestStore := store.NewRequestStore()
 	responseState := response.NewResponseState()
 	responseProc := response.NewProcessor(&config.ImposterConfig{}, tempDir)
+	exch := exchange.NewExchange(req, []byte(xmlBody), requestStore, responseState)
 
 	// Handle request
-	handler.HandleRequest(req, requestStore, responseState, responseProc)
+	handler.HandleRequest(exch, responseProc)
 
 	// Check response
 	if !responseState.Handled {

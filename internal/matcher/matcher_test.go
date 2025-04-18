@@ -1,6 +1,7 @@
 package matcher
 
 import (
+	"github.com/imposter-project/imposter-go/internal/exchange"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -227,7 +228,8 @@ func TestCalculateMatchScore(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotScore, gotWildcard := CalculateMatchScore(tt.matcher, tt.request, tt.body, tt.systemNamespaces, tt.imposterConfig, &tt.requestStore)
+			exch := exchange.NewExchangeFromRequest(tt.request, tt.body, store.NewRequestStore())
+			gotScore, gotWildcard := CalculateMatchScore(exch, tt.matcher, tt.systemNamespaces, tt.imposterConfig)
 			if gotScore != tt.wantScore {
 				t.Errorf("expected score %d, got %d", tt.wantScore, gotScore)
 			}

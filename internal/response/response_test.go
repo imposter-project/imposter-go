@@ -1,6 +1,7 @@
 package response
 
 import (
+	"github.com/imposter-project/imposter-go/internal/exchange"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -27,14 +28,14 @@ func TestNewResponseState(t *testing.T) {
 func TestWriteToResponseWriter(t *testing.T) {
 	tests := []struct {
 		name           string
-		responseState  *ResponseState
+		responseState  *exchange.ResponseState
 		expectedStatus int
 		expectedBody   string
 		expectedHeader map[string]string
 	}{
 		{
 			name: "normal response",
-			responseState: &ResponseState{
+			responseState: &exchange.ResponseState{
 				StatusCode: http.StatusOK,
 				Headers:    map[string]string{"Content-Type": "application/json"},
 				Body:       []byte(`{"status":"ok"}`),
@@ -45,7 +46,7 @@ func TestWriteToResponseWriter(t *testing.T) {
 		},
 		{
 			name: "stopped response",
-			responseState: &ResponseState{
+			responseState: &exchange.ResponseState{
 				StatusCode: http.StatusOK,
 				Stopped:    true,
 			},
@@ -355,8 +356,8 @@ func TestProcessResponse(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, reqPath, nil)
 			requestStore := store.NewRequestStore()
 			imposterConfig := &config.ImposterConfig{}
-
-			processResponse(tt.requestMatcher, rs, req, &tt.response, tmpDir, requestStore, imposterConfig)
+			exch := exchange.NewExchange(req, nil, requestStore, rs)
+			processResponse(exch, tt.requestMatcher, &tt.response, tmpDir, imposterConfig)
 
 			assert.Equal(t, tt.expectedStatus, rs.StatusCode)
 			if tt.expectedBody != "" {

@@ -18,7 +18,7 @@ func TestExecuteScriptStep(t *testing.T) {
 		step        config.Step
 		setupExch   func() *exchange.Exchange
 		setupStore  func()
-		validate    func(t *testing.T, responseState *response.ResponseState)
+		validate    func(t *testing.T, responseState *exchange.ResponseState)
 		expectError bool
 		reqMatcher  *config.RequestMatcher
 	}{
@@ -90,7 +90,7 @@ func TestExecuteScriptStep(t *testing.T) {
 					},
 				}
 			},
-			validate: func(t *testing.T, rs *response.ResponseState) {
+			validate: func(t *testing.T, rs *exchange.ResponseState) {
 				assert.Equal(t, 200, rs.StatusCode)
 				assert.Equal(t, "response.json", rs.File)
 			},
@@ -178,7 +178,7 @@ func TestExecuteScriptStep(t *testing.T) {
 					},
 				}
 			},
-			validate: func(t *testing.T, rs *response.ResponseState) {
+			validate: func(t *testing.T, rs *exchange.ResponseState) {
 				assert.Equal(t, 201, rs.StatusCode)
 				assert.Equal(t, `{"status":"created"}`, string(rs.Body))
 				assert.Equal(t, "test", rs.Headers["X-Custom"])
@@ -210,7 +210,7 @@ func TestExecuteScriptStep(t *testing.T) {
 					},
 				}
 			},
-			validate: func(t *testing.T, rs *response.ResponseState) {
+			validate: func(t *testing.T, rs *exchange.ResponseState) {
 				assert.Equal(t, 201, rs.StatusCode)
 				assert.Equal(t, `{"status":"created"}`, string(rs.Body))
 				assert.Equal(t, "test", rs.Headers["X-Custom"])
@@ -241,7 +241,7 @@ func TestExecuteScriptStep(t *testing.T) {
 					},
 				}
 			},
-			validate: func(t *testing.T, rs *response.ResponseState) {
+			validate: func(t *testing.T, rs *exchange.ResponseState) {
 				assert.Equal(t, 200, rs.StatusCode)
 				assert.Equal(t, `{"status":"ok"}`, string(rs.Body))
 				assert.Equal(t, 1000, rs.Delay.Exact)
@@ -273,7 +273,7 @@ func TestExecuteScriptStep(t *testing.T) {
 					},
 				}
 			},
-			validate: func(t *testing.T, rs *response.ResponseState) {
+			validate: func(t *testing.T, rs *exchange.ResponseState) {
 				assert.Equal(t, 200, rs.StatusCode)
 				assert.Equal(t, `{"status":"ok"}`, string(rs.Body))
 				assert.Equal(t, 0, rs.Delay.Exact)
@@ -305,7 +305,7 @@ func TestExecuteScriptStep(t *testing.T) {
 					},
 				}
 			},
-			validate: func(t *testing.T, rs *response.ResponseState) {
+			validate: func(t *testing.T, rs *exchange.ResponseState) {
 				assert.Equal(t, 200, rs.StatusCode)
 				assert.Equal(t, `{"status":"ok"}`, string(rs.Body))
 				assert.Equal(t, "EmptyResponse", rs.Fail)
@@ -335,7 +335,7 @@ func TestExecuteScriptStep(t *testing.T) {
 					},
 				}
 			},
-			validate: func(t *testing.T, rs *response.ResponseState) {
+			validate: func(t *testing.T, rs *exchange.ResponseState) {
 				assert.Equal(t, 200, rs.StatusCode)
 				assert.Equal(t, `{"status":"ok"}`, string(rs.Body))
 				assert.Equal(t, "CloseConnection", rs.Fail)
@@ -368,7 +368,7 @@ func TestExecuteScriptStep(t *testing.T) {
 					},
 				}
 			},
-			validate: func(t *testing.T, rs *response.ResponseState) {
+			validate: func(t *testing.T, rs *exchange.ResponseState) {
 				assert.Equal(t, 200, rs.StatusCode)
 				assert.Equal(t, "response.json", rs.File)
 				assert.Equal(t, "application/json", rs.Headers["Content-Type"])

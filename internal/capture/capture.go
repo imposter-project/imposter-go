@@ -42,7 +42,7 @@ func getValueFromCaptureConfig(imposterConfig *config.ImposterConfig, reqMatcher
 	} else if key.RequestHeader != "" {
 		return exch.Request.Request.Header.Get(key.RequestHeader)
 	} else if key.Expression != "" {
-		return template.ProcessTemplateWithContext(key.Expression, exch, imposterConfig, reqMatcher)
+		return template.ProcessTemplate(key.Expression, exch, imposterConfig, reqMatcher)
 	} else if key.Const != "" {
 		return key.Const
 	} else if key.RequestBody.JSONPath != "" {

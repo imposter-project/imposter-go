@@ -1,7 +1,7 @@
 package openapi
 
 import (
-	"github.com/imposter-project/imposter-go/internal/response"
+	"github.com/imposter-project/imposter-go/internal/exchange"
 	"github.com/imposter-project/imposter-go/pkg/logger"
 	validator "github.com/pb33f/libopenapi-validator"
 	"github.com/pb33f/libopenapi-validator/errors"
@@ -32,7 +32,7 @@ func (p *openAPIParser) ValidateRequest(req *http.Request) (bool, []*errors.Vali
 
 // ValidateResponse is a placeholder for response validation against the OpenAPI specification
 // Currently not fully implemented
-func (p *openAPIParser) ValidateResponse(rs *response.ResponseState) (bool, []*errors.ValidationError) {
+func (p *openAPIParser) ValidateResponse(rs *exchange.ResponseState) (bool, []*errors.ValidationError) {
 	logger.Debugf("response validation not supported")
 	return true, nil
 }

@@ -2,6 +2,7 @@ package openapi
 
 import (
 	"encoding/json"
+	"github.com/imposter-project/imposter-go/internal/exchange"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -253,9 +254,10 @@ Content-Type: image/jpeg
 			responseState := response.NewResponseState()
 			requestStore := store.NewRequestStore()
 			responseProc := response.NewProcessor(imposterConfig, tt.configDir)
+			exch := exchange.NewExchange(tt.request, nil, requestStore, responseState)
 
 			// Handle request
-			handler.HandleRequest(tt.request, requestStore, responseState, responseProc)
+			handler.HandleRequest(exch, responseProc)
 
 			// Assert status code
 			assert.Equal(t, tt.wantStatus, responseState.StatusCode, "Unexpected status code")

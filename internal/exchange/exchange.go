@@ -8,9 +8,10 @@ import (
 
 // Exchange holds the data for a request/response exchange
 type Exchange struct {
-	Request      *RequestContext
-	Response     *ResponseContext
-	RequestStore *store.Store
+	Request       *RequestContext
+	RequestStore  *store.Store
+	Response      *ResponseContext
+	ResponseState *ResponseState
 }
 
 // RequestContext holds request-related data
@@ -25,12 +26,19 @@ type ResponseContext struct {
 	Body     []byte
 }
 
-func NewExchangeFromRequest(r *http.Request, body []byte, requestStore *store.Store) *Exchange {
+// NewExchange creates a new Exchange object from an HTTP request, body, request store, and response state
+func NewExchange(req *http.Request, body []byte, requestStore *store.Store, responseState *ResponseState) *Exchange {
 	return &Exchange{
 		Request: &RequestContext{
-			Request: r,
+			Request: req,
 			Body:    body,
 		},
-		RequestStore: requestStore,
+		RequestStore:  requestStore,
+		ResponseState: responseState,
 	}
+}
+
+// NewExchangeFromRequest creates a new Exchange object from an HTTP request, body, and request store
+func NewExchangeFromRequest(req *http.Request, body []byte, requestStore *store.Store) *Exchange {
+	return NewExchange(req, body, requestStore, nil)
 }
