@@ -21,18 +21,28 @@ func InitialiseImposter(configDirArg string) (*config.ImposterConfig, []plugin.P
 	store.InitStoreProvider()
 
 	var plugins []plugin.Plugin
+	totalConfigs := 0
+
 	for _, configDir := range configDirs {
 		if info, err := os.Stat(configDir); os.IsNotExist(err) || !info.IsDir() {
 			panic("Specified path is not a valid directory")
 		}
 
 		cfgs := config.LoadConfig(configDir, imposterConfig)
+		totalConfigs += len(cfgs)
 		plgs := plugin.LoadPlugins(cfgs, configDir, imposterConfig)
 
 		store.PreloadStores(configDir, cfgs)
 
 		plugins = append(plugins, plgs...)
 	}
+
+	// Exit if no configuration files were found
+	if totalConfigs == 0 {
+		logger.Errorf("No configuration files found in specified directories: %v", configDirs)
+		os.Exit(1)
+	}
+
 	return imposterConfig, plugins
 }
 
