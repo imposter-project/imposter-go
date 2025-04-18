@@ -179,12 +179,21 @@ func handleResponseReplacement(field string, exch *exchange.Exchange) string {
 
 	switch {
 	case field == "body":
-		return string(exch.Response.Body)
+		if exch.Response != nil {
+			return string(exch.Response.Body)
+		}
+		return ""
 	case field == "statusCode":
-		return fmt.Sprintf("%d", exch.Response.Response.StatusCode)
+		if exch.Response != nil && exch.Response.Response != nil {
+			return fmt.Sprintf("%d", exch.Response.Response.StatusCode)
+		}
+		return ""
 	case strings.HasPrefix(field, "headers."):
 		key := strings.TrimPrefix(field, "headers.")
-		return exch.Response.Response.Header.Get(key)
+		if exch.Response != nil && exch.Response.Response != nil {
+			return exch.Response.Response.Header.Get(key)
+		}
+		return ""
 	default:
 		return ""
 	}

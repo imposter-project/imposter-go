@@ -114,6 +114,8 @@ func (h *PluginHandler) HandleRequest(
 	}
 
 	// Process the response
-	h.processResponse(&best.Resource.RequestMatcher, responseState, r, &best.Resource.Response, requestStore, respProc)
-	responseState.Handled = true
+	if best.Resource.Response != nil {
+		h.processResponse(&best.Resource.RequestMatcher, responseState, r, best.Resource.Response, requestStore, respProc)
+		responseState.Handled = true
+	}
 }

@@ -113,41 +113,43 @@ func augmentConfigWithOpenApiSpec(cfg *config.Config, parser OpenAPIParser) erro
 		for _, resp := range responses {
 			// Create an interceptor with default RequestMatcher
 			newInterceptor := config.Interceptor{
-				RuntimeGenerated: true,
-				Continue:         true,
-				RequestMatcher: config.RequestMatcher{
-					Method: op.Method,
-					Path:   op.Path,
-					RequestHeaders: map[string]config.MatcherUnmarshaler{
-						"Accept": {
-							Matcher: config.MatchCondition{
-								Value:    resp.ContentType,
-								Operator: "Contains",
+				Continue: true,
+				BaseResource: config.BaseResource{
+					RuntimeGenerated: true,
+					RequestMatcher: config.RequestMatcher{
+						Method: op.Method,
+						Path:   op.Path,
+						RequestHeaders: map[string]config.MatcherUnmarshaler{
+							"Accept": {
+								Matcher: config.MatchCondition{
+									Value:    resp.ContentType,
+									Operator: "Contains",
+								},
+							},
+						},
+						// TODO check request headers, query params, etc.
+					},
+					Capture: map[string]config.Capture{
+						"_matched-openapi-operation": {
+							Store: "request",
+							CaptureConfig: config.CaptureConfig{
+								Const: op.Name,
+							},
+						},
+						"_matched-openapi-response": {
+							Store: "request",
+							CaptureConfig: config.CaptureConfig{
+								Const: resp.UniqueID,
 							},
 						},
 					},
-					// TODO check request headers, query params, etc.
-				},
-				Capture: map[string]config.Capture{
-					"_matched-openapi-operation": {
-						Store: "request",
-						CaptureConfig: config.CaptureConfig{
-							Const: op.Name,
+					Response: &config.Response{
+						StatusCode: responseCode,
+						Headers: map[string]string{
+							"Content-Type": resp.ContentType,
 						},
+						Content: openapiExamplePlaceholder,
 					},
-					"_matched-openapi-response": {
-						Store: "request",
-						CaptureConfig: config.CaptureConfig{
-							Const: resp.UniqueID,
-						},
-					},
-				},
-				Response: &config.Response{
-					StatusCode: responseCode,
-					Headers: map[string]string{
-						"Content-Type": resp.ContentType,
-					},
-					Content: openapiExamplePlaceholder,
 				},
 			}
 			logger.Tracef("adding interceptor for operation %s at %s %s", op.Name, op.Method, op.Path)
@@ -157,18 +159,20 @@ func augmentConfigWithOpenApiSpec(cfg *config.Config, parser OpenAPIParser) erro
 
 	// Add a default resource to handle unmatched requests
 	defaultResource := config.Resource{
-		RuntimeGenerated: true,
-		RequestMatcher: config.RequestMatcher{
-			AllOf: []config.ExpressionMatchCondition{
-				{
-					Expression: "${stores.request._matched-openapi-operation}",
-					MatchCondition: config.MatchCondition{
-						Operator: "Exists",
+		BaseResource: config.BaseResource{
+			RuntimeGenerated: true,
+			RequestMatcher: config.RequestMatcher{
+				AllOf: []config.ExpressionMatchCondition{
+					{
+						Expression: "${stores.request._matched-openapi-operation}",
+						MatchCondition: config.MatchCondition{
+							Operator: "Exists",
+						},
 					},
 				},
 			},
+			Response: &config.Response{},
 		},
-		Response: config.Response{},
 	}
 	cfg.Resources = append(cfg.Resources, defaultResource)
 

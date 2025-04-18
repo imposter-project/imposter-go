@@ -128,7 +128,10 @@ system:
 						assert.Len(t, cfg.Resources, 1)
 						assert.Equal(t, "/api/test", cfg.Resources[0].Path)
 						assert.Equal(t, "GET", cfg.Resources[0].Method)
-						assert.Equal(t, "test response", cfg.Resources[0].Response.Content)
+						assert.NotNil(t, cfg.Resources[0].Response, "Response should not be nil")
+						if cfg.Resources[0].Response != nil {
+							assert.Equal(t, "test response", cfg.Resources[0].Response.Content)
+						}
 					}
 				}
 			}

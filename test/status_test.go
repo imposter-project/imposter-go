@@ -19,12 +19,14 @@ func TestSystemStatus(t *testing.T) {
 			Plugin: "rest",
 			Resources: []config.Resource{
 				{
-					RequestMatcher: config.RequestMatcher{
-						Path: "/test",
-					},
-					Response: config.Response{
-						Content:    "test response",
-						StatusCode: 200,
+					BaseResource: config.BaseResource{
+						RequestMatcher: config.RequestMatcher{
+							Path: "/test",
+						},
+						Response: &config.Response{
+							Content:    "test response",
+							StatusCode: 200,
+						},
 					},
 				},
 			},

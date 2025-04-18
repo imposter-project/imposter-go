@@ -116,7 +116,7 @@ func TestInterceptors_ShortCircuit(t *testing.T) {
 		{
 			Plugin: "rest",
 			Resources: []config.Resource{
-				testutils.NewResource("GET", "/example", config.Response{
+				testutils.NewResource("GET", "/example", &config.Response{
 					StatusCode: 200,
 					Content:    "Hello, world!",
 				}),
@@ -187,7 +187,7 @@ func TestInterceptors_Passthrough(t *testing.T) {
 		{
 			Plugin: "rest",
 			Resources: []config.Resource{
-				testutils.NewResource("GET", "/example", config.Response{
+				testutils.NewResource("GET", "/example", &config.Response{
 					StatusCode: 200,
 					Content:    "User agent: ${stores.request.userAgent}",
 					Template:   true,

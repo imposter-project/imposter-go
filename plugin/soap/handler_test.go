@@ -143,21 +143,23 @@ func TestSOAPHandler_HandleRequest(t *testing.T) {
 				},
 				Resources: []config.Resource{
 					{
-						RequestMatcher: config.RequestMatcher{
-							Path:       "/pets/",
-							Operation:  "getPetById",
-							SOAPAction: "getPetById",
-							RequestBody: config.RequestBody{
-								BodyMatchCondition: &config.BodyMatchCondition{
-									MatchCondition: config.MatchCondition{
-										Value: "3",
+						BaseResource: config.BaseResource{
+							RequestMatcher: config.RequestMatcher{
+								Path:       "/pets/",
+								Operation:  "getPetById",
+								SOAPAction: "getPetById",
+								RequestBody: config.RequestBody{
+									BodyMatchCondition: &config.BodyMatchCondition{
+										MatchCondition: config.MatchCondition{
+											Value: "3",
+										},
+										XPath: "//pet:id",
 									},
-									XPath: "//pet:id",
 								},
 							},
-						},
-						Response: config.Response{
-							StatusCode: 200,
+							Response: &config.Response{
+								StatusCode: 200,
+							},
 						},
 					},
 				},
@@ -258,14 +260,16 @@ func TestSOAPHandler_HandleRequest_InvalidMethod(t *testing.T) {
 				WSDLFile: tt.wsdlPath,
 				Resources: []config.Resource{
 					{
-						RequestMatcher: config.RequestMatcher{
-							Path:       "/pets/",
-							Operation:  "getPetById",
-							SOAPAction: "getPetById",
-						},
-						Response: config.Response{
-							Content:    "test response",
-							StatusCode: 200,
+						BaseResource: config.BaseResource{
+							RequestMatcher: config.RequestMatcher{
+								Path:       "/pets/",
+								Operation:  "getPetById",
+								SOAPAction: "getPetById",
+							},
+							Response: &config.Response{
+								Content:    "test response",
+								StatusCode: 200,
+							},
 						},
 					},
 				},
@@ -336,14 +340,16 @@ func TestSOAPHandler_HandleRequest_NoMatchingOperation(t *testing.T) {
 				WSDLFile: tt.wsdlPath,
 				Resources: []config.Resource{
 					{
-						RequestMatcher: config.RequestMatcher{
-							Path:       "/pets/",
-							Operation:  "getPetById",
-							SOAPAction: "getPetById",
-						},
-						Response: config.Response{
-							Content:    "test response",
-							StatusCode: 200,
+						BaseResource: config.BaseResource{
+							RequestMatcher: config.RequestMatcher{
+								Path:       "/pets/",
+								Operation:  "getPetById",
+								SOAPAction: "getPetById",
+							},
+							Response: &config.Response{
+								Content:    "test response",
+								StatusCode: 200,
+							},
 						},
 					},
 				},
@@ -391,15 +397,16 @@ func TestSOAPHandler_HandleRequest_WithInterceptor(t *testing.T) {
 		WSDLFile: filepath.Join("testdata", "wsdl2-soap12/service.wsdl"),
 		Interceptors: []config.Interceptor{
 			{
-				RequestMatcher: config.RequestMatcher{
-					Method: http.MethodPost,
-					Path:   "/pets/",
-					RequestHeaders: map[string]config.MatcherUnmarshaler{
-						"X-Test-Header": {Matcher: config.StringMatcher("test-value")},
+				BaseResource: config.BaseResource{
+					RequestMatcher: config.RequestMatcher{
+						Method: http.MethodPost,
+						Path:   "/pets/",
+						RequestHeaders: map[string]config.MatcherUnmarshaler{
+							"X-Test-Header": {Matcher: config.StringMatcher("test-value")},
+						},
 					},
-				},
-				Response: &config.Response{
-					Content: `<?xml version="1.0" encoding="UTF-8"?>
+					Response: &config.Response{
+						Content: `<?xml version="1.0" encoding="UTF-8"?>
 <env:Envelope xmlns:env="http://www.w3.org/2003/05/soap-envelope">
    <env:Body>
       <env:Fault>
@@ -412,7 +419,8 @@ func TestSOAPHandler_HandleRequest_WithInterceptor(t *testing.T) {
       </env:Fault>
    </env:Body>
 </env:Envelope>`,
-					StatusCode: http.StatusBadRequest,
+						StatusCode: http.StatusBadRequest,
+					},
 				},
 				Continue: false,
 			},
@@ -472,15 +480,16 @@ func TestSOAPHandler_HandleRequest_WithPassthroughInterceptor(t *testing.T) {
 		WSDLFile: filepath.Join("testdata", "wsdl2-soap12/service.wsdl"),
 		Interceptors: []config.Interceptor{
 			{
-				RequestMatcher: config.RequestMatcher{
-					Method: http.MethodPost,
-					Path:   "/pets/",
-					RequestHeaders: map[string]config.MatcherUnmarshaler{
-						"X-Test-Header": {Matcher: config.StringMatcher("test-value")},
+				BaseResource: config.BaseResource{
+					RequestMatcher: config.RequestMatcher{
+						Method: http.MethodPost,
+						Path:   "/pets/",
+						RequestHeaders: map[string]config.MatcherUnmarshaler{
+							"X-Test-Header": {Matcher: config.StringMatcher("test-value")},
+						},
 					},
-				},
-				Response: &config.Response{
-					Content: `<?xml version="1.0" encoding="UTF-8"?>
+					Response: &config.Response{
+						Content: `<?xml version="1.0" encoding="UTF-8"?>
 <env:Envelope xmlns:env="http://www.w3.org/2003/05/soap-envelope">
    <env:Body>
       <env:Fault>
@@ -493,20 +502,22 @@ func TestSOAPHandler_HandleRequest_WithPassthroughInterceptor(t *testing.T) {
       </env:Fault>
    </env:Body>
 </env:Envelope>`,
-					StatusCode: http.StatusBadRequest,
+						StatusCode: http.StatusBadRequest,
+					},
 				},
 				Continue: true,
 			},
 		},
 		Resources: []config.Resource{
 			{
-				RequestMatcher: config.RequestMatcher{
-					Path:       "/pets/",
-					Operation:  "getPetById",
-					SOAPAction: "getPetById",
-				},
-				Response: config.Response{
-					Content: `<?xml version="1.0" encoding="UTF-8"?>
+				BaseResource: config.BaseResource{
+					RequestMatcher: config.RequestMatcher{
+						Path:       "/pets/",
+						Operation:  "getPetById",
+						SOAPAction: "getPetById",
+					},
+					Response: &config.Response{
+						Content: `<?xml version="1.0" encoding="UTF-8"?>
 <env:Envelope xmlns:env="http://www.w3.org/2003/05/soap-envelope">
     <env:Body>
         <getPetByIdResponse xmlns="urn:com:example:petstore">
@@ -515,7 +526,8 @@ func TestSOAPHandler_HandleRequest_WithPassthroughInterceptor(t *testing.T) {
         </getPetByIdResponse>
     </env:Body>
 </env:Envelope>`,
-					StatusCode: http.StatusOK,
+						StatusCode: http.StatusOK,
+					},
 				},
 			},
 		},
@@ -839,14 +851,16 @@ func TestSOAPHandler_SOAPFault(t *testing.T) {
 				WSDLFile: tt.wsdlPath,
 				Resources: []config.Resource{
 					{
-						RequestMatcher: config.RequestMatcher{
-							Path:       "/pets/",
-							Operation:  "getPetById",
-							SOAPAction: "getPetById",
-						},
-						Response: config.Response{
-							Content:    fmt.Sprintf(tt.responseContent, tt.envelopeNS),
-							StatusCode: http.StatusBadRequest,
+						BaseResource: config.BaseResource{
+							RequestMatcher: config.RequestMatcher{
+								Path:       "/pets/",
+								Operation:  "getPetById",
+								SOAPAction: "getPetById",
+							},
+							Response: &config.Response{
+								Content:    fmt.Sprintf(tt.responseContent, tt.envelopeNS),
+								StatusCode: http.StatusBadRequest,
+							},
 						},
 					},
 				},

@@ -108,7 +108,9 @@ func transformLegacyConfig(data []byte) (*Config, error) {
 func parseRootLegacyFields(rawConfig map[string]interface{}) (*Resource, error) {
 	var hasRootLegacyFields bool
 	resource := Resource{
-		RequestMatcher: RequestMatcher{},
+		BaseResource: BaseResource{
+			RequestMatcher: RequestMatcher{},
+		},
 	}
 
 	if path, ok := rawConfig["path"].(string); ok {
@@ -123,6 +125,10 @@ func parseRootLegacyFields(rawConfig map[string]interface{}) (*Resource, error) 
 	}
 	if contentType, ok := rawConfig["contentType"].(string); ok {
 		hasRootLegacyFields = true
+		// Initialize Response if nil
+		if resource.Response == nil {
+			resource.Response = &Response{}
+		}
 		if resource.Response.Headers == nil {
 			resource.Response.Headers = make(map[string]string)
 		}
@@ -144,6 +150,11 @@ func parseRootLegacyFields(rawConfig map[string]interface{}) (*Resource, error) 
 func transformLegacyResource(resource *Resource, rawResource map[string]interface{}) error {
 	// Handle legacy contentType
 	if contentType, ok := rawResource["contentType"].(string); ok {
+		// Ensure Response is initialized
+		if resource.Response == nil {
+			resource.Response = &Response{}
+		}
+
 		if resource.Response.Headers == nil {
 			resource.Response.Headers = make(map[string]string)
 		}
@@ -161,6 +172,11 @@ func transformLegacyResource(resource *Resource, rawResource map[string]interfac
 
 // transformResponseConfig handles the transformation of response configuration
 func transformResponseConfig(resource *Resource, rawResponse map[string]interface{}) error {
+	// Ensure Response is initialized
+	if resource.Response == nil {
+		resource.Response = &Response{}
+	}
+
 	// First unmarshal the raw response into the Response struct to preserve all current format fields
 	if err := yaml.Unmarshal(mustMarshal(rawResponse), &resource.Response); err != nil {
 		return fmt.Errorf("failed to unmarshal response config: %w", err)

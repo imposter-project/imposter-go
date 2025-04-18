@@ -281,27 +281,29 @@ func augmentConfigWithWSDL(cfg *config.Config, parser WSDLParser) error {
 
 		// Create an interceptor with default RequestMatcher
 		newInterceptor := config.Interceptor{
-			RuntimeGenerated: true,
-			Continue:         true,
-			RequestMatcher: config.RequestMatcher{
-				Method:    "POST",
-				Operation: op.Name,
-				Binding:   parser.GetBindingName(op),
+			Continue: true,
+			BaseResource: config.BaseResource{
+				RuntimeGenerated: true,
+				RequestMatcher: config.RequestMatcher{
+					Method:    "POST",
+					Operation: op.Name,
+					Binding:   parser.GetBindingName(op),
 
-				// SOAPAction header is not mandatory - don't be too strict if we match the operation and binding
-				//SOAPAction: op.SOAPAction,
-			},
-			Capture: map[string]config.Capture{
-				"_matched-soap-operation": {
-					Store: "request",
-					CaptureConfig: config.CaptureConfig{
-						Const: op.Name,
+					// SOAPAction header is not mandatory - don't be too strict if we match the operation and binding
+					//SOAPAction: op.SOAPAction,
+				},
+				Capture: map[string]config.Capture{
+					"_matched-soap-operation": {
+						Store: "request",
+						CaptureConfig: config.CaptureConfig{
+							Const: op.Name,
+						},
 					},
 				},
-			},
-			Response: &config.Response{
-				StatusCode: 200,
-				Content:    soapExamplePlaceholder,
+				Response: &config.Response{
+					StatusCode: 200,
+					Content:    soapExamplePlaceholder,
+				},
 			},
 		}
 		cfg.Interceptors = append(cfg.Interceptors, newInterceptor)
@@ -309,18 +311,20 @@ func augmentConfigWithWSDL(cfg *config.Config, parser WSDLParser) error {
 
 	// Add a default resource to handle unmatched requests
 	defaultResource := config.Resource{
-		RuntimeGenerated: true,
-		RequestMatcher: config.RequestMatcher{
-			AllOf: []config.ExpressionMatchCondition{
-				{
-					Expression: "${stores.request._matched-soap-operation}",
-					MatchCondition: config.MatchCondition{
-						Operator: "Exists",
+		BaseResource: config.BaseResource{
+			RuntimeGenerated: true,
+			RequestMatcher: config.RequestMatcher{
+				AllOf: []config.ExpressionMatchCondition{
+					{
+						Expression: "${stores.request._matched-soap-operation}",
+						MatchCondition: config.MatchCondition{
+							Operator: "Exists",
+						},
 					},
 				},
 			},
+			Response: &config.Response{},
 		},
-		Response: config.Response{},
 	}
 	cfg.Resources = append(cfg.Resources, defaultResource)
 

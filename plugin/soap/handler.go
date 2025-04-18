@@ -340,6 +340,8 @@ func (h *PluginHandler) HandleRequest(r *http.Request, requestStore *store.Store
 	}
 
 	// Process the response
-	h.processResponse(bodyHolder, &best.Resource.RequestMatcher, responseState, r, &best.Resource.Response, requestStore, op, respProc)
-	responseState.Handled = true
+	if best.Resource.Response != nil {
+		h.processResponse(bodyHolder, &best.Resource.RequestMatcher, responseState, r, best.Resource.Response, requestStore, op, respProc)
+		responseState.Handled = true
+	}
 }

@@ -62,16 +62,18 @@ func transformSecurityBlock(cfg *Config, security *SecurityConfig, prefix string
 
 		// Create an interceptor for the condition check
 		interceptor := Interceptor{
-			RequestMatcher: RequestMatcher{
-				RequestHeaders: make(map[string]MatcherUnmarshaler),
-				QueryParams:    make(map[string]MatcherUnmarshaler),
-				FormParams:     make(map[string]MatcherUnmarshaler),
-			},
-			Capture: map[string]Capture{
-				conditionKey: {
-					Store: "request",
-					CaptureConfig: CaptureConfig{
-						Const: "met",
+			BaseResource: BaseResource{
+				RequestMatcher: RequestMatcher{
+					RequestHeaders: make(map[string]MatcherUnmarshaler),
+					QueryParams:    make(map[string]MatcherUnmarshaler),
+					FormParams:     make(map[string]MatcherUnmarshaler),
+				},
+				Capture: map[string]Capture{
+					conditionKey: {
+						Store: "request",
+						CaptureConfig: CaptureConfig{
+							Const: "met",
+						},
 					},
 				},
 			},
@@ -99,14 +101,16 @@ func transformSecurityBlock(cfg *Config, security *SecurityConfig, prefix string
 	// Add default deny interceptor if default is "Deny"
 	if strings.EqualFold(security.Default, "Deny") {
 		denyInterceptor := Interceptor{
-			RequestMatcher: RequestMatcher{
-				AnyOf: buildSecurityEvalConditions(len(security.Conditions), prefix),
-			},
-			Response: &Response{
-				StatusCode: http.StatusUnauthorized,
-				Content:    "Unauthorised",
-				Headers: map[string]string{
-					"Content-Type": "text/plain",
+			BaseResource: BaseResource{
+				RequestMatcher: RequestMatcher{
+					AnyOf: buildSecurityEvalConditions(len(security.Conditions), prefix),
+				},
+				Response: &Response{
+					StatusCode: http.StatusUnauthorized,
+					Content:    "Unauthorised",
+					Headers: map[string]string{
+						"Content-Type": "text/plain",
+					},
 				},
 			},
 			Continue: false,

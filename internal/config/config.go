@@ -90,13 +90,15 @@ func LoadConfig(configDir string, imposterConfig *ImposterConfig) []Config {
 			}
 
 			for i := range fileConfig.Resources {
-				// Resolve response file path relative to config file
-				if fileConfig.Resources[i].Response.File != "" && relDir != "." {
-					fileConfig.Resources[i].Response.File = filepath.Join(relDir, fileConfig.Resources[i].Response.File)
-				}
-				// Resolve response dir path relative to config file
-				if fileConfig.Resources[i].Response.Dir != "" && relDir != "." {
-					fileConfig.Resources[i].Response.Dir = filepath.Join(relDir, fileConfig.Resources[i].Response.Dir)
+				if fileConfig.Resources[i].Response != nil {
+					// Resolve response file path relative to config file
+					if fileConfig.Resources[i].Response.File != "" && relDir != "." {
+						fileConfig.Resources[i].Response.File = filepath.Join(relDir, fileConfig.Resources[i].Response.File)
+					}
+					// Resolve response dir path relative to config file
+					if fileConfig.Resources[i].Response.Dir != "" && relDir != "." {
+						fileConfig.Resources[i].Response.Dir = filepath.Join(relDir, fileConfig.Resources[i].Response.Dir)
+					}
 				}
 				// Prefix paths with basePath
 				if fileConfig.BasePath != "" {

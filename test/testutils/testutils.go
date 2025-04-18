@@ -13,10 +13,12 @@ func NewRequestMatcher(method, path string) config.RequestMatcher {
 }
 
 // NewResource creates a new Resource for testing
-func NewResource(method, path string, response config.Response) config.Resource {
+func NewResource(method, path string, response *config.Response) config.Resource {
 	return config.Resource{
-		RequestMatcher: NewRequestMatcher(method, path),
-		Response:       response,
+		BaseResource: config.BaseResource{
+			RequestMatcher: NewRequestMatcher(method, path),
+			Response:       response,
+		},
 	}
 }
 
@@ -25,9 +27,11 @@ func NewInterceptor(method, path string, headers map[string]config.MatcherUnmars
 	rm := NewRequestMatcher(method, path)
 	rm.RequestHeaders = headers
 	return config.Interceptor{
-		RequestMatcher: rm,
-		Response:       response,
-		Continue:       cont,
+		BaseResource: config.BaseResource{
+			RequestMatcher: rm,
+			Response:       response,
+		},
+		Continue: cont,
 	}
 }
 
@@ -35,7 +39,9 @@ func NewInterceptor(method, path string, headers map[string]config.MatcherUnmars
 func NewInterceptorWithResponse(method, path string, cont bool) config.Interceptor {
 	rm := NewRequestMatcher(method, path)
 	return config.Interceptor{
-		RequestMatcher: rm,
-		Continue:       cont,
+		BaseResource: config.BaseResource{
+			RequestMatcher: rm,
+		},
+		Continue: cont,
 	}
 }

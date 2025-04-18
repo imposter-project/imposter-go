@@ -24,7 +24,11 @@ func TestTransformSecurityConfig_NoSecurity(t *testing.T) {
 	cfg := &Config{
 		Plugin: "rest",
 		Resources: []Resource{
-			{Response: Response{StatusCode: 200}},
+			{
+				BaseResource: BaseResource{
+					Response: &Response{StatusCode: 200},
+				},
+			},
 		},
 	}
 
@@ -409,11 +413,13 @@ func TestTransformSecurityConfig_ResourceLevel(t *testing.T) {
 		Plugin: "rest",
 		Resources: []Resource{
 			{
-				RequestMatcher: RequestMatcher{
-					Path: "/protected",
-				},
-				Response: Response{
-					StatusCode: 200,
+				BaseResource: BaseResource{
+					RequestMatcher: RequestMatcher{
+						Path: "/protected",
+					},
+					Response: &Response{
+						StatusCode: 200,
+					},
 				},
 				Security: &SecurityConfig{
 					Default: "Deny",
@@ -430,11 +436,13 @@ func TestTransformSecurityConfig_ResourceLevel(t *testing.T) {
 				},
 			},
 			{
-				RequestMatcher: RequestMatcher{
-					Path: "/also-protected",
-				},
-				Response: Response{
-					StatusCode: 200,
+				BaseResource: BaseResource{
+					RequestMatcher: RequestMatcher{
+						Path: "/also-protected",
+					},
+					Response: &Response{
+						StatusCode: 200,
+					},
 				},
 				Security: &SecurityConfig{
 					Default: "Deny",
@@ -526,11 +534,13 @@ func TestTransformSecurityConfig_BothLevels(t *testing.T) {
 		},
 		Resources: []Resource{
 			{
-				RequestMatcher: RequestMatcher{
-					Path: "/extra-protected",
-				},
-				Response: Response{
-					StatusCode: 200,
+				BaseResource: BaseResource{
+					RequestMatcher: RequestMatcher{
+						Path: "/extra-protected",
+					},
+					Response: &Response{
+						StatusCode: 200,
+					},
 				},
 				Security: &SecurityConfig{
 					Default: "Deny",
@@ -594,8 +604,10 @@ func TestTransformSecurityConfig_UniqueResourcePrefixes(t *testing.T) {
 		Plugin: "rest",
 		Resources: []Resource{
 			{
-				RequestMatcher: RequestMatcher{
-					Path: "/protected1",
+				BaseResource: BaseResource{
+					RequestMatcher: RequestMatcher{
+						Path: "/protected1",
+					},
 				},
 				Security: &SecurityConfig{
 					Default: "Deny",
@@ -619,8 +631,10 @@ func TestTransformSecurityConfig_UniqueResourcePrefixes(t *testing.T) {
 		Plugin: "rest",
 		Resources: []Resource{
 			{
-				RequestMatcher: RequestMatcher{
-					Path: "/protected2",
+				BaseResource: BaseResource{
+					RequestMatcher: RequestMatcher{
+						Path: "/protected2",
+					},
 				},
 				Security: &SecurityConfig{
 					Default: "Deny",
@@ -662,8 +676,10 @@ func TestTransformSecurityConfig_UniqueResourcePrefixes(t *testing.T) {
 		Plugin: "rest",
 		Resources: []Resource{
 			{
-				RequestMatcher: RequestMatcher{
-					Path: "/protected3a",
+				BaseResource: BaseResource{
+					RequestMatcher: RequestMatcher{
+						Path: "/protected3a",
+					},
 				},
 				Security: &SecurityConfig{
 					Default: "Deny",
@@ -680,8 +696,10 @@ func TestTransformSecurityConfig_UniqueResourcePrefixes(t *testing.T) {
 				},
 			},
 			{
-				RequestMatcher: RequestMatcher{
-					Path: "/protected3b",
+				BaseResource: BaseResource{
+					RequestMatcher: RequestMatcher{
+						Path: "/protected3b",
+					},
 				},
 				Security: &SecurityConfig{
 					Default: "Deny",
@@ -735,26 +753,30 @@ func TestTransformSecurityConfig_PreservesExistingInterceptors(t *testing.T) {
 		},
 		Resources: []Resource{
 			{
-				RequestMatcher: RequestMatcher{
-					Path: "/api",
-				},
-				Response: Response{
-					StatusCode: 200,
+				BaseResource: BaseResource{
+					RequestMatcher: RequestMatcher{
+						Path: "/api",
+					},
+					Response: &Response{
+						StatusCode: 200,
+					},
 				},
 			},
 		},
 		Interceptors: []Interceptor{
 			{
-				RequestMatcher: RequestMatcher{
-					RequestHeaders: map[string]MatcherUnmarshaler{
-						"X-Custom": {
-							Matcher: StringMatcher("custom-value"),
+				BaseResource: BaseResource{
+					RequestMatcher: RequestMatcher{
+						RequestHeaders: map[string]MatcherUnmarshaler{
+							"X-Custom": {
+								Matcher: StringMatcher("custom-value"),
+							},
 						},
 					},
-				},
-				Response: &Response{
-					StatusCode: 200,
-					Content:    "Custom Response",
+					Response: &Response{
+						StatusCode: 200,
+						Content:    "Custom Response",
+					},
 				},
 				Continue: true,
 			},

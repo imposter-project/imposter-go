@@ -28,12 +28,14 @@ func TestHandler_HandleRequest_NoMatchingResource(t *testing.T) {
 		Plugin: "rest",
 		Resources: []config.Resource{
 			{
-				RequestMatcher: config.RequestMatcher{
-					Method: "GET",
-					Path:   "/test",
-				},
-				Response: config.Response{
-					Content: "test response",
+				BaseResource: config.BaseResource{
+					RequestMatcher: config.RequestMatcher{
+						Method: "GET",
+						Path:   "/test",
+					},
+					Response: &config.Response{
+						Content: "test response",
+					},
 				},
 			},
 		},
@@ -74,12 +76,14 @@ func TestHandler_HandleRequest_MatchingResource(t *testing.T) {
 		Plugin: "rest",
 		Resources: []config.Resource{
 			{
-				RequestMatcher: config.RequestMatcher{
-					Method: "GET",
-					Path:   "/test",
-				},
-				Response: config.Response{
-					Content: "test response",
+				BaseResource: config.BaseResource{
+					RequestMatcher: config.RequestMatcher{
+						Method: "GET",
+						Path:   "/test",
+					},
+					Response: &config.Response{
+						Content: "test response",
+					},
 				},
 			},
 		},
@@ -129,24 +133,28 @@ func TestHandler_HandleRequest_WithInterceptor(t *testing.T) {
 		Plugin: "rest",
 		Interceptors: []config.Interceptor{
 			{
-				RequestMatcher: config.RequestMatcher{
-					Method: "GET",
-					Path:   "/test",
-				},
-				Response: &config.Response{
-					Content: "intercepted response",
+				BaseResource: config.BaseResource{
+					RequestMatcher: config.RequestMatcher{
+						Method: "GET",
+						Path:   "/test",
+					},
+					Response: &config.Response{
+						Content: "intercepted response",
+					},
 				},
 				Continue: false,
 			},
 		},
 		Resources: []config.Resource{
 			{
-				RequestMatcher: config.RequestMatcher{
-					Method: "GET",
-					Path:   "/test",
-				},
-				Response: config.Response{
-					Content: "test response",
+				BaseResource: config.BaseResource{
+					RequestMatcher: config.RequestMatcher{
+						Method: "GET",
+						Path:   "/test",
+					},
+					Response: &config.Response{
+						Content: "test response",
+					},
 				},
 			},
 		},
@@ -196,20 +204,22 @@ func TestHandler_HandleRequest_WithPathParams(t *testing.T) {
 		Plugin: "rest",
 		Resources: []config.Resource{
 			{
-				RequestMatcher: config.RequestMatcher{
-					Method: "GET",
-					Path:   "/users/{id}",
-					PathParams: map[string]config.MatcherUnmarshaler{
-						"id": {
-							Matcher: config.MatchCondition{
-								Value:    "123",
-								Operator: "EqualTo",
+				BaseResource: config.BaseResource{
+					RequestMatcher: config.RequestMatcher{
+						Method: "GET",
+						Path:   "/users/{id}",
+						PathParams: map[string]config.MatcherUnmarshaler{
+							"id": {
+								Matcher: config.MatchCondition{
+									Value:    "123",
+									Operator: "EqualTo",
+								},
 							},
 						},
 					},
-				},
-				Response: config.Response{
-					Content: "user 123",
+					Response: &config.Response{
+						Content: "user 123",
+					},
 				},
 			},
 		},
@@ -266,12 +276,14 @@ func TestHandler_HandleRequest_WithResponseFile(t *testing.T) {
 		Plugin: "rest",
 		Resources: []config.Resource{
 			{
-				RequestMatcher: config.RequestMatcher{
-					Method: "GET",
-					Path:   "/test",
-				},
-				Response: config.Response{
-					File: "response.txt",
+				BaseResource: config.BaseResource{
+					RequestMatcher: config.RequestMatcher{
+						Method: "GET",
+						Path:   "/test",
+					},
+					Response: &config.Response{
+						File: "response.txt",
+					},
 				},
 			},
 		},
@@ -321,20 +333,22 @@ func TestHandler_HandleRequest_WithRequestBody(t *testing.T) {
 		Plugin: "rest",
 		Resources: []config.Resource{
 			{
-				RequestMatcher: config.RequestMatcher{
-					Method: "POST",
-					Path:   "/test",
-					RequestBody: config.RequestBody{
-						BodyMatchCondition: &config.BodyMatchCondition{
-							MatchCondition: config.MatchCondition{
-								Value:    "test body",
-								Operator: "EqualTo",
+				BaseResource: config.BaseResource{
+					RequestMatcher: config.RequestMatcher{
+						Method: "POST",
+						Path:   "/test",
+						RequestBody: config.RequestBody{
+							BodyMatchCondition: &config.BodyMatchCondition{
+								MatchCondition: config.MatchCondition{
+									Value:    "test body",
+									Operator: "EqualTo",
+								},
 							},
 						},
 					},
-				},
-				Response: config.Response{
-					Content: "test response",
+					Response: &config.Response{
+						Content: "test response",
+					},
 				},
 			},
 		},
@@ -389,20 +403,22 @@ func TestHandler_HandleRequest_WithXMLNamespaces(t *testing.T) {
 		},
 		Resources: []config.Resource{
 			{
-				RequestMatcher: config.RequestMatcher{
-					Method: "POST",
-					Path:   "/test",
-					RequestBody: config.RequestBody{
-						BodyMatchCondition: &config.BodyMatchCondition{
-							MatchCondition: config.MatchCondition{
-								Value: "Grace",
+				BaseResource: config.BaseResource{
+					RequestMatcher: config.RequestMatcher{
+						Method: "POST",
+						Path:   "/test",
+						RequestBody: config.RequestBody{
+							BodyMatchCondition: &config.BodyMatchCondition{
+								MatchCondition: config.MatchCondition{
+									Value: "Grace",
+								},
+								XPath: "//ns:user",
 							},
-							XPath: "//ns:user",
 						},
 					},
-				},
-				Response: config.Response{
-					Content: "test response",
+					Response: &config.Response{
+						Content: "test response",
+					},
 				},
 			},
 		},

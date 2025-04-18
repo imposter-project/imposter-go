@@ -24,16 +24,18 @@ func TestCaptureRequestData(t *testing.T) {
 		{
 			name: "capture query parameter",
 			resource: config.Resource{
-				Capture: map[string]config.Capture{
-					"test": {
-						Enabled: boolPtr(true),
-						Key: config.CaptureConfig{
-							Const: "myKey",
+				BaseResource: config.BaseResource{
+					Capture: map[string]config.Capture{
+						"test": {
+							Enabled: boolPtr(true),
+							Key: config.CaptureConfig{
+								Const: "myKey",
+							},
+							CaptureConfig: config.CaptureConfig{
+								QueryParam: "param",
+							},
+							Store: "request",
 						},
-						CaptureConfig: config.CaptureConfig{
-							QueryParam: "param",
-						},
-						Store: "request",
 					},
 				},
 			},
@@ -50,16 +52,18 @@ func TestCaptureRequestData(t *testing.T) {
 		{
 			name: "capture path parameter",
 			resource: config.Resource{
-				Capture: map[string]config.Capture{
-					"test": {
-						Enabled: boolPtr(true),
-						Key: config.CaptureConfig{
-							Const: "myKey",
+				BaseResource: config.BaseResource{
+					Capture: map[string]config.Capture{
+						"test": {
+							Enabled: boolPtr(true),
+							Key: config.CaptureConfig{
+								Const: "myKey",
+							},
+							CaptureConfig: config.CaptureConfig{
+								PathParam: "param",
+							},
+							Store: "request",
 						},
-						CaptureConfig: config.CaptureConfig{
-							PathParam: "param",
-						},
-						Store: "request",
 					},
 				},
 			},
@@ -76,16 +80,18 @@ func TestCaptureRequestData(t *testing.T) {
 		{
 			name: "capture request header",
 			resource: config.Resource{
-				Capture: map[string]config.Capture{
-					"test": {
-						Enabled: boolPtr(true),
-						Key: config.CaptureConfig{
-							Const: "headerValue",
+				BaseResource: config.BaseResource{
+					Capture: map[string]config.Capture{
+						"test": {
+							Enabled: boolPtr(true),
+							Key: config.CaptureConfig{
+								Const: "headerValue",
+							},
+							CaptureConfig: config.CaptureConfig{
+								RequestHeader: "X-Test-Header",
+							},
+							Store: "request",
 						},
-						CaptureConfig: config.CaptureConfig{
-							RequestHeader: "X-Test-Header",
-						},
-						Store: "request",
 					},
 				},
 			},
@@ -103,16 +109,18 @@ func TestCaptureRequestData(t *testing.T) {
 		{
 			name: "capture form parameter",
 			resource: config.Resource{
-				Capture: map[string]config.Capture{
-					"test": {
-						Enabled: boolPtr(true),
-						Key: config.CaptureConfig{
-							Const: "formValue",
+				BaseResource: config.BaseResource{
+					Capture: map[string]config.Capture{
+						"test": {
+							Enabled: boolPtr(true),
+							Key: config.CaptureConfig{
+								Const: "formValue",
+							},
+							CaptureConfig: config.CaptureConfig{
+								FormParam: "field",
+							},
+							Store: "request",
 						},
-						CaptureConfig: config.CaptureConfig{
-							FormParam: "field",
-						},
-						Store: "request",
 					},
 				},
 			},
@@ -131,22 +139,24 @@ func TestCaptureRequestData(t *testing.T) {
 		{
 			name: "capture JSON path",
 			resource: config.Resource{
-				Capture: map[string]config.Capture{
-					"test": {
-						Enabled: boolPtr(true),
-						Key: config.CaptureConfig{
-							Const: "jsonValue",
-						},
-						CaptureConfig: config.CaptureConfig{
-							RequestBody: struct {
-								JSONPath      string            `yaml:"jsonPath,omitempty"`
-								XPath         string            `yaml:"xPath,omitempty"`
-								XMLNamespaces map[string]string `yaml:"xmlNamespaces,omitempty"`
-							}{
-								JSONPath: "$.name",
+				BaseResource: config.BaseResource{
+					Capture: map[string]config.Capture{
+						"test": {
+							Enabled: boolPtr(true),
+							Key: config.CaptureConfig{
+								Const: "jsonValue",
 							},
+							CaptureConfig: config.CaptureConfig{
+								RequestBody: struct {
+									JSONPath      string            `yaml:"jsonPath,omitempty"`
+									XPath         string            `yaml:"xPath,omitempty"`
+									XMLNamespaces map[string]string `yaml:"xmlNamespaces,omitempty"`
+								}{
+									JSONPath: "$.name",
+								},
+							},
+							Store: "request",
 						},
-						Store: "request",
 					},
 				},
 			},
@@ -165,22 +175,24 @@ func TestCaptureRequestData(t *testing.T) {
 		{
 			name: "capture XML path",
 			resource: config.Resource{
-				Capture: map[string]config.Capture{
-					"test": {
-						Enabled: boolPtr(true),
-						Key: config.CaptureConfig{
-							Const: "xmlValue",
-						},
-						CaptureConfig: config.CaptureConfig{
-							RequestBody: struct {
-								JSONPath      string            `yaml:"jsonPath,omitempty"`
-								XPath         string            `yaml:"xPath,omitempty"`
-								XMLNamespaces map[string]string `yaml:"xmlNamespaces,omitempty"`
-							}{
-								XPath: "//name",
+				BaseResource: config.BaseResource{
+					Capture: map[string]config.Capture{
+						"test": {
+							Enabled: boolPtr(true),
+							Key: config.CaptureConfig{
+								Const: "xmlValue",
 							},
+							CaptureConfig: config.CaptureConfig{
+								RequestBody: struct {
+									JSONPath      string            `yaml:"jsonPath,omitempty"`
+									XPath         string            `yaml:"xPath,omitempty"`
+									XMLNamespaces map[string]string `yaml:"xmlNamespaces,omitempty"`
+								}{
+									XPath: "//name",
+								},
+							},
+							Store: "request",
 						},
-						Store: "request",
 					},
 				},
 			},
@@ -199,16 +211,18 @@ func TestCaptureRequestData(t *testing.T) {
 		{
 			name: "capture disabled",
 			resource: config.Resource{
-				Capture: map[string]config.Capture{
-					"test": {
-						Enabled: boolPtr(false),
-						Key: config.CaptureConfig{
-							Const: "disabled",
+				BaseResource: config.BaseResource{
+					Capture: map[string]config.Capture{
+						"test": {
+							Enabled: boolPtr(false),
+							Key: config.CaptureConfig{
+								Const: "disabled",
+							},
+							CaptureConfig: config.CaptureConfig{
+								QueryParam: "param",
+							},
+							Store: "request",
 						},
-						CaptureConfig: config.CaptureConfig{
-							QueryParam: "param",
-						},
-						Store: "request",
 					},
 				},
 			},
@@ -225,15 +239,17 @@ func TestCaptureRequestData(t *testing.T) {
 		{
 			name: "capture enabled not set",
 			resource: config.Resource{
-				Capture: map[string]config.Capture{
-					"test": {
-						Key: config.CaptureConfig{
-							Const: "enabled_not_set",
+				BaseResource: config.BaseResource{
+					Capture: map[string]config.Capture{
+						"test": {
+							Key: config.CaptureConfig{
+								Const: "enabled_not_set",
+							},
+							CaptureConfig: config.CaptureConfig{
+								QueryParam: "param",
+							},
+							Store: "request",
 						},
-						CaptureConfig: config.CaptureConfig{
-							QueryParam: "param",
-						},
-						Store: "request",
 					},
 				},
 			},

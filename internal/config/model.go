@@ -213,24 +213,24 @@ type Step struct {
 	Capture map[string]Capture `yaml:"capture,omitempty"`
 }
 
-// Resource represents an HTTP resource
-type Resource struct {
-	RequestMatcher   `yaml:",inline"`
-	Capture          map[string]Capture `yaml:"capture,omitempty"`
-	Steps            []Step             `yaml:"steps,omitempty"`
-	Response         Response           `yaml:"response"`
-	Security         *SecurityConfig    `yaml:"security,omitempty"`
-	RuntimeGenerated bool               `yaml:"-"`
-}
-
-// Interceptor represents an HTTP interceptor that can be executed before resources
-type Interceptor struct {
+type BaseResource struct {
 	RequestMatcher   `yaml:",inline"`
 	Capture          map[string]Capture `yaml:"capture,omitempty"`
 	Steps            []Step             `yaml:"steps,omitempty"`
 	Response         *Response          `yaml:"response,omitempty"`
-	Continue         bool               `yaml:"continue"`
 	RuntimeGenerated bool               `yaml:"-"`
+}
+
+// Resource represents an HTTP resource
+type Resource struct {
+	BaseResource `yaml:",inline"`
+	Security     *SecurityConfig `yaml:"security,omitempty"`
+}
+
+// Interceptor represents an HTTP interceptor that can be executed before resources
+type Interceptor struct {
+	BaseResource `yaml:",inline"`
+	Continue     bool `yaml:"continue"`
 }
 
 type System struct {
