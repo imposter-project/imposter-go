@@ -14,6 +14,7 @@ bin/
 *.iml
 __debug_bin*
 venv/
+.venv/
 
 # Outputs
 bootstrap
@@ -24,6 +25,9 @@ imposter.zip
 coverage.out
 coverage.html
 
-# Examples
-all-examples/
+# Symbolic links
+/all-examples
+/docs
+
+# Tool config
 /.tool-versions

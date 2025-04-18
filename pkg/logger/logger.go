@@ -1,10 +1,12 @@
 package logger
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"os"
 	"strings"
+	"sync"
 )
 
 type LogLevel int
@@ -17,7 +19,34 @@ const (
 	ERROR
 )
 
+// writerProxy is a Writer that forwards write calls to the underlying writer
+type writerProxy struct {
+	mu     sync.RWMutex
+	writer io.Writer
+}
+
+func (w *writerProxy) Write(p []byte) (n int, err error) {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+	return w.writer.Write(p)
+}
+
+func (w *writerProxy) getWriter() io.Writer {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+	return w.writer
+}
+
+func (w *writerProxy) setWriter(writer io.Writer) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.writer = writer
+}
+
 var (
+	outputSink = &writerProxy{writer: os.Stdout}
+	errorSink  = &writerProxy{writer: os.Stderr}
+
 	Trace *log.Logger
 	Debug *log.Logger
 	Info  *log.Logger
@@ -28,11 +57,11 @@ var (
 )
 
 func init() {
-	Trace = log.New(os.Stdout, "[TRACE] ", log.Ldate|log.Ltime)
-	Debug = log.New(os.Stdout, "[DEBUG] ", log.Ldate|log.Ltime)
-	Info = log.New(os.Stdout, "[INFO] ", log.Ldate|log.Ltime)
-	Warn = log.New(os.Stdout, "[WARN] ", log.Ldate|log.Ltime)
-	Error = log.New(os.Stderr, "[ERROR] ", log.Ldate|log.Ltime)
+	Trace = log.New(outputSink, "[TRACE] ", log.Ldate|log.Ltime)
+	Debug = log.New(outputSink, "[DEBUG] ", log.Ldate|log.Ltime)
+	Info = log.New(outputSink, "[INFO] ", log.Ldate|log.Ltime)
+	Warn = log.New(outputSink, "[WARN] ", log.Ldate|log.Ltime)
+	Error = log.New(errorSink, "[ERROR] ", log.Ldate|log.Ltime)
 
 	setLogLevel()
 }
@@ -75,6 +104,29 @@ func setLogLevel() {
 	if !IsErrorEnabled() {
 		Error.SetOutput(io.Discard)
 	}
+}
+
+// GetSinks returns both the current output and error sink writers
+func GetSinks() (outputWriter, errorWriter io.Writer) {
+	return outputSink.getWriter(), errorSink.getWriter()
+}
+
+// SetOutputSink sets a custom writer for the output sink
+func SetOutputSink(w io.Writer) {
+	if w == nil {
+		fmt.Fprintln(os.Stderr, "[WARN] Attempted to set output sink to nil, using io.Discard instead")
+		w = io.Discard // prevent nil writers
+	}
+	outputSink.setWriter(w)
+}
+
+// SetErrorSink sets a custom writer for the error sink
+func SetErrorSink(w io.Writer) {
+	if w == nil {
+		fmt.Fprintln(os.Stderr, "[WARN] Attempted to set error sink to nil, using io.Discard instead")
+		w = io.Discard // prevent nil writers
+	}
+	errorSink.setWriter(w)
 }
 
 // Level check functions

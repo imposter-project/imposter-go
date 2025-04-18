@@ -218,6 +218,7 @@ type BaseResource struct {
 	Capture          map[string]Capture `yaml:"capture,omitempty"`
 	Steps            []Step             `yaml:"steps,omitempty"`
 	Response         *Response          `yaml:"response,omitempty"`
+	Log              string             `yaml:"log,omitempty"`
 	RuntimeGenerated bool               `yaml:"-"`
 }
 

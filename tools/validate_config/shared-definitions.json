@@ -91,6 +91,10 @@
                 "operation": { "type": "string" },
                 "soapAction": { "type": "string" },
                 "binding": { "type": "string" },
+                "log": { 
+                    "type": "string",
+                    "description": "A log message to output when this resource or interceptor handles a request. Can contain template placeholders using ${...} syntax."
+                },
                 "queryParams": {
                     "type": "object",
                     "additionalProperties": { "$ref": "#/definitions/matchCondition" }

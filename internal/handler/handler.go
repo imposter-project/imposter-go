@@ -7,6 +7,7 @@ import (
 
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/exchange"
+	"github.com/imposter-project/imposter-go/internal/template"
 	"github.com/imposter-project/imposter-go/pkg/logger"
 
 	"github.com/imposter-project/imposter-go/internal/response"
@@ -75,6 +76,12 @@ func HandleRequest(imposterConfig *config.ImposterConfig, w http.ResponseWriter,
 				break
 			}
 		}
+	}
+
+	// Check if there's a log message to process
+	if responseState.Resource != nil && responseState.Resource.Log != "" {
+		logMessage := template.ProcessTemplate(responseState.Resource.Log, exch, imposterConfig, &responseState.Resource.RequestMatcher)
+		logger.Infoln(logMessage)
 	}
 
 	logger.Infof("handled request - method:%s, path:%s, status:%d, length:%d",

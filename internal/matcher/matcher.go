@@ -236,6 +236,11 @@ func FindBestMatch(matches []MatchResult) (best MatchResult, tie bool) {
 
 // GetRequestBody reads and resets the request body
 func GetRequestBody(r *http.Request) ([]byte, error) {
+	// Handle nil body
+	if r.Body == nil {
+		return []byte{}, nil
+	}
+
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read request body: %w", err)
