@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.28.0] - 2025-05-07
+### Added
+- feat: matched resources and interceptors can log a (templated) string.
+
+### Changed
+- test: use exchange object to minimise request args.
+
+### Fixed
+- fix: exit with nonzero status if no config files are found.
+
 ## [0.27.2] - 2025-04-18
 ### Changed
 - refactor: introduce BaseResource to unify resource structure.
