@@ -1,0 +1,21 @@
+# Temporary files
+*.tmp
+*.log
+/tmp/
+
+# Load test output files
+*.out
+
+# Docker volumes
+data/
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Hey output
+hey-*

@@ -34,10 +34,11 @@ resources:
           headers:
             Retry-After: "5"
     response:
+      template: true
       content: |
         {
           "message": "Light endpoint response",
-          "timestamp": "${now()}",
+          "timestamp": "${datetime.now.iso8601_datetime}",
           "endpoint": "light"
         }
       headers:
@@ -50,10 +51,11 @@ resources:
       # First tier: add delay to slow down requests
       - limit: 3
         response:
+          template: true
           content: |
             {
               "message": "Heavy endpoint - throttled",
-              "timestamp": "${now()}",
+              "timestamp": "${datetime.now.iso8601_datetime}",
               "endpoint": "heavy",
               "status": "throttled"
             }
@@ -67,21 +69,23 @@ resources:
       - limit: 5
         response:
           statusCode: 503
+          template: true
           content: |
             {
               "error": "Service temporarily overloaded",
               "message": "Heavy endpoint is currently overloaded. Please try again later.",
-              "timestamp": "${now()}",
+              "timestamp": "${datetime.now.iso8601_datetime}",
               "retryAfter": 30
             }
           headers:
             Content-Type: application/json
             Retry-After: "30"
     response:
+      template: true
       content: |
         {
           "message": "Heavy endpoint response",
-          "timestamp": "${now()}",
+          "timestamp": "${datetime.now.iso8601_datetime}",
           "endpoint": "heavy",
           "processingTime": "normal"
         }
@@ -99,21 +103,23 @@ resources:
       - limit: 2
         response:
           statusCode: 429
+          template: true
           content: |
             {
               "error": "Rate limit exceeded",
               "message": "Critical endpoint allows maximum 2 concurrent requests",
-              "timestamp": "${now()}",
+              "timestamp": "${datetime.now.iso8601_datetime}",
               "endpoint": "critical"
             }
           headers:
             Content-Type: application/json
             Retry-After: "10"
     response:
+      template: true
       content: |
         {
           "message": "Critical operation completed",
-          "timestamp": "${now()}",
+          "timestamp": "${datetime.now.iso8601_datetime}",
           "endpoint": "critical",
           "status": "success"
         }
@@ -126,10 +132,11 @@ resources:
   - path: /api/status
     method: GET
     response:
+      template: true
       content: |
         {
           "status": "healthy",
-          "timestamp": "${now()}",
+          "timestamp": "${datetime.now.iso8601_datetime}",
           "version": "1.0.0",
           "endpoints": {
             "light": "up to 10 concurrent",
