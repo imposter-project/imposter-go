@@ -12,6 +12,7 @@ import (
 
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/store"
+	"github.com/imposter-project/imposter-go/internal/system"
 	"github.com/imposter-project/imposter-go/pkg/logger"
 )
 
@@ -53,7 +54,7 @@ func NewRateLimiter(storeProvider store.StoreProvider) RateLimiter {
 
 // NewRateLimiterWithTTL creates a new rate limiter instance with custom TTL
 func NewRateLimiterWithTTL(storeProvider store.StoreProvider, ttl time.Duration) RateLimiter {
-	instanceID := generateInstanceID()
+	instanceID := system.GenerateInstanceID()
 
 	rl := &RateLimiterImpl{
 		storeProvider: storeProvider,
@@ -287,14 +288,6 @@ func (rl *RateLimiterImpl) Cleanup() error {
 	}
 
 	return nil
-}
-
-// generateInstanceID generates a unique instance ID for this server instance
-func generateInstanceID() string {
-	hostname, _ := os.Hostname()
-	pid := os.Getpid()
-	timestamp := time.Now().UnixNano()
-	return fmt.Sprintf("%s-%d-%d", hostname, pid, timestamp)
 }
 
 // GenerateResourceKey generates a unique key for a resource

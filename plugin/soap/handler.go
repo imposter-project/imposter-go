@@ -11,6 +11,7 @@ import (
 
 	"github.com/antchfx/xmlquery"
 	"github.com/imposter-project/imposter-go/internal/capture"
+	"github.com/imposter-project/imposter-go/internal/common"
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/exchange"
 	"github.com/imposter-project/imposter-go/internal/matcher"
@@ -302,6 +303,30 @@ func (h *PluginHandler) HandleRequest(exch *exchange.Exchange, respProc response
 	best, tie := matcher.FindBestMatch(matches)
 	if tie {
 		logger.Warnf("multiple equally specific matches, using the first")
+	}
+
+	// Check rate limiting if configured
+	if len(best.Resource.Concurrency) > 0 {
+		processResponseFunc := func(exch *exchange.Exchange, requestMatcher *config.RequestMatcher, response *config.Response, respProc response.Processor) {
+			h.processResponse(exch, bodyHolder, requestMatcher, response, op, respProc)
+		}
+
+		shouldLimit, cleanupFunc := common.RateLimitCheck(
+			best.Resource,
+			"POST",  // defaultMethod for SOAP
+			op.Name, // resourcePath (operation name)
+			exch,
+			respProc,
+			processResponseFunc,
+		)
+
+		if shouldLimit {
+			return
+		}
+
+		if cleanupFunc != nil {
+			defer cleanupFunc()
+		}
 	}
 
 	// Capture request data
