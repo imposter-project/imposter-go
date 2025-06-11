@@ -19,9 +19,9 @@ const (
 	defaultTTL           = 5 * time.Minute
 	defaultCleanupTicker = 1 * time.Minute
 	rateLimiterStoreName = "rate_limiter"
-	instanceKeyPrefix    = "instance:"
+	activityKeyPrefix    = "activity:"
 	totalKeyPrefix       = "total:"
-	instancesKeyPrefix   = "instances:"
+	activitiesKeyPrefix  = "activities:"
 	timestampKeySuffix   = ":timestamp"
 )
 
@@ -32,8 +32,8 @@ type RateLimiter interface {
 	Cleanup() error
 }
 
-// InstanceData represents per-instance concurrency data
-type InstanceData struct {
+// ResourceActivity represents per-server-instance resource activity data
+type ResourceActivity struct {
 	Count     int       `json:"count"`
 	Timestamp time.Time `json:"timestamp"`
 }
@@ -140,24 +140,24 @@ func (rl *RateLimiterImpl) findMatchingLimit(currentCount int, limits []config.C
 
 // getTotalActiveCount gets the total active count across all instances for a resource
 func (rl *RateLimiterImpl) getTotalActiveCount(resourceKey string) (int, error) {
-	// Clean up expired instances first
-	rl.cleanupExpiredInstances(resourceKey)
+	// Clean up expired activities first
+	rl.cleanupExpiredActivities(resourceKey)
 
-	// Get all instance data for this resource
-	instancePrefix := rl.getInstanceKeyPrefix(resourceKey)
-	instances := rl.store.GetAllValues(instancePrefix)
+	// Get all resource activity data for this resource
+	activityPrefix := rl.getActivityKeyPrefix(resourceKey)
+	activities := rl.store.GetAllValues(activityPrefix)
 
 	total := 0
-	for key, value := range instances {
+	for key, value := range activities {
 		// Skip timestamp keys
 		if strings.HasSuffix(key, timestampKeySuffix) {
 			continue
 		}
 
-		if instanceData, err := rl.parseInstanceData(value); err == nil {
-			// Check if instance data is still valid (not expired)
-			if time.Since(instanceData.Timestamp) <= rl.ttl {
-				total += instanceData.Count
+		if activityData, err := rl.parseResourceActivity(value); err == nil {
+			// Check if activity data is still valid (not expired)
+			if time.Since(activityData.Timestamp) <= rl.ttl {
+				total += activityData.Count
 			}
 		}
 	}
@@ -165,14 +165,14 @@ func (rl *RateLimiterImpl) getTotalActiveCount(resourceKey string) (int, error) 
 	return total, nil
 }
 
-// incrementActiveCount increments the active count for a specific instance
+// incrementActiveCount increments the active count for a specific server instance
 func (rl *RateLimiterImpl) incrementActiveCount(resourceKey, instanceID string) error {
-	instanceKey := rl.getInstanceKey(resourceKey, instanceID)
+	activityKey := rl.getActivityKey(resourceKey, instanceID)
 
-	// Get current instance data
-	currentData := InstanceData{Count: 0, Timestamp: time.Now()}
-	if value, exists := rl.store.GetValue(instanceKey); exists {
-		if existingData, err := rl.parseInstanceData(value); err == nil {
+	// Get current activity data
+	currentData := ResourceActivity{Count: 0, Timestamp: time.Now()}
+	if value, exists := rl.store.GetValue(activityKey); exists {
+		if existingData, err := rl.parseResourceActivity(value); err == nil {
 			currentData.Count = existingData.Count
 		}
 	}
@@ -183,21 +183,21 @@ func (rl *RateLimiterImpl) incrementActiveCount(resourceKey, instanceID string) 
 
 	dataBytes, err := json.Marshal(currentData)
 	if err != nil {
-		return fmt.Errorf("failed to marshal instance data: %w", err)
+		return fmt.Errorf("failed to marshal activity data: %w", err)
 	}
 
-	rl.store.StoreValue(instanceKey, string(dataBytes))
+	rl.store.StoreValue(activityKey, string(dataBytes))
 	return nil
 }
 
-// decrementActiveCount decrements the active count for a specific instance
+// decrementActiveCount decrements the active count for a specific server instance
 func (rl *RateLimiterImpl) decrementActiveCount(resourceKey, instanceID string) error {
-	instanceKey := rl.getInstanceKey(resourceKey, instanceID)
+	activityKey := rl.getActivityKey(resourceKey, instanceID)
 
-	// Get current instance data
-	currentData := InstanceData{Count: 0, Timestamp: time.Now()}
-	if value, exists := rl.store.GetValue(instanceKey); exists {
-		if existingData, err := rl.parseInstanceData(value); err == nil {
+	// Get current activity data
+	currentData := ResourceActivity{Count: 0, Timestamp: time.Now()}
+	if value, exists := rl.store.GetValue(activityKey); exists {
+		if existingData, err := rl.parseResourceActivity(value); err == nil {
 			currentData = *existingData
 		}
 	}
@@ -210,21 +210,21 @@ func (rl *RateLimiterImpl) decrementActiveCount(resourceKey, instanceID string) 
 
 	if currentData.Count == 0 {
 		// Remove the key if count reaches 0
-		rl.store.DeleteValue(instanceKey)
+		rl.store.DeleteValue(activityKey)
 	} else {
 		// Update the count
 		dataBytes, err := json.Marshal(currentData)
 		if err != nil {
-			return fmt.Errorf("failed to marshal instance data: %w", err)
+			return fmt.Errorf("failed to marshal activity data: %w", err)
 		}
-		rl.store.StoreValue(instanceKey, string(dataBytes))
+		rl.store.StoreValue(activityKey, string(dataBytes))
 	}
 
 	return nil
 }
 
-// parseInstanceData parses instance data from stored value
-func (rl *RateLimiterImpl) parseInstanceData(value interface{}) (*InstanceData, error) {
+// parseResourceActivity parses resource activity data from stored value
+func (rl *RateLimiterImpl) parseResourceActivity(value interface{}) (*ResourceActivity, error) {
 	var dataStr string
 	switch v := value.(type) {
 	case string:
@@ -235,30 +235,30 @@ func (rl *RateLimiterImpl) parseInstanceData(value interface{}) (*InstanceData, 
 		return nil, fmt.Errorf("invalid data type: %T", value)
 	}
 
-	var data InstanceData
+	var data ResourceActivity
 	if err := json.Unmarshal([]byte(dataStr), &data); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal instance data: %w", err)
+		return nil, fmt.Errorf("failed to unmarshal activity data: %w", err)
 	}
 
 	return &data, nil
 }
 
-// cleanupExpiredInstances removes expired instance data
-func (rl *RateLimiterImpl) cleanupExpiredInstances(resourceKey string) {
-	instancePrefix := rl.getInstanceKeyPrefix(resourceKey)
-	instances := rl.store.GetAllValues(instancePrefix)
+// cleanupExpiredActivities removes expired resource activity data
+func (rl *RateLimiterImpl) cleanupExpiredActivities(resourceKey string) {
+	activityPrefix := rl.getActivityKeyPrefix(resourceKey)
+	activities := rl.store.GetAllValues(activityPrefix)
 
-	for key, value := range instances {
+	for key, value := range activities {
 		// Skip timestamp keys
 		if strings.HasSuffix(key, timestampKeySuffix) {
 			continue
 		}
 
-		if instanceData, err := rl.parseInstanceData(value); err == nil {
-			// Check if instance data is expired
-			if time.Since(instanceData.Timestamp) > rl.ttl {
+		if activityData, err := rl.parseResourceActivity(value); err == nil {
+			// Check if activity data is expired
+			if time.Since(activityData.Timestamp) > rl.ttl {
 				rl.store.DeleteValue(key)
-				logger.Debugf("cleaned up expired instance data: %s", key)
+				logger.Debugf("cleaned up expired resource activity: %s", key)
 			}
 		}
 	}
@@ -285,16 +285,16 @@ func (rl *RateLimiterImpl) Cleanup() error {
 	allData := rl.store.GetAllValues("")
 
 	for key, value := range allData {
-		// Only process instance keys
-		if !strings.Contains(key, instanceKeyPrefix) {
+		// Only process activity keys
+		if !strings.Contains(key, activityKeyPrefix) {
 			continue
 		}
 
-		if instanceData, err := rl.parseInstanceData(value); err == nil {
-			// Check if instance data is expired
-			if time.Since(instanceData.Timestamp) > rl.ttl {
+		if activityData, err := rl.parseResourceActivity(value); err == nil {
+			// Check if activity data is expired
+			if time.Since(activityData.Timestamp) > rl.ttl {
 				rl.store.DeleteValue(key)
-				logger.Debugf("cleaned up expired instance data: %s", key)
+				logger.Debugf("cleaned up expired resource activity: %s", key)
 			}
 		}
 	}
@@ -333,20 +333,20 @@ func getTTLFromEnv() time.Duration {
 }
 
 // Key generation helpers
-func (rl *RateLimiterImpl) getInstanceKeyPrefix(resourceKey string) string {
-	return fmt.Sprintf("%s%s:", instanceKeyPrefix, resourceKey)
+func (rl *RateLimiterImpl) getActivityKeyPrefix(resourceKey string) string {
+	return fmt.Sprintf("%s%s:", activityKeyPrefix, resourceKey)
 }
 
-func (rl *RateLimiterImpl) getInstanceKey(resourceKey, instanceID string) string {
-	return fmt.Sprintf("%s%s:%s", instanceKeyPrefix, resourceKey, instanceID)
+func (rl *RateLimiterImpl) getActivityKey(resourceKey, instanceID string) string {
+	return fmt.Sprintf("%s%s:%s", activityKeyPrefix, resourceKey, instanceID)
 }
 
 func (rl *RateLimiterImpl) getTotalKey(resourceKey string) string {
 	return fmt.Sprintf("%s%s", totalKeyPrefix, resourceKey)
 }
 
-func (rl *RateLimiterImpl) getInstancesKey(resourceKey string) string {
-	return fmt.Sprintf("%s%s", instancesKeyPrefix, resourceKey)
+func (rl *RateLimiterImpl) getActivitiesKey(resourceKey string) string {
+	return fmt.Sprintf("%s%s", activitiesKeyPrefix, resourceKey)
 }
 
 // Stop stops the cleanup routine and releases resources
