@@ -291,11 +291,14 @@ func (rl *RateLimiterImpl) Cleanup() error {
 }
 
 // GenerateResourceKey generates a unique key for a resource
-func GenerateResourceKey(method, path string) string {
+func GenerateResourceKey(method, name string) string {
 	if method == "" {
 		method = "*"
 	}
-	return fmt.Sprintf("%s:%s", strings.ToUpper(method), path)
+	if name == "" {
+		name = "*"
+	}
+	return fmt.Sprintf("%s:%s", strings.ToUpper(method), name)
 }
 
 // getTTLFromEnv gets TTL from environment variable or returns default
