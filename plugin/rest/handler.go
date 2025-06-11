@@ -89,7 +89,7 @@ func (h *PluginHandler) HandleRequest(
 		shouldLimit, cleanupFunc := common.RateLimitCheck(
 			best.Resource,
 			best.Resource.Method,
-			best.Resource.Path,
+			best.Resource.Path, // resourceName (path for REST)
 			exch,
 			respProc,
 			processResponseFunc,

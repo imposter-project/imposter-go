@@ -11,12 +11,10 @@ import (
 )
 
 // RateLimitCheck performs rate limiting check and returns true if request should be rate limited
-// defaultMethod is used when resource.Method is empty (e.g., "POST" for SOAP)
-// resourcePath is used instead of resource.Path for plugins that need custom path logic (e.g., SOAP using operation name)
 func RateLimitCheck(
 	resource *config.Resource,
 	resourceMethod string,
-	resourcePath string,
+	resourceName string,
 	exch *exchange.Exchange,
 	respProc response.Processor,
 	processResponseFunc func(*exchange.Exchange, *config.RequestMatcher, *config.Response, response.Processor),
@@ -25,7 +23,7 @@ func RateLimitCheck(
 		return false, nil
 	}
 
-	resourceKey := ratelimiter.GenerateResourceKey(resourceMethod, resourcePath)
+	resourceKey := ratelimiter.GenerateResourceKey(resourceMethod, resourceName)
 
 	storeProvider := store.GetStoreProvider()
 	instanceID := system.GenerateInstanceID()
