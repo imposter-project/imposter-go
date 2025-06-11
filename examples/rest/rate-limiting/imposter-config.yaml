@@ -1,0 +1,287 @@
+plugin: rest
+resources:
+  # Light endpoint - can handle 10 concurrent requests
+  - path: /api/light
+    method: GET
+    concurrency:
+      - limit: 10
+        response:
+          statusCode: 429
+          content: |
+            {
+              "error": "Rate limit exceeded",
+              "message": "Too many concurrent requests to light endpoint",
+              "limit": 10,
+              "endpoint": "light",
+              "timestamp": "${now()}"
+            }
+          headers:
+            Content-Type: application/json
+            Retry-After: "5"
+    response:
+      content: |
+        {
+          "message": "Light endpoint response",
+          "timestamp": "${now()}",
+          "endpoint": "light",
+          "processing": "fast"
+        }
+      headers:
+        Content-Type: application/json
+
+  # Heavy endpoint - lower concurrency limit with progressive throttling
+  - path: /api/heavy
+    method: GET
+    concurrency:
+      # First tier: add delay to slow down requests
+      - limit: 3
+        response:
+          content: |
+            {
+              "message": "Heavy endpoint - throttled",
+              "timestamp": "${now()}",
+              "endpoint": "heavy",
+              "status": "throttled",
+              "delay": "2000ms"
+            }
+          delay:
+            exact: 2000
+          headers:
+            Content-Type: application/json
+            X-Throttled: "true"
+            X-Delay-Applied: "2000ms"
+      
+      # Second tier: reject with 503 Service Unavailable
+      - limit: 5
+        response:
+          statusCode: 503
+          content: |
+            {
+              "error": "Service temporarily overloaded",
+              "message": "Heavy endpoint is currently overloaded. Please try again later.",
+              "timestamp": "${now()}",
+              "endpoint": "heavy",
+              "retryAfter": 30,
+              "concurrentLimit": 5
+            }
+          headers:
+            Content-Type: application/json
+            Retry-After: "30"
+            X-Rate-Limited: "true"
+    response:
+      content: |
+        {
+          "message": "Heavy endpoint response",
+          "timestamp": "${now()}",
+          "endpoint": "heavy",
+          "processingTime": "normal",
+          "status": "success"
+        }
+      delay:
+        range:
+          min: 100
+          max: 500
+      headers:
+        Content-Type: application/json
+
+  # Critical endpoint - very strict limits
+  - path: /api/critical
+    method: POST
+    concurrency:
+      - limit: 2
+        response:
+          statusCode: 429
+          content: |
+            {
+              "error": "Rate limit exceeded",
+              "message": "Critical endpoint allows maximum 2 concurrent requests",
+              "timestamp": "${now()}",
+              "endpoint": "critical",
+              "maxConcurrency": 2,
+              "suggestion": "Reduce concurrency or implement request queuing"
+            }
+          headers:
+            Content-Type: application/json
+            Retry-After: "10"
+            X-Rate-Limited: "true"
+            X-Max-Concurrency: "2"
+    response:
+      content: |
+        {
+          "message": "Critical operation completed successfully",
+          "timestamp": "${now()}",
+          "endpoint": "critical",
+          "status": "success",
+          "operationId": "${randomUUID()}"
+        }
+      delay:
+        exact: 1000
+      headers:
+        Content-Type: application/json
+
+  # Database simulation endpoint - multiple tiers with different behaviors
+  - path: /api/database
+    method: GET
+    concurrency:
+      # Tier 1: Warning response with small delay
+      - limit: 5
+        response:
+          content: |
+            {
+              "message": "Database query completed with reduced priority",
+              "timestamp": "${now()}",
+              "endpoint": "database",
+              "status": "throttled",
+              "priority": "low",
+              "queryTime": "1500ms"
+            }
+          delay:
+            exact: 1500
+          headers:
+            Content-Type: application/json
+            X-Throttled: "true"
+            X-Query-Priority: "low"
+      
+      # Tier 2: Circuit breaker simulation
+      - limit: 8
+        response:
+          statusCode: 503
+          content: |
+            {
+              "error": "Circuit breaker activated",
+              "message": "Database connection pool exhausted. Circuit breaker is open.",
+              "timestamp": "${now()}",
+              "endpoint": "database",
+              "circuitBreakerState": "open",
+              "retryAfter": 60
+            }
+          headers:
+            Content-Type: application/json
+            Retry-After: "60"
+            X-Circuit-Breaker: "open"
+    response:
+      content: |
+        {
+          "message": "Database query executed successfully",
+          "timestamp": "${now()}",
+          "endpoint": "database",
+          "queryTime": "fast",
+          "recordsFound": 42,
+          "status": "success"
+        }
+      delay:
+        range:
+          min: 50
+          max: 200
+      headers:
+        Content-Type: application/json
+
+  # File upload endpoint - strict concurrency for resource-intensive operations
+  - path: /api/upload
+    method: POST
+    concurrency:
+      - limit: 1
+        response:
+          statusCode: 429
+          content: |
+            {
+              "error": "Upload slot unavailable",
+              "message": "Only one file upload allowed at a time due to resource constraints",
+              "timestamp": "${now()}",
+              "endpoint": "upload",
+              "maxConcurrency": 1,
+              "suggestion": "Wait for current upload to complete"
+            }
+          headers:
+            Content-Type: application/json
+            Retry-After: "30"
+            X-Upload-Queue: "full"
+    response:
+      content: |
+        {
+          "message": "File upload initiated",
+          "timestamp": "${now()}",
+          "endpoint": "upload",
+          "uploadId": "${randomUUID()}",
+          "status": "processing",
+          "estimatedTime": "5-10 seconds"
+        }
+      delay:
+        range:
+          min: 5000
+          max: 10000
+      headers:
+        Content-Type: application/json
+
+  # Status endpoint - no rate limiting for monitoring
+  - path: /api/status
+    method: GET
+    response:
+      content: |
+        {
+          "status": "healthy",
+          "timestamp": "${now()}",
+          "version": "1.0.0",
+          "rateLimiting": {
+            "enabled": true,
+            "store": "in-memory",
+            "ttl": "5 minutes"
+          },
+          "endpoints": {
+            "light": {
+              "path": "/api/light",
+              "maxConcurrency": 10,
+              "rateLimitBehavior": "429 when exceeded"
+            },
+            "heavy": {
+              "path": "/api/heavy", 
+              "tiers": [
+                {
+                  "limit": 3,
+                  "behavior": "throttle with 2s delay"
+                },
+                {
+                  "limit": 5,
+                  "behavior": "503 service unavailable"
+                }
+              ]
+            },
+            "critical": {
+              "path": "/api/critical",
+              "maxConcurrency": 2,
+              "rateLimitBehavior": "429 when exceeded"
+            },
+            "database": {
+              "path": "/api/database",
+              "tiers": [
+                {
+                  "limit": 5,
+                  "behavior": "throttle with 1.5s delay"
+                },
+                {
+                  "limit": 8,
+                  "behavior": "503 circuit breaker"
+                }
+              ]
+            },
+            "upload": {
+              "path": "/api/upload",
+              "maxConcurrency": 1,
+              "rateLimitBehavior": "429 when exceeded"
+            }
+          }
+        }
+      headers:
+        Content-Type: application/json
+
+  # Health check endpoint - simple and fast
+  - path: /health
+    method: GET
+    response:
+      content: |
+        {
+          "status": "ok",
+          "timestamp": "${now()}"
+        }
+      headers:
+        Content-Type: application/json
