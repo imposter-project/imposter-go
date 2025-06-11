@@ -97,6 +97,12 @@ type RequestBody struct {
 	AnyOf               []BodyMatchCondition `yaml:"anyOf"`
 }
 
+// ConcurrencyLimit represents a concurrency limit with its associated response
+type ConcurrencyLimit struct {
+	Limit    int       `yaml:"limit" json:"limit"`
+	Response *Response `yaml:"response" json:"response"`
+}
+
 // UnmarshalYAML implements custom unmarshaling for RequestBody
 func (rb *RequestBody) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	type bodyMatchFields struct {
@@ -218,6 +224,7 @@ type BaseResource struct {
 	Capture          map[string]Capture `yaml:"capture,omitempty"`
 	Steps            []Step             `yaml:"steps,omitempty"`
 	Response         *Response          `yaml:"response,omitempty"`
+	Concurrency      []ConcurrencyLimit `yaml:"concurrency,omitempty"`
 	Log              string             `yaml:"log,omitempty"`
 	RuntimeGenerated bool               `yaml:"-"`
 }

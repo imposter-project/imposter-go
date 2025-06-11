@@ -8,6 +8,7 @@ import (
 	"github.com/imposter-project/imposter-go/internal/capture"
 	"github.com/imposter-project/imposter-go/internal/exchange"
 	"github.com/imposter-project/imposter-go/internal/matcher"
+	"github.com/imposter-project/imposter-go/internal/ratelimiter"
 	"github.com/imposter-project/imposter-go/internal/response"
 	"github.com/imposter-project/imposter-go/internal/steps"
 )
@@ -76,6 +77,32 @@ func (h *PluginHandler) HandleRequest(
 	best, tie := matcher.FindBestMatch(matches)
 	if tie {
 		logger.Warnf("multiple equally specific matches, using the first")
+	}
+
+	// Check rate limiting if configured
+	if len(best.Resource.Concurrency) > 0 {
+		storeProvider := h.getStoreProvider()
+		rateLimiter := ratelimiter.NewRateLimiter(storeProvider)
+		resourceKey := ratelimiter.GenerateResourceKey(best.Resource.Method, best.Resource.Path)
+		instanceID := h.getInstanceID()
+
+		if limitResponse, err := rateLimiter.CheckAndIncrement(resourceKey, best.Resource.Concurrency, instanceID); limitResponse != nil {
+			// Rate limit exceeded, return the configured response
+			if err != nil {
+				logger.Warnf("rate limiter error: %v", err)
+			}
+			logger.Infof("rate limit applied for resource %s", resourceKey)
+			h.processResponse(exch, &best.Resource.RequestMatcher, limitResponse.Response, respProc)
+			responseState.HandledWithResource(&best.Resource.BaseResource)
+			return
+		}
+
+		// Set up deferred cleanup
+		defer func() {
+			if err := rateLimiter.Decrement(resourceKey, instanceID); err != nil {
+				logger.Warnf("failed to decrement rate limiter count: %v", err)
+			}
+		}()
 	}
 
 	// Capture request data
