@@ -348,20 +348,23 @@ func TestRateLimiter_TTLCleanup(t *testing.T) {
 func TestGenerateResourceKey(t *testing.T) {
 	tests := []struct {
 		method   string
-		path     string
+		name     string
 		expected string
 	}{
 		{"GET", "/test", "GET:/test"},
 		{"POST", "/api/users", "POST:/api/users"},
 		{"", "/test", "*:/test"},
 		{"get", "/test", "GET:/test"},
+		{"POST", "getPetById", "POST:getPetById"}, // SOAP operation example
+		{"GET", "", "GET:*"},                      // Empty resource name
+		{"", "", "*:*"},                           // Both empty
 	}
 
 	for _, test := range tests {
-		result := GenerateResourceKey(test.method, test.path)
+		result := GenerateResourceKey(test.method, test.name)
 		if result != test.expected {
 			t.Errorf("GenerateResourceKey(%q, %q) = %q, expected %q",
-				test.method, test.path, result, test.expected)
+				test.method, test.name, result, test.expected)
 		}
 	}
 }

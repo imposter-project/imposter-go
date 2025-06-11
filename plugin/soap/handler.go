@@ -314,7 +314,7 @@ func (h *PluginHandler) HandleRequest(exch *exchange.Exchange, respProc response
 		shouldLimit, cleanupFunc := common.RateLimitCheck(
 			best.Resource,
 			"POST",  // defaultMethod for SOAP
-			op.Name, // resourcePath (operation name)
+			op.Name, // resourceName (operation name)
 			exch,
 			respProc,
 			processResponseFunc,
