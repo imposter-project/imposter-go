@@ -20,9 +20,6 @@ const (
 	defaultCleanupTicker = 1 * time.Minute
 	rateLimiterStoreName = "rate_limiter"
 	activityKeyPrefix    = "activity:"
-	totalKeyPrefix       = "total:"
-	activitiesKeyPrefix  = "activities:"
-	timestampKeySuffix   = ":timestamp"
 )
 
 // RateLimiter interface defines the contract for rate limiting functionality
@@ -148,12 +145,7 @@ func (rl *RateLimiterImpl) getTotalActiveCount(resourceKey string) (int, error) 
 	activities := rl.store.GetAllValues(activityPrefix)
 
 	total := 0
-	for key, value := range activities {
-		// Skip timestamp keys
-		if strings.HasSuffix(key, timestampKeySuffix) {
-			continue
-		}
-
+	for _, value := range activities {
 		if activityData, err := rl.parseResourceActivity(value); err == nil {
 			// Check if activity data is still valid (not expired)
 			if time.Since(activityData.Timestamp) <= rl.ttl {
@@ -249,11 +241,6 @@ func (rl *RateLimiterImpl) cleanupExpiredActivities(resourceKey string) {
 	activities := rl.store.GetAllValues(activityPrefix)
 
 	for key, value := range activities {
-		// Skip timestamp keys
-		if strings.HasSuffix(key, timestampKeySuffix) {
-			continue
-		}
-
 		if activityData, err := rl.parseResourceActivity(value); err == nil {
 			// Check if activity data is expired
 			if time.Since(activityData.Timestamp) > rl.ttl {
@@ -310,7 +297,7 @@ func generateInstanceID() string {
 	return fmt.Sprintf("%s-%d-%d", hostname, pid, timestamp)
 }
 
-// generateResourceKey generates a unique key for a resource
+// GenerateResourceKey generates a unique key for a resource
 func GenerateResourceKey(method, path string) string {
 	if method == "" {
 		method = "*"
@@ -339,14 +326,6 @@ func (rl *RateLimiterImpl) getActivityKeyPrefix(resourceKey string) string {
 
 func (rl *RateLimiterImpl) getActivityKey(resourceKey, instanceID string) string {
 	return fmt.Sprintf("%s%s:%s", activityKeyPrefix, resourceKey, instanceID)
-}
-
-func (rl *RateLimiterImpl) getTotalKey(resourceKey string) string {
-	return fmt.Sprintf("%s%s", totalKeyPrefix, resourceKey)
-}
-
-func (rl *RateLimiterImpl) getActivitiesKey(resourceKey string) string {
-	return fmt.Sprintf("%s%s", activitiesKeyPrefix, resourceKey)
 }
 
 // Stop stops the cleanup routine and releases resources
