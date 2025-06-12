@@ -18,9 +18,9 @@ func RateLimitCheck(
 	exch *exchange.Exchange,
 	respProc response.Processor,
 	processResponseFunc func(*exchange.Exchange, *config.RequestMatcher, *config.Response, response.Processor),
-) (shouldLimit bool, cleanupFunc func()) {
+) (shouldLimit bool) {
 	if len(resource.Concurrency) == 0 {
-		return false, nil
+		return false
 	}
 
 	resourceKey := ratelimiter.GenerateResourceKey(resourceMethod, resourceName)
@@ -37,15 +37,16 @@ func RateLimitCheck(
 		logger.Infof("rate limit applied for resource %s", resourceKey)
 		processResponseFunc(exch, &resource.RequestMatcher, limitResponse.Response, respProc)
 		exch.ResponseState.HandledWithResource(&resource.BaseResource)
-		return true, nil
+		return true
 	}
 
-	// Set up cleanup function
-	cleanupFunc = func() {
+	// Register cleanup function with ResponseState
+	cleanupFunc := func() {
 		if err := rateLimiter.Decrement(resourceKey, instanceID); err != nil {
 			logger.Warnf("failed to decrement rate limiter count: %v", err)
 		}
 	}
+	exch.ResponseState.CleanupFunctions = append(exch.ResponseState.CleanupFunctions, cleanupFunc)
 
-	return false, cleanupFunc
+	return false
 }
