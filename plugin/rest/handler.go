@@ -86,7 +86,7 @@ func (h *PluginHandler) HandleRequest(
 			h.processResponse(exch, requestMatcher, response, respProc)
 		}
 
-		shouldLimit, cleanupFunc := common.RateLimitCheck(
+		shouldLimit := common.RateLimitCheck(
 			best.Resource,
 			best.Resource.Method,
 			best.Resource.Path, // resourceName (path for REST)
@@ -97,10 +97,6 @@ func (h *PluginHandler) HandleRequest(
 
 		if shouldLimit {
 			return
-		}
-
-		if cleanupFunc != nil {
-			defer cleanupFunc()
 		}
 	}
 
