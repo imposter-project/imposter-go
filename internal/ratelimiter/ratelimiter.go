@@ -23,6 +23,11 @@ const (
 	activityKeyPrefix    = "activity:"
 )
 
+var (
+	globalRateLimiter RateLimiter
+	globalRLMutex     sync.Mutex
+)
+
 // RateLimiter interface defines the contract for rate limiting functionality
 type RateLimiter interface {
 	CheckAndIncrement(resourceKey string, limits []config.ConcurrencyLimit, instanceID string) (*config.ConcurrencyLimit, error)
@@ -45,6 +50,24 @@ type RateLimiterImpl struct {
 	cleanupTicker *time.Ticker
 	cleanupDone   chan bool
 	mu            sync.RWMutex
+}
+
+// GetGlobalRateLimiter returns the global rate limiter instance, initializing it if needed
+func GetGlobalRateLimiter() RateLimiter {
+	// First check without locking (fast path)
+	if globalRateLimiter != nil {
+		return globalRateLimiter
+	}
+
+	globalRLMutex.Lock()
+	defer globalRLMutex.Unlock()
+
+	// Check again after acquiring the lock
+	if globalRateLimiter == nil {
+		storeProvider := store.GetStoreProvider()
+		globalRateLimiter = NewRateLimiter(storeProvider)
+	}
+	return globalRateLimiter
 }
 
 // NewRateLimiter creates a new rate limiter instance
@@ -257,7 +280,9 @@ func (rl *RateLimiterImpl) startCleanupRoutine() {
 	for {
 		select {
 		case <-rl.cleanupTicker.C:
-			rl.Cleanup()
+			if err := rl.Cleanup(); err != nil {
+				logger.Warnf("cleanup failed: %v", err)
+			}
 		case <-rl.cleanupDone:
 			return
 		}

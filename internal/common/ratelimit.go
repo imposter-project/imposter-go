@@ -5,7 +5,6 @@ import (
 	"github.com/imposter-project/imposter-go/internal/exchange"
 	"github.com/imposter-project/imposter-go/internal/ratelimiter"
 	"github.com/imposter-project/imposter-go/internal/response"
-	"github.com/imposter-project/imposter-go/internal/store"
 	"github.com/imposter-project/imposter-go/internal/system"
 	"github.com/imposter-project/imposter-go/pkg/logger"
 )
@@ -25,9 +24,8 @@ func RateLimitCheck(
 
 	resourceKey := ratelimiter.GenerateResourceKey(resourceMethod, resourceName)
 
-	storeProvider := store.GetStoreProvider()
 	instanceID := system.GenerateInstanceID()
-	rateLimiter := ratelimiter.NewRateLimiter(storeProvider)
+	rateLimiter := ratelimiter.GetGlobalRateLimiter()
 
 	if limitResponse, err := rateLimiter.CheckAndIncrement(resourceKey, resource.Concurrency, instanceID); limitResponse != nil {
 		// Rate limit exceeded, return the configured response
