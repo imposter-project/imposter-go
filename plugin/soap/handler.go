@@ -311,7 +311,7 @@ func (h *PluginHandler) HandleRequest(exch *exchange.Exchange, respProc response
 			h.processResponse(exch, bodyHolder, requestMatcher, response, op, respProc)
 		}
 
-		shouldLimit, cleanupFunc := common.RateLimitCheck(
+		shouldLimit := common.RateLimitCheck(
 			best.Resource,
 			"POST",  // defaultMethod for SOAP
 			op.Name, // resourceName (operation name)
@@ -322,10 +322,6 @@ func (h *PluginHandler) HandleRequest(exch *exchange.Exchange, respProc response
 
 		if shouldLimit {
 			return
-		}
-
-		if cleanupFunc != nil {
-			defer cleanupFunc()
 		}
 	}
 
