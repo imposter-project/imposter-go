@@ -92,8 +92,7 @@ func runRateLimiterIntegrationTest(t *testing.T, storeProvider store.StoreProvid
 
 		// Test requests within limit (up to 3)
 		for i := 0; i < 3; i++ {
-			instanceID := fmt.Sprintf("instance-%d", i)
-			result, err := rl.CheckAndIncrement(resourceKey, limits, instanceID)
+			result, err := rl.CheckAndIncrement(resourceKey, limits)
 			if err != nil {
 				t.Fatalf("unexpected error on request %d: %v", i, err)
 			}
@@ -103,7 +102,7 @@ func runRateLimiterIntegrationTest(t *testing.T, storeProvider store.StoreProvid
 		}
 
 		// Test request that exceeds limit (4th request)
-		result, err := rl.CheckAndIncrement(resourceKey, limits, "instance-excess")
+		result, err := rl.CheckAndIncrement(resourceKey, limits)
 		if err != nil {
 			t.Fatalf("unexpected error on excess request: %v", err)
 		}
@@ -115,12 +114,12 @@ func runRateLimiterIntegrationTest(t *testing.T, storeProvider store.StoreProvid
 		}
 
 		// Test decrement allows new request
-		err = rl.Decrement(resourceKey, "instance-0")
+		err = rl.Decrement(resourceKey)
 		if err != nil {
 			t.Fatalf("unexpected error on decrement: %v", err)
 		}
 
-		result, err = rl.CheckAndIncrement(resourceKey, limits, "instance-new")
+		result, err = rl.CheckAndIncrement(resourceKey, limits)
 		if err != nil {
 			t.Fatalf("unexpected error on new request after decrement: %v", err)
 		}
@@ -152,8 +151,7 @@ func runRateLimiterIntegrationTest(t *testing.T, storeProvider store.StoreProvid
 
 		for _, instanceID := range instanceIds {
 			for j := 0; j < requestsPerInstance; j++ {
-				requestID := fmt.Sprintf("%s-req-%d", instanceID, j)
-				result, err := rl.CheckAndIncrement(resourceKey, limits, requestID)
+				result, err := rl.CheckAndIncrement(resourceKey, limits)
 				if err != nil {
 					t.Fatalf("unexpected error for instance %s request %d: %v", instanceID, j, err)
 				}
@@ -190,8 +188,7 @@ func runRateLimiterIntegrationTest(t *testing.T, storeProvider store.StoreProvid
 
 		// Fill up to the limit
 		for i := 0; i < 2; i++ {
-			instanceID := fmt.Sprintf("instance-%d", i)
-			result, err := rl.CheckAndIncrement(resourceKey, limits, instanceID)
+			result, err := rl.CheckAndIncrement(resourceKey, limits)
 			if err != nil {
 				t.Fatalf("unexpected error on request %d: %v", i, err)
 			}
@@ -201,7 +198,7 @@ func runRateLimiterIntegrationTest(t *testing.T, storeProvider store.StoreProvid
 		}
 
 		// Next request should be rate limited
-		result, err := rl.CheckAndIncrement(resourceKey, limits, "instance-excess")
+		result, err := rl.CheckAndIncrement(resourceKey, limits)
 		if err != nil {
 			t.Fatalf("unexpected error on excess request: %v", err)
 		}
@@ -220,8 +217,7 @@ func runRateLimiterIntegrationTest(t *testing.T, storeProvider store.StoreProvid
 
 		// Should now be able to make requests again
 		for i := 0; i < 2; i++ {
-			instanceID := fmt.Sprintf("instance-after-ttl-%d", i)
-			result, err := rl.CheckAndIncrement(resourceKey, limits, instanceID)
+			result, err := rl.CheckAndIncrement(resourceKey, limits)
 			if err != nil {
 				t.Fatalf("unexpected error on request %d after TTL: %v", i, err)
 			}
@@ -279,10 +275,9 @@ func TestCrossStoreCompatibility(t *testing.T) {
 			}
 
 			// Test basic increment/decrement cycle
-			instanceID := "compatibility-test-instance"
 
 			// Should be able to increment up to limit
-			result, err := rl.CheckAndIncrement(resourceKey, limits, instanceID)
+			result, err := rl.CheckAndIncrement(resourceKey, limits)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -291,7 +286,7 @@ func TestCrossStoreCompatibility(t *testing.T) {
 			}
 
 			// Should be able to decrement
-			err = rl.Decrement(resourceKey, instanceID)
+			err = rl.Decrement(resourceKey)
 			if err != nil {
 				t.Fatalf("unexpected error on decrement: %v", err)
 			}
@@ -377,9 +372,8 @@ func BenchmarkRateLimiterStores(b *testing.B) {
 			b.RunParallel(func(pb *testing.PB) {
 				i := 0
 				for pb.Next() {
-					instanceID := fmt.Sprintf("bench-instance-%d", i)
-					rl.CheckAndIncrement(resourceKey, limits, instanceID)
-					rl.Decrement(resourceKey, instanceID)
+					rl.CheckAndIncrement(resourceKey, limits)
+					rl.Decrement(resourceKey)
 					i++
 				}
 			})
