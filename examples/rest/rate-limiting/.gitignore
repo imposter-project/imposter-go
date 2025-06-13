@@ -17,5 +17,7 @@ data/
 .DS_Store
 Thumbs.db
 
-# Hey output
-hey-*
+# Built config, binaries and archives
+bootstrap
+config/
+*.zip
