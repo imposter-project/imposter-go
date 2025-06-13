@@ -30,8 +30,8 @@ var (
 
 // RateLimiter interface defines the contract for rate limiting functionality
 type RateLimiter interface {
-	CheckAndIncrement(resourceKey string, limits []config.ConcurrencyLimit, instanceID string) (*config.ConcurrencyLimit, error)
-	Decrement(resourceKey string, instanceID string) error
+	CheckAndIncrement(resourceKey string, limits []config.ConcurrencyLimit) (*config.ConcurrencyLimit, error)
+	Decrement(resourceKey string) error
 	Cleanup() error
 }
 
@@ -88,14 +88,13 @@ func NewRateLimiterWithTTL(storeProvider store.StoreProvider, ttl time.Duration)
 		cleanupDone:   make(chan bool),
 	}
 
-	// Start cleanup goroutine for inmemory store
 	go rl.startCleanupRoutine()
 
 	return rl
 }
 
 // CheckAndIncrement checks if the request should be rate limited and increments counter if not
-func (rl *RateLimiterImpl) CheckAndIncrement(resourceKey string, limits []config.ConcurrencyLimit, instanceID string) (*config.ConcurrencyLimit, error) {
+func (rl *RateLimiterImpl) CheckAndIncrement(resourceKey string, limits []config.ConcurrencyLimit) (*config.ConcurrencyLimit, error) {
 	if len(limits) == 0 {
 		return nil, nil
 	}
@@ -120,8 +119,7 @@ func (rl *RateLimiterImpl) CheckAndIncrement(resourceKey string, limits []config
 		return matchedLimit, nil
 	}
 
-	// Increment the counter
-	err = rl.incrementActiveCount(resourceKey, instanceID)
+	err = rl.incrementActiveCount(resourceKey)
 	if err != nil {
 		logger.Warnf("failed to increment active count for resource %s: %v", resourceKey, err)
 		// On error, allow the request to proceed
@@ -132,11 +130,11 @@ func (rl *RateLimiterImpl) CheckAndIncrement(resourceKey string, limits []config
 }
 
 // Decrement decrements the active count for a resource and instance
-func (rl *RateLimiterImpl) Decrement(resourceKey string, instanceID string) error {
+func (rl *RateLimiterImpl) Decrement(resourceKey string) error {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
 
-	return rl.decrementActiveCount(resourceKey, instanceID)
+	return rl.decrementActiveCount(resourceKey)
 }
 
 // findMatchingLimit finds the highest matching limit using "greater than or equal to" logic
@@ -182,8 +180,8 @@ func (rl *RateLimiterImpl) getTotalActiveCount(resourceKey string) (int, error) 
 }
 
 // incrementActiveCount increments the active count for a specific server instance
-func (rl *RateLimiterImpl) incrementActiveCount(resourceKey, instanceID string) error {
-	activityKey := rl.getActivityKey(resourceKey, instanceID)
+func (rl *RateLimiterImpl) incrementActiveCount(resourceKey string) error {
+	activityKey := rl.getActivityKey(resourceKey, rl.instanceID)
 
 	// Get current activity data
 	currentData := ResourceActivity{Count: 0, Timestamp: time.Now()}
@@ -207,8 +205,8 @@ func (rl *RateLimiterImpl) incrementActiveCount(resourceKey, instanceID string) 
 }
 
 // decrementActiveCount decrements the active count for a specific server instance
-func (rl *RateLimiterImpl) decrementActiveCount(resourceKey, instanceID string) error {
-	activityKey := rl.getActivityKey(resourceKey, instanceID)
+func (rl *RateLimiterImpl) decrementActiveCount(resourceKey string) error {
+	activityKey := rl.getActivityKey(resourceKey, rl.instanceID)
 
 	// Get current activity data
 	currentData := ResourceActivity{Count: 0, Timestamp: time.Now()}
@@ -269,7 +267,7 @@ func (rl *RateLimiterImpl) cleanupExpiredActivities(resourceKey string) {
 			// Check if activity data is expired
 			if time.Since(activityData.Timestamp) > rl.ttl {
 				rl.store.DeleteValue(key)
-				logger.Debugf("cleaned up expired resource activity: %s", key)
+				logger.Tracef("cleaned up expired resource activity: %s", key)
 			}
 		}
 	}
