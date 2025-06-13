@@ -236,18 +236,18 @@ func (rl *RateLimiterImpl) decrementActiveCount(resourceKey string) error {
 
 // parseResourceActivity parses resource activity data from stored value
 func (rl *RateLimiterImpl) parseResourceActivity(value interface{}) (*ResourceActivity, error) {
-	var dataStr string
+	var dataStr []byte
 	switch v := value.(type) {
 	case string:
-		dataStr = v
+		dataStr = []byte(v)
 	case []byte:
-		dataStr = string(v)
+		dataStr = v
 	default:
 		return nil, fmt.Errorf("invalid data type: %T", value)
 	}
 
 	var data ResourceActivity
-	if err := json.Unmarshal([]byte(dataStr), &data); err != nil {
+	if err := json.Unmarshal(dataStr, &data); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal activity data: %w", err)
 	}
 
