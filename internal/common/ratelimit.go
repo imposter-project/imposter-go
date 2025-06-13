@@ -5,7 +5,6 @@ import (
 	"github.com/imposter-project/imposter-go/internal/exchange"
 	"github.com/imposter-project/imposter-go/internal/ratelimiter"
 	"github.com/imposter-project/imposter-go/internal/response"
-	"github.com/imposter-project/imposter-go/internal/system"
 	"github.com/imposter-project/imposter-go/pkg/logger"
 )
 
@@ -22,12 +21,10 @@ func RateLimitCheck(
 		return false
 	}
 
+	rateLimiter := ratelimiter.GetGlobalRateLimiter()
 	resourceKey := ratelimiter.GenerateResourceKey(resourceMethod, resourceName)
 
-	instanceID := system.GenerateInstanceID()
-	rateLimiter := ratelimiter.GetGlobalRateLimiter()
-
-	if limitResponse, err := rateLimiter.CheckAndIncrement(resourceKey, resource.Concurrency, instanceID); limitResponse != nil {
+	if limitResponse, err := rateLimiter.CheckAndIncrement(resourceKey, resource.Concurrency); limitResponse != nil {
 		// Rate limit exceeded, return the configured response
 		if err != nil {
 			logger.Warnf("rate limiter error: %v", err)
@@ -40,7 +37,7 @@ func RateLimitCheck(
 
 	// Register cleanup function with ResponseState
 	cleanupFunc := func() {
-		if err := rateLimiter.Decrement(resourceKey, instanceID); err != nil {
+		if err := rateLimiter.Decrement(resourceKey); err != nil {
 			logger.Warnf("failed to decrement rate limiter count: %v", err)
 		}
 	}

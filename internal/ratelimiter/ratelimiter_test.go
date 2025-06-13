@@ -1,7 +1,6 @@
 package ratelimiter
 
 import (
-	"fmt"
 	"os"
 	"sync"
 	"testing"
@@ -38,10 +37,9 @@ func TestRateLimiter_CheckAndIncrement_NoLimits(t *testing.T) {
 	defer rl.(*RateLimiterImpl).Stop()
 
 	resourceKey := "GET:/test"
-	instanceID := "test-instance"
 	limits := []config.ConcurrencyLimit{}
 
-	result, err := rl.CheckAndIncrement(resourceKey, limits, instanceID)
+	result, err := rl.CheckAndIncrement(resourceKey, limits)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -57,7 +55,6 @@ func TestRateLimiter_CheckAndIncrement_BelowLimit(t *testing.T) {
 	defer rl.(*RateLimiterImpl).Stop()
 
 	resourceKey := "GET:/test"
-	instanceID := "test-instance"
 	limits := []config.ConcurrencyLimit{
 		{
 			Limit: 5,
@@ -70,7 +67,7 @@ func TestRateLimiter_CheckAndIncrement_BelowLimit(t *testing.T) {
 
 	// First 4 requests should pass
 	for i := 0; i < 4; i++ {
-		result, err := rl.CheckAndIncrement(resourceKey, limits, fmt.Sprintf("%s-%d", instanceID, i))
+		result, err := rl.CheckAndIncrement(resourceKey, limits)
 		if err != nil {
 			t.Fatalf("unexpected error on request %d: %v", i, err)
 		}
@@ -87,7 +84,6 @@ func TestRateLimiter_CheckAndIncrement_ExceedsLimit(t *testing.T) {
 	defer rl.(*RateLimiterImpl).Stop()
 
 	resourceKey := "GET:/test"
-	instanceID := "test-instance"
 	limits := []config.ConcurrencyLimit{
 		{
 			Limit: 3,
@@ -100,7 +96,7 @@ func TestRateLimiter_CheckAndIncrement_ExceedsLimit(t *testing.T) {
 
 	// First 3 requests should pass (up to the limit)
 	for i := 0; i < 3; i++ {
-		result, err := rl.CheckAndIncrement(resourceKey, limits, fmt.Sprintf("%s-%d", instanceID, i))
+		result, err := rl.CheckAndIncrement(resourceKey, limits)
 		if err != nil {
 			t.Fatalf("unexpected error on request %d: %v", i, err)
 		}
@@ -110,7 +106,7 @@ func TestRateLimiter_CheckAndIncrement_ExceedsLimit(t *testing.T) {
 	}
 
 	// Fourth request should be rate limited
-	result, err := rl.CheckAndIncrement(resourceKey, limits, fmt.Sprintf("%s-4", instanceID))
+	result, err := rl.CheckAndIncrement(resourceKey, limits)
 	if err != nil {
 		t.Fatalf("unexpected error on rate limited request: %v", err)
 	}
@@ -129,7 +125,6 @@ func TestRateLimiter_CheckAndIncrement_MultipleLimits(t *testing.T) {
 	defer rl.(*RateLimiterImpl).Stop()
 
 	resourceKey := "GET:/test"
-	instanceID := "test-instance"
 	limits := []config.ConcurrencyLimit{
 		{
 			Limit: 3,
@@ -149,7 +144,7 @@ func TestRateLimiter_CheckAndIncrement_MultipleLimits(t *testing.T) {
 
 	// First 3 requests should pass (up to first limit)
 	for i := 0; i < 3; i++ {
-		result, err := rl.CheckAndIncrement(resourceKey, limits, fmt.Sprintf("%s-%d", instanceID, i))
+		result, err := rl.CheckAndIncrement(resourceKey, limits)
 		if err != nil {
 			t.Fatalf("unexpected error on request %d: %v", i, err)
 		}
@@ -159,7 +154,7 @@ func TestRateLimiter_CheckAndIncrement_MultipleLimits(t *testing.T) {
 	}
 
 	// Fourth request should hit the first limit (exceeds limit: 3)
-	result, err := rl.CheckAndIncrement(resourceKey, limits, fmt.Sprintf("%s-4", instanceID))
+	result, err := rl.CheckAndIncrement(resourceKey, limits)
 	if err != nil {
 		t.Fatalf("unexpected error on rate limited request: %v", err)
 	}
@@ -173,7 +168,7 @@ func TestRateLimiter_CheckAndIncrement_MultipleLimits(t *testing.T) {
 	// All subsequent requests should continue to hit the same limit since count doesn't increase
 	// when rate limited
 	for i := 5; i < 8; i++ {
-		result, err := rl.CheckAndIncrement(resourceKey, limits, fmt.Sprintf("%s-%d", instanceID, i))
+		result, err := rl.CheckAndIncrement(resourceKey, limits)
 		if err != nil {
 			t.Fatalf("unexpected error on request %d: %v", i, err)
 		}
@@ -193,7 +188,6 @@ func TestRateLimiter_Decrement(t *testing.T) {
 	defer rl.(*RateLimiterImpl).Stop()
 
 	resourceKey := "GET:/test"
-	instanceID := "test-instance"
 	limits := []config.ConcurrencyLimit{
 		{
 			Limit: 2,
@@ -206,7 +200,7 @@ func TestRateLimiter_Decrement(t *testing.T) {
 
 	// Increment to the limit
 	for i := 0; i < 2; i++ {
-		result, err := rl.CheckAndIncrement(resourceKey, limits, fmt.Sprintf("%s-%d", instanceID, i))
+		result, err := rl.CheckAndIncrement(resourceKey, limits)
 		if err != nil {
 			t.Fatalf("unexpected error on request %d: %v", i, err)
 		}
@@ -216,13 +210,13 @@ func TestRateLimiter_Decrement(t *testing.T) {
 	}
 
 	// Decrement one request
-	err := rl.Decrement(resourceKey, fmt.Sprintf("%s-0", instanceID))
+	err := rl.Decrement(resourceKey)
 	if err != nil {
 		t.Fatalf("unexpected error on decrement: %v", err)
 	}
 
 	// Should be able to add another request now
-	result, err := rl.CheckAndIncrement(resourceKey, limits, fmt.Sprintf("%s-new", instanceID))
+	result, err := rl.CheckAndIncrement(resourceKey, limits)
 	if err != nil {
 		t.Fatalf("unexpected error on new request: %v", err)
 	}
@@ -261,8 +255,7 @@ func TestRateLimiter_ConcurrentAccess(t *testing.T) {
 			defer wg.Done()
 
 			for j := 0; j < numRequestsPerGoroutine; j++ {
-				instanceID := fmt.Sprintf("goroutine-%d-request-%d", goroutineID, j)
-				result, err := rl.CheckAndIncrement(resourceKey, limits, instanceID)
+				result, err := rl.CheckAndIncrement(resourceKey, limits)
 				if err != nil {
 					t.Errorf("unexpected error: %v", err)
 					return
@@ -275,7 +268,7 @@ func TestRateLimiter_ConcurrentAccess(t *testing.T) {
 				} else {
 					// Simulate some work, then decrement
 					time.Sleep(10 * time.Millisecond)
-					if err := rl.Decrement(resourceKey, instanceID); err != nil {
+					if err := rl.Decrement(resourceKey); err != nil {
 						t.Errorf("unexpected error on decrement: %v", err)
 					}
 				}
@@ -303,7 +296,6 @@ func TestRateLimiter_TTLCleanup(t *testing.T) {
 	defer rl.(*RateLimiterImpl).Stop()
 
 	resourceKey := "GET:/test"
-	instanceID := "test-instance"
 	limits := []config.ConcurrencyLimit{
 		{
 			Limit: 5,
@@ -316,7 +308,7 @@ func TestRateLimiter_TTLCleanup(t *testing.T) {
 
 	// Add some requests
 	for i := 0; i < 3; i++ {
-		result, err := rl.CheckAndIncrement(resourceKey, limits, fmt.Sprintf("%s-%d", instanceID, i))
+		result, err := rl.CheckAndIncrement(resourceKey, limits)
 		if err != nil {
 			t.Fatalf("unexpected error on request %d: %v", i, err)
 		}
@@ -335,7 +327,7 @@ func TestRateLimiter_TTLCleanup(t *testing.T) {
 
 	// All requests should now pass since expired entries were cleaned up
 	for i := 0; i < 4; i++ {
-		result, err := rl.CheckAndIncrement(resourceKey, limits, fmt.Sprintf("%s-new-%d", instanceID, i))
+		result, err := rl.CheckAndIncrement(resourceKey, limits)
 		if err != nil {
 			t.Fatalf("unexpected error on request %d after cleanup: %v", i, err)
 		}
