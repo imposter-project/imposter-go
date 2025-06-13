@@ -27,13 +27,12 @@ func (p *RedisStoreProvider) InitStores() {
 
 func (p *RedisStoreProvider) GetValue(storeName, key string) (interface{}, bool) {
 	key = applyKeyPrefix(key)
-	val, err := p.client.HGet(p.ctx, storeName, key).Result()
+	redisKey := buildRedisKey(storeName, key)
+	val, err := p.client.Get(p.ctx, redisKey).Result()
 	if err == redis.Nil {
 		return nil, false
 	} else if err != nil {
-		if err != redis.Nil {
-			logger.Errorf("failed to get item: %v", err)
-		}
+		logger.Errorf("failed to get item: %v", err)
 		return nil, false
 	}
 	var value interface{}
@@ -46,40 +45,57 @@ func (p *RedisStoreProvider) GetValue(storeName, key string) (interface{}, bool)
 
 func (p *RedisStoreProvider) StoreValue(storeName, key string, value interface{}) {
 	key = applyKeyPrefix(key)
+	redisKey := buildRedisKey(storeName, key)
 	valueBytes, err := json.Marshal(value)
 	if err != nil {
 		logger.Errorf("failed to marshal value: %v", err)
 		return
 	}
+
 	expiration := getExpiration()
-	err = p.client.HSet(p.ctx, storeName, key, valueBytes).Err()
+	if expiration > 0 {
+		err = p.client.Set(p.ctx, redisKey, valueBytes, expiration).Err()
+	} else {
+		err = p.client.Set(p.ctx, redisKey, valueBytes, 0).Err()
+	}
 	if err != nil {
 		logger.Errorf("failed to set item: %v", err)
-		return
-	}
-	err = p.client.Expire(p.ctx, storeName+":"+key, expiration).Err()
-	if err != nil {
-		logger.Errorf("failed to set expiration: %v", err)
 	}
 }
 
 func (p *RedisStoreProvider) GetAllValues(storeName, keyPrefix string) map[string]interface{} {
 	keyPrefix = applyKeyPrefix(keyPrefix)
+	searchPattern := buildRedisKey(storeName, keyPrefix) + "*"
 	items := make(map[string]interface{})
-	vals, err := p.client.HGetAll(p.ctx, storeName).Result()
-	if err != nil {
-		logger.Errorf("failed to get items: %v", err)
-		return nil
-	}
-	for key, val := range vals {
-		if strings.HasPrefix(key, keyPrefix) {
+
+	var cursor uint64
+	for {
+		keys, nextCursor, err := p.client.Scan(p.ctx, cursor, searchPattern, 100).Result()
+		if err != nil {
+			logger.Errorf("failed to scan keys: %v", err)
+			return nil
+		}
+
+		for _, redisKey := range keys {
+			val, err := p.client.Get(p.ctx, redisKey).Result()
+			if err != nil {
+				logger.Errorf("failed to get item %s: %v", redisKey, err)
+				continue
+			}
 			var value interface{}
 			if err := json.Unmarshal([]byte(val), &value); err != nil {
 				logger.Errorf("failed to unmarshal value: %v", err)
 				continue
 			}
+			// Extract the original key by removing storeName prefix
+			key := extractKeyFromRedisKey(storeName, redisKey)
 			deprefixedKey := removeKeyPrefix(key)
 			items[deprefixedKey] = value
+		}
+
+		cursor = nextCursor
+		if cursor == 0 {
+			break
 		}
 	}
 	return items
@@ -87,28 +103,58 @@ func (p *RedisStoreProvider) GetAllValues(storeName, keyPrefix string) map[strin
 
 func (p *RedisStoreProvider) DeleteValue(storeName, key string) {
 	key = applyKeyPrefix(key)
-	err := p.client.HDel(p.ctx, storeName, key).Err()
+	redisKey := buildRedisKey(storeName, key)
+	err := p.client.Del(p.ctx, redisKey).Err()
 	if err != nil {
 		logger.Errorf("failed to delete item: %v", err)
 	}
 }
 
 func (p *RedisStoreProvider) DeleteStore(storeName string) {
-	err := p.client.Del(p.ctx, storeName).Err()
-	if err != nil {
-		logger.Errorf("failed to delete store: %v", err)
+	searchPattern := buildRedisKey(storeName, "*")
+
+	// Use SCAN instead of KEYS for better performance
+	var cursor uint64
+	for {
+		keys, nextCursor, err := p.client.Scan(p.ctx, cursor, searchPattern, 100).Result()
+		if err != nil {
+			logger.Errorf("failed to scan keys for store deletion: %v", err)
+			return
+		}
+
+		if len(keys) > 0 {
+			err = p.client.Del(p.ctx, keys...).Err()
+			if err != nil {
+				logger.Errorf("failed to delete keys: %v", err)
+			}
+		}
+
+		cursor = nextCursor
+		if cursor == 0 {
+			break
+		}
 	}
+}
+
+// buildRedisKey creates a Redis key from store name and key
+func buildRedisKey(storeName, key string) string {
+	return storeName + ":" + key
+}
+
+// extractKeyFromRedisKey extracts the original key from a Redis key
+func extractKeyFromRedisKey(storeName, redisKey string) string {
+	return strings.TrimPrefix(redisKey, storeName+":")
 }
 
 func getExpiration() time.Duration {
 	expirationStr := os.Getenv("IMPOSTER_STORE_REDIS_EXPIRY")
 	if expirationStr == "" {
-		return 30 * time.Minute
+		return -1
 	}
 	expiration, err := time.ParseDuration(expirationStr)
 	if err != nil {
 		logger.Errorf("invalid expiration duration: %v", err)
-		return 30 * time.Minute
+		return -1
 	}
 	return expiration
 }
