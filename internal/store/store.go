@@ -75,6 +75,11 @@ func InitStoreProvider() {
 	storeProvider.InitStores()
 }
 
+// GetStoreProvider returns the global store provider
+func GetStoreProvider() StoreProvider {
+	return storeProvider
+}
+
 func PreloadStores(configDir string, configs []config.Config) {
 	for _, cfg := range configs {
 		if cfg.System != nil && cfg.System.Stores != nil {

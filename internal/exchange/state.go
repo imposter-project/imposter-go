@@ -7,15 +7,16 @@ import (
 
 // ResponseState tracks the state of the HTTP response
 type ResponseState struct {
-	StatusCode int
-	Headers    map[string]string
-	Body       []byte
-	Stopped    bool                 // indicates if the response has been stopped (e.g., connection closed)
-	Handled    bool                 // indicates if a handler has handled the request
-	Resource   *config.BaseResource // the resource that handled the request
-	Delay      config.Delay         // delay configuration for the response
-	Fail       string               // failure type for the response
-	File       string               // path to the response file
+	StatusCode       int
+	Headers          map[string]string
+	Body             []byte
+	Stopped          bool                 // indicates if the response has been stopped (e.g., connection closed)
+	Handled          bool                 // indicates if a handler has handled the request
+	Resource         *config.BaseResource // the resource that handled the request
+	Delay            config.Delay         // delay configuration for the response
+	Fail             string               // failure type for the response
+	File             string               // path to the response file
+	CleanupFunctions []func()             // functions to execute after response is written
 }
 
 // HandledWithResource marks the response as handled and sets the resource that handled it
@@ -45,5 +46,12 @@ func (rs *ResponseState) WriteToResponseWriter(w http.ResponseWriter) {
 	w.WriteHeader(rs.StatusCode)
 	if rs.Body != nil {
 		w.Write(rs.Body)
+	}
+
+	// Execute cleanup functions after response is written
+	for _, cleanup := range rs.CleanupFunctions {
+		if cleanup != nil {
+			cleanup()
+		}
 	}
 }
