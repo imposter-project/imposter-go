@@ -159,9 +159,6 @@ func (rl *RateLimiterImpl) findMatchingLimit(currentCount int, limits []config.C
 
 // getTotalActiveCount gets the total active count across all instances for a resource
 func (rl *RateLimiterImpl) getTotalActiveCount(resourceKey string) (int, error) {
-	// Clean up expired activities first
-	rl.cleanupExpiredActivities(resourceKey)
-
 	// Get all resource activity data for this resource
 	activityPrefix := rl.getActivityKeyPrefix(resourceKey)
 	activities := rl.store.GetAllValues(activityPrefix)
@@ -255,22 +252,6 @@ func (rl *RateLimiterImpl) parseResourceActivity(value interface{}) (*ResourceAc
 	}
 
 	return &data, nil
-}
-
-// cleanupExpiredActivities removes expired resource activity data
-func (rl *RateLimiterImpl) cleanupExpiredActivities(resourceKey string) {
-	activityPrefix := rl.getActivityKeyPrefix(resourceKey)
-	activities := rl.store.GetAllValues(activityPrefix)
-
-	for key, value := range activities {
-		if activityData, err := rl.parseResourceActivity(value); err == nil {
-			// Check if activity data is expired
-			if time.Since(activityData.Timestamp) > rl.ttl {
-				rl.store.DeleteValue(key)
-				logger.Tracef("cleaned up expired resource activity: %s", key)
-			}
-		}
-	}
 }
 
 // startCleanupRoutine starts the periodic cleanup routine
