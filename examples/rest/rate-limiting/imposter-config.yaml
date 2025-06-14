@@ -1,6 +1,37 @@
 plugin: rest
 resources:
   # Light endpoint - can handle 10 concurrent requests
+  - path: /api/simple
+    method: GET
+    concurrency:
+      - limit: 10
+        response:
+          statusCode: 429
+          delay:
+            exact: 1000
+          template: true
+          content: |
+            {
+              "error": "Rate limit exceeded",
+              "message": "Too many concurrent requests to simple endpoint"
+              "timestamp": "${datetime.now.iso8601_datetime}"
+            }
+          headers:
+            Content-Type: application/json
+            Retry-After: "5"
+    response:
+      delay:
+        exact: 1000
+      template: true
+      content: |
+        {
+          "message": "Simple endpoint response",
+          "timestamp": "${datetime.now.iso8601_datetime}"
+        }
+      headers:
+        Content-Type: application/json
+
+  # Light endpoint - can handle 10 concurrent requests
   - path: /api/light
     method: GET
     concurrency:
