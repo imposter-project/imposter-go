@@ -88,7 +88,16 @@ func NewRateLimiterWithTTL(storeProvider store.StoreProvider, ttl time.Duration)
 		cleanupDone:   make(chan bool),
 	}
 
-	go rl.startCleanupRoutine()
+	// Check if cleanup routine should be enabled (default: false)
+	autoCleanup := os.Getenv("IMPOSTER_RATE_LIMITER_AUTO_CLEANUP")
+	logger.Tracef("rate limiter auto cleanup: %s", autoCleanup)
+
+	if autoCleanup == "true" || autoCleanup == "1" {
+		logger.Tracef("starting rate limiter cleanup routine")
+		go rl.startCleanupRoutine()
+	} else {
+		logger.Tracef("rate limiter cleanup routine disabled")
+	}
 
 	return rl
 }
