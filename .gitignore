@@ -26,8 +26,8 @@ coverage.out
 coverage.html
 
 # Symbolic links
+/all-docs
 /all-examples
-/docs
 
 # Tool config
 /.tool-versions
