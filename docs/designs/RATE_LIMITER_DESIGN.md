@@ -2,142 +2,75 @@
 
 ## Overview
 
-This document outlines the design and implementation of a concurrent request rate limiter in imposter-go. The rate limiter tracks concurrent requests per resource and applies different responses based on configurable thresholds.
-
-## Requirements
-
-### Functional Requirements
-1. **Concurrent Request Tracking**: Track the number of active requests per resource across multiple server instances
-2. **Configurable Thresholds**: Support multiple concurrency limits per resource with different responses
-3. **Distributed State**: Use configurable datastores (inmemory, DynamoDB, Redis) for state management
-4. **TTL Cleanup**: Automatically clean up stale request counts from ungraceful shutdowns
-5. **Per-Resource Configuration**: Configure rate limits individually per resource
-6. **Threshold Matching**: Use "greater than" logic with highest matching limit selection
-7. **Plugin Support**: Support both REST and SOAP plugins with different resource naming conventions
-
-### Non-Functional Requirements
-1. **High Performance**: Minimal latency impact on request processing
-2. **Thread Safety**: Safe for concurrent request handling
-3. **Fault Tolerance**: Handle store failures gracefully
-4. **Scalability**: Support multiple server instances (Lambda, containers)
+The rate limiter in imposter-go provides concurrent request limiting functionality that tracks active requests per resource and applies different responses based on configurable thresholds. It operates as a global singleton that integrates seamlessly with both REST and SOAP plugins, using atomic counters for thread-safe operation across multiple server instances.
 
 ## Architecture
 
-### High-Level Flow
-```
-Request → Rate Limiter Check → Plugin Processing → Response
-           ↓
-         Store Update
-```
+### Core Components
 
-### Components
-
-#### 1. Configuration Model
-```go
-type ConcurrencyLimit struct {
-    Limit    int       `yaml:"limit" json:"limit"`
-    Response *Response `yaml:"response" json:"response"`
-}
-
-type Resource struct {
-    // ... existing fields
-    Concurrency []ConcurrencyLimit `yaml:"concurrency,omitempty" json:"concurrency,omitempty"`
-}
-```
-
-#### 2. Rate Limiter Core
+#### 1. RateLimiter Interface
 ```go
 type RateLimiter interface {
-    CheckAndIncrement(resourceKey string, limits []config.ConcurrencyLimit, instanceID string) (*config.ConcurrencyLimit, error)
-    Decrement(resourceKey string, instanceID string) error
-    Cleanup() error
+    CheckAndIncrement(resourceKey string, limits []config.ConcurrencyLimit) (*config.ConcurrencyLimit, error)
+    Decrement(resourceKey string) error
 }
 ```
 
-#### 3. Common Rate Limiting Function
-```go
-func RateLimitCheck(
-    resource *config.Resource,
-    resourceMethod string,
-    resourceName string,
-    exch *exchange.Exchange,
-    respProc response.Processor,
-    processResponseFunc func(*exchange.Exchange, *config.RequestMatcher, *config.Response, response.Processor),
-) (shouldLimit bool, cleanupFunc func())
-```
+#### 2. Global Rate Limiter Instance
+The rate limiter operates as a global singleton accessible via `GetGlobalRateLimiter()`, ensuring consistent state management across all requests and plugins.
 
-#### 4. Store Keys Structure
+#### 3. Store Integration
+Rate limiting data is stored using the configured store provider:
+- **InMemory**: Thread-safe atomic operations with mutex protection
+- **Redis**: Native atomic increment/decrement operations with TTL
+- **DynamoDB**: Atomic UpdateItem operations with TTL attribute support
+
+### Request Processing Flow
+
 ```
-Rate limiter uses the following key patterns in the store:
-- `activity:{resourceKey}:{instanceID}` - Resource activity data per server instance
+Request → Plugin Handler → Rate Limit Check → Counter Increment → Limit Evaluation
+                                    ↓
+                          Rate Limited? → Process Limit Response → Return
+                                    ↓ No
+                          Normal Processing → Response Writing → Counter Decrement
 ```
 
 ## Implementation Details
 
-### 1. Request Processing Flow
+### 1. Resource Key Generation
 
-The rate limiter is integrated into both REST and SOAP plugin handlers:
-
+Resources are identified using a standardised key format:
 ```go
-// Check rate limiting if configured
-if len(best.Resource.Concurrency) > 0 {
-    processResponseFunc := func(exch *exchange.Exchange, requestMatcher *config.RequestMatcher, response *config.Response, respProc response.Processor) {
-        h.processResponse(exch, requestMatcher, response, respProc)
+func GenerateResourceKey(method, name string) string {
+    if method == "" {
+        method = "*"
     }
-
-    shouldLimit, cleanupFunc := common.RateLimitCheck(
-        best.Resource,
-        resourceMethod,  // "POST" for SOAP, best.Resource.Method for REST
-        resourceName,    // operation name for SOAP, path for REST
-        exch,
-        respProc,
-        processResponseFunc,
-    )
-
-    if shouldLimit {
-        return
+    if name == "" {
+        name = "*"
     }
-
-    if cleanupFunc != nil {
-        defer cleanupFunc()
-    }
+    return fmt.Sprintf("%s:%s", strings.ToUpper(method), name)
 }
 ```
 
-### 2. Concurrency Checking Algorithm
+**Examples:**
+- REST: `GET:/api/users`, `POST:/api/orders`
+- SOAP: `POST:getUserDetails`, `POST:createOrder`
 
-```go
-func (rl *RateLimiterImpl) CheckAndIncrement(resourceKey string, limits []config.ConcurrencyLimit, instanceID string) (*config.ConcurrencyLimit, error) {
-    // Get current total active count
-    totalActive, err := rl.getTotalActiveCount(resourceKey)
-    if err != nil {
-        // On error, allow the request to proceed
-        return nil, nil
-    }
+### 2. Atomic Counter Management
 
-    // Check if any limit is exceeded after incrementing
-    futureTotal := totalActive + 1
-    matchedLimit := rl.findMatchingLimit(futureTotal, limits)
-
-    if matchedLimit != nil {
-        // Rate limit exceeded, return the matched limit
-        return matchedLimit, nil
-    }
-
-    // Increment the counter
-    err = rl.incrementActiveCount(resourceKey, instanceID)
-    if err != nil {
-        // On error, allow the request to proceed
-        return nil, nil
-    }
-
-    return nil, nil
-}
+The rate limiter uses a single atomic counter per resource stored with the key pattern:
+```
+counter:{resourceKey}
 ```
 
-### 3. Limit Matching Logic
+**Counter Operations:**
+- **Increment**: Atomic increment when request starts
+- **Rollback**: Atomic decrement if rate limit exceeded  
+- **Cleanup**: Atomic decrement when request completes
 
-The rate limiter uses "greater than" logic with highest matching limit selection:
+### 3. Concurrency Limit Evaluation
+
+Limits are evaluated using "greater than" logic with highest matching threshold selection:
 
 ```go
 func (rl *RateLimiterImpl) findMatchingLimit(currentCount int, limits []config.ConcurrencyLimit) *config.ConcurrencyLimit {
@@ -160,123 +93,116 @@ func (rl *RateLimiterImpl) findMatchingLimit(currentCount int, limits []config.C
 }
 ```
 
-### 4. TTL and Cleanup Mechanism
+**Example:** With limits `[3, 5, 10]` and current count `7`:
+- Count `7 > 3` ✓ (match)
+- Count `7 > 5` ✓ (match, overwrites previous)
+- Count `7 > 10` ✗ (no match)
+- Returns limit with threshold `5`
 
-**Resource Activity Tracking**:
+### 4. Plugin Integration
+
+#### REST Plugin Integration
 ```go
-type ResourceActivity struct {
-    Count     int       `json:"count"`
-    Timestamp time.Time `json:"timestamp"`
-}
-```
-
-**TTL Implementation**:
-- InMemory: Periodic cleanup goroutine with configurable TTL (default 5 minutes)
-- Redis: Native TTL support
-- DynamoDB: TTL attribute support
-
-### 5. Instance ID Generation
-
-Instance IDs are generated using the system package for consistency:
-
-```go
-// internal/system/instance.go
-func GenerateInstanceID() string {
-    hostname, _ := os.Hostname()
-    pid := os.Getpid()
-    timestamp := time.Now().UnixNano()
-    return fmt.Sprintf("%s-%d-%d", hostname, pid, timestamp)
-}
-```
-
-### 6. Resource Key Generation
-
-```go
-func GenerateResourceKey(method, name string) string {
-    if method == "" {
-        method = "*"
+// Check rate limiting if configured
+if len(best.Resource.Concurrency) > 0 {
+    processResponseFunc := func(exch *exchange.Exchange, requestMatcher *config.RequestMatcher, response *config.Response, respProc response.Processor) {
+        h.processResponse(exch, requestMatcher, response, respProc)
     }
-    if name == "" {
-        name = "*"
+
+    shouldLimit := common.RateLimitCheck(
+        best.Resource,
+        best.Resource.Method,    // HTTP method (GET, POST, etc.)
+        best.Resource.Path,      // Resource path (/api/users)
+        exch,
+        respProc,
+        processResponseFunc,
+    )
+
+    if shouldLimit {
+        return
     }
-    return fmt.Sprintf("%s:%s", strings.ToUpper(method), name)
 }
 ```
 
-**Resource Naming by Plugin**:
-- **REST**: Uses `resource.Path` (e.g., `/api/users`)
-- **SOAP**: Uses operation name (e.g., `getPetById`)
-
-## Plugin Integration
-
-### REST Plugin Integration
+#### SOAP Plugin Integration
 ```go
-shouldLimit, cleanupFunc := common.RateLimitCheck(
-    best.Resource,
-    best.Resource.Method,
-    best.Resource.Path, // resourceName (path for REST)
-    exch,
-    respProc,
-    processResponseFunc,
-)
-```
+// Check rate limiting if configured
+if len(best.Resource.Concurrency) > 0 {
+    processResponseFunc := func(exch *exchange.Exchange, requestMatcher *config.RequestMatcher, response *config.Response, respProc response.Processor) {
+        h.processResponse(exch, bodyHolder, requestMatcher, response, op, respProc)
+    }
 
-### SOAP Plugin Integration
-```go
-shouldLimit, cleanupFunc := common.RateLimitCheck(
-    best.Resource,
-    "POST",  // defaultMethod for SOAP
-    op.Name, // resourceName (operation name)
-    exch,
-    respProc,
-    processResponseFunc,
-)
-```
+    shouldLimit := common.RateLimitCheck(
+        best.Resource,
+        "POST",                  // SOAP always uses POST
+        op.Name,                 // SOAP operation name
+        exch,
+        respProc,
+        processResponseFunc,
+    )
 
-## Store Implementation Details
-
-### Resource Activity Data Structure
-Each server instance maintains its own activity count with timestamp:
-```json
-{
-    "count": 3,
-    "timestamp": "2023-10-01T12:00:00Z"
+    if shouldLimit {
+        return
+    }
 }
 ```
 
-### Store Key Patterns
-- Activity Key: `activity:{resourceKey}:{instanceID}`
-- Example: `activity:GET:/api/users:server1-1234-1696156800000000000`
+### 5. Cleanup Mechanism
 
-### InMemory Store
-- Uses periodic cleanup goroutine
-- Configurable TTL via `IMPOSTER_RATE_LIMITER_TTL` environment variable
-- Thread-safe with mutex protection
+The rate limiter uses a deferred cleanup approach to ensure counters are decremented after response processing:
 
-### Redis Store
-- Uses native TTL for automatic cleanup
-- Atomic increment/decrement operations
-- Efficient key pattern matching for cleanup
+```go
+// Register cleanup function with ResponseState
+cleanupFunc := func() {
+    if err := rateLimiter.Decrement(resourceKey); err != nil {
+        logger.Warnf("failed to decrement rate limiter count: %v", err)
+    }
+}
+exch.ResponseState.CleanupFunctions = append(exch.ResponseState.CleanupFunctions, cleanupFunc)
+```
 
-### DynamoDB Store
-- Uses TTL attribute for automatic cleanup
-- Atomic counter operations
-- Efficient query patterns for activity aggregation
+**Cleanup Execution Flow:**
+1. Request processed normally
+2. Response written to client via `WriteToResponseWriter()`
+3. Cleanup functions executed automatically
+4. Counter decremented atomically
 
-## Configuration Examples
+### 6. Store Implementation Details
 
-### Basic Configuration
+#### Key Patterns
+- **Counter Key**: `counter:{resourceKey}` (e.g., `counter:GET:/api/users`)
+- **Global Prefix**: Applied automatically via store provider
+- **TTL Support**: Automatic cleanup via store-specific TTL mechanisms
+
+#### Store Provider Capabilities
+
+**InMemory Store:**
+- Mutex-protected atomic operations
+- TTL support via `IMPOSTER_STORE_INMEMORY_TTL`
+- Thread-safe for concurrent access
+
+**Redis Store:**
+- Native `INCRBY`/`DECRBY` atomic operations
+- TTL via `EXPIRE` command
+- High-performance distributed counter
+
+**DynamoDB Store:**
+- `UpdateItem` with `ADD` operation for atomic increments
+- TTL attribute for automatic cleanup
+- Consistent atomic operations across regions
+
+## Configuration
+
+### Resource Configuration
+
+#### Basic Rate Limiting
 ```yaml
 plugin: rest
 resources:
 - path: /api/users
-  method: get
+  method: GET
   concurrency:
     - limit: 5
-      response:
-        delay:
-          exact: 500
-    - limit: 10  
       response:
         statusCode: 429
         content: "Too many concurrent requests"
@@ -285,11 +211,37 @@ resources:
     content: "Success"
 ```
 
-### SOAP Configuration
+#### Multiple Thresholds
+```yaml
+plugin: rest
+resources:
+- path: /api/heavy-operation
+  method: POST
+  concurrency:
+    - limit: 2
+      response:
+        delay:
+          exact: 1000
+    - limit: 5
+      response:
+        statusCode: 503
+        headers:
+          Retry-After: "30"
+        content: "Service temporarily overloaded"
+    - limit: 10
+      response:
+        statusCode: 429
+        content: "Rate limit exceeded"
+  response:
+    statusCode: 202
+    content: "Operation queued"
+```
+
+#### SOAP Rate Limiting
 ```yaml
 plugin: soap
 resources:
-- operation: getPetById
+- operation: getUserDetails
   concurrency:
     - limit: 3
       response:
@@ -305,90 +257,92 @@ resources:
           </soap:Envelope>
 ```
 
-### Advanced Configuration
-```yaml
-plugin: rest
-resources:
-- path: /api/heavy-operation
-  method: post
-  concurrency:
-    - limit: 2
-      response:
-        delay:
-          range:
-            min: 1000
-            max: 3000
-    - limit: 5
-      response:
-        statusCode: 503
-        headers:
-          Retry-After: "30"
-        content: "Service temporarily overloaded"
-  response:
-    statusCode: 202
-    content: "Operation queued"
-```
+### Environment Variables
 
-## Error Handling
+| Variable | Purpose | Default | Example |
+|----------|---------|---------|---------|
+| `IMPOSTER_RATE_LIMITER_TTL` | Rate limiter data TTL (seconds) | `300` (5 minutes) | `IMPOSTER_RATE_LIMITER_TTL=600` |
+| `IMPOSTER_STORE_DRIVER` | Store backend selection | `inmemory` | `IMPOSTER_STORE_DRIVER=store-redis` |
+| `IMPOSTER_STORE_INMEMORY_TTL` | InMemory store TTL (seconds) | No TTL | `IMPOSTER_STORE_INMEMORY_TTL=300` |
 
-1. **Store Failures**: Log errors but allow requests to proceed
-2. **Invalid Configuration**: Validate during startup
-3. **Cleanup Failures**: Log warnings but continue processing
-4. **Race Conditions**: Use atomic operations and proper locking
+## Error Handling and Resilience
 
-## Performance Considerations
+### Fail-Open Design
+The rate limiter follows a fail-open approach:
+- Store failures allow requests to proceed
+- Increment/decrement errors are logged but don't block requests
+- Network issues with Redis/DynamoDB don't impact availability
 
-1. **Atomic Operations**: Use store-native atomic increment/decrement
-2. **Efficient Aggregation**: Minimize store queries for total count calculation
-3. **Cleanup Frequency**: Balance between accuracy and performance (default 1-minute cleanup interval)
-4. **Store Selection**: Redis recommended for high-throughput scenarios
-5. **Memory Usage**: TTL cleanup prevents unbounded memory growth
+### Rollback Protection
+When rate limits are exceeded:
+1. Counter is atomically incremented
+2. Limit evaluation performed
+3. If exceeded, counter is immediately rolled back
+4. Ensures accurate counting even under high concurrency
+
+### Cleanup Guarantees
+- Cleanup functions always execute after response writing
+- Failed decrements are logged but don't impact request processing
+- Store-level TTL provides secondary cleanup mechanism
+
+## Performance Characteristics
+
+### Throughput Optimisation
+- Single atomic operation per request (increment)
+- Minimal store queries for limit evaluation
+- Efficient key structures for store access patterns
+
+### Memory Management
+- TTL-based cleanup prevents unbounded growth
+- Atomic counters are more efficient than per-instance tracking
+- Store provider abstractions allow optimal backend selection
+
+### Concurrency Safety
+- All operations use atomic store operations
+- No in-memory locks for distributed stores
+- Thread-safe design for high-concurrency scenarios
+
+## Monitoring and Observability
+
+### Logging
+- Rate limit applications logged at INFO level
+- Store failures logged at WARN level
+- Counter decrement failures logged at WARN level
 
 ## Testing Strategy
 
-### Unit Tests
-- Rate limiter logic with mock stores
-- Limit matching algorithms
-- TTL and cleanup mechanisms
-- Configuration validation
+### Unit Testing
+- Mock store providers for isolated rate limiter logic testing
+- Limit matching algorithm verification
+- Counter rollback scenarios
+- Cleanup function execution
 
-### Integration Tests
+### Integration Testing
 - All store backends (InMemory, Redis, DynamoDB)
-- Multi-instance scenarios
+- Concurrent request scenarios
+- Multi-threshold limit configurations
 - TTL behavior verification
-- Cross-store compatibility
 
-### Performance Tests
-- Concurrent request handling
+### Performance Testing
+- High-concurrency load testing
 - Store backend performance comparison
-- Memory usage under load
-- Cleanup efficiency
+- Memory usage under sustained load
+- Cleanup efficiency measurement
 
-## Migration and Deployment
+## Key Implementation Files
 
-1. **Backward Compatibility**: Feature is opt-in via configuration
-2. **Gradual Rollout**: Can be enabled per resource
-3. **Monitoring**: Logs rate limiting events for observability
-4. **Configuration Validation**: Startup validation prevents misconfigurations
+- **`internal/ratelimiter/ratelimiter.go`**: Core rate limiter implementation
+- **`internal/common/ratelimit.go`**: Common rate limiting function for plugin integration
+- **`internal/system/instance.go`**: Instance ID generation utilities
+- **`plugin/rest/handler.go`**: REST plugin rate limiting integration
+- **`plugin/soap/handler.go`**: SOAP plugin rate limiting integration
+- **`internal/store/`**: Store provider implementations with atomic operations
 
-## Future Enhancements
+## Future Enhancement Opportunities
 
-1. **Client-based Limiting**: Rate limit per IP, user ID, or header value
-2. **Sliding Window**: Time-based rate limiting in addition to concurrent requests
-3. **Metrics Integration**: Expose rate limiting metrics via system endpoints
-4. **Dynamic Configuration**: Hot-reload rate limiting rules without restart
-5. **Circuit Breaker Integration**: Combine with circuit breaker patterns
-6. **Advanced Matching**: Regular expressions or wildcard patterns for resource matching
-
-## Appendix
-
-### Environment Variables
-- `IMPOSTER_RATE_LIMITER_TTL`: TTL in seconds for activity cleanup (default: 300)
-- `IMPOSTER_STORE_DRIVER`: Store backend selection (inmemory, store-redis, store-dynamodb)
-
-### Key Implementation Files
-- `internal/ratelimiter/ratelimiter.go`: Core rate limiter implementation
-- `internal/common/ratelimit.go`: Common rate limiting function for plugins
-- `internal/system/instance.go`: Instance ID generation utilities
-- `plugin/rest/handler.go`: REST plugin integration
-- `plugin/soap/handler.go`: SOAP plugin integration
+1. **Client-based Limiting**: Rate limiting per IP address, user ID, or custom headers
+2. **Time-window Limiting**: Sliding window rate limiting in addition to concurrent request limiting  
+3. **Dynamic Configuration**: Hot-reload of rate limiting rules without service restart
+4. **Circuit Breaker Integration**: Automatic request blocking when backends are overloaded
+5. **Advanced Metrics**: Detailed rate limiting metrics via system endpoints
+6. **Pattern Matching**: Wildcard or regex-based resource matching for flexible configuration
