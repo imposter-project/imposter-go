@@ -37,6 +37,7 @@ cat > /tmp/dynamodb-policy.json << EOF
             "Action": [
                 "dynamodb:GetItem",
                 "dynamodb:PutItem",
+                "dynamodb:UpdateItem",
                 "dynamodb:Query",
                 "dynamodb:DeleteItem"
             ],
@@ -47,14 +48,29 @@ cat > /tmp/dynamodb-policy.json << EOF
 EOF
 
 # Create or update the policy
-aws iam create-policy \
-    --policy-name "$DYNAMODB_POLICY_NAME" \
-    --policy-document file:///tmp/dynamodb-policy.json \
-    --description "DynamoDB permissions for Imposter rate limiter" 2>/dev/null || \
-aws iam create-policy-version \
-    --policy-arn "arn:aws:iam::${ACCOUNT_ID}:policy/${DYNAMODB_POLICY_NAME}" \
-    --policy-document file:///tmp/dynamodb-policy.json \
-    --set-as-default 2>/dev/null || echo "Policy update failed, continuing..."
+if aws iam get-policy --policy-arn "arn:aws:iam::${ACCOUNT_ID}:policy/${DYNAMODB_POLICY_NAME}" > /dev/null 2>&1; then
+    echo "Policy exists, creating new version"
+    # Delete old non-default versions first to avoid hitting the limit of 5 versions
+    aws iam list-policy-versions --policy-arn "arn:aws:iam::${ACCOUNT_ID}:policy/${DYNAMODB_POLICY_NAME}" \
+        --query 'Versions[?IsDefaultVersion==`false`].VersionId' --output text | \
+        xargs -n1 -I{} aws iam delete-policy-version \
+            --policy-arn "arn:aws:iam::${ACCOUNT_ID}:policy/${DYNAMODB_POLICY_NAME}" \
+            --version-id {} 2>/dev/null || true
+    
+    # Create new policy version
+    aws iam create-policy-version \
+        --policy-arn "arn:aws:iam::${ACCOUNT_ID}:policy/${DYNAMODB_POLICY_NAME}" \
+        --policy-document file:///tmp/dynamodb-policy.json \
+        --set-as-default
+    echo "Policy updated successfully"
+else
+    echo "Creating new policy"
+    aws iam create-policy \
+        --policy-name "$DYNAMODB_POLICY_NAME" \
+        --policy-document file:///tmp/dynamodb-policy.json \
+        --description "DynamoDB permissions for Imposter rate limiter"
+    echo "Policy created successfully"
+fi
 
 # Attach the policy to the role
 aws iam attach-role-policy \
@@ -65,6 +81,8 @@ aws iam attach-role-policy \
 rm -f /tmp/dynamodb-policy.json
 
 echo "DynamoDB permissions configured for role '$ROLE_NAME'"
+echo "Waiting for IAM policy changes to propagate..."
+sleep 10
 
 echo "=== Creating DynamoDB table for rate limiting ==="
 

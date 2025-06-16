@@ -206,16 +206,10 @@ func runRateLimiterIntegrationTest(t *testing.T, storeProvider store.StoreProvid
 			t.Fatal("expected rate limit response, got nil")
 		}
 
-		// Wait for TTL to expire
+		// Wait for store TTL to expire (counters should expire automatically)
 		time.Sleep(3 * time.Second)
 
-		// Manual cleanup to ensure TTL expiration is processed
-		// (In real usage, this would happen automatically)
-		if err := rl.Cleanup(); err != nil {
-			t.Fatalf("cleanup failed: %v", err)
-		}
-
-		// Should now be able to make requests again
+		// Should now be able to make requests again (counters expired via store TTL)
 		for i := 0; i < 2; i++ {
 			result, err := rl.CheckAndIncrement(resourceKey, limits)
 			if err != nil {
@@ -229,6 +223,17 @@ func runRateLimiterIntegrationTest(t *testing.T, storeProvider store.StoreProvid
 }
 
 func TestRateLimiterIntegrationInMemory(t *testing.T) {
+	// Set InMemory TTL for integration testing
+	oldTTL := os.Getenv("IMPOSTER_STORE_INMEMORY_TTL")
+	os.Setenv("IMPOSTER_STORE_INMEMORY_TTL", "2") // 2 second TTL to match the rate limiter TTL test
+	defer func() {
+		if oldTTL == "" {
+			os.Unsetenv("IMPOSTER_STORE_INMEMORY_TTL")
+		} else {
+			os.Setenv("IMPOSTER_STORE_INMEMORY_TTL", oldTTL)
+		}
+	}()
+
 	storeProvider := setupTest(t)
 	runRateLimiterIntegrationTest(t, storeProvider, "InMemory")
 }

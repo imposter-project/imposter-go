@@ -20,6 +20,8 @@ type StoreProvider interface {
 	GetAllValues(storeName, keyPrefix string) map[string]interface{}
 	DeleteValue(storeName, key string)
 	DeleteStore(storeName string)
+	AtomicIncrement(storeName, key string, delta int64) (int64, error)
+	AtomicDecrement(storeName, key string, delta int64) (int64, error)
 }
 
 // Store represents a handle to a specific named store
@@ -57,6 +59,16 @@ func (s *Store) GetAllValues(keyPrefix string) map[string]interface{} {
 // DeleteValue removes a value from the store
 func (s *Store) DeleteValue(key string) {
 	s.provider.DeleteValue(s.name, key)
+}
+
+// AtomicIncrement atomically increments a numeric value and returns the new value
+func (s *Store) AtomicIncrement(key string, delta int64) (int64, error) {
+	return s.provider.AtomicIncrement(s.name, key, delta)
+}
+
+// AtomicDecrement atomically decrements a numeric value and returns the new value
+func (s *Store) AtomicDecrement(key string, delta int64) (int64, error) {
+	return s.provider.AtomicDecrement(s.name, key, delta)
 }
 
 // storeProvider is the global store provider

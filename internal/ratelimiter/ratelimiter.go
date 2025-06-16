@@ -12,7 +12,6 @@ import (
 
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/store"
-	"github.com/imposter-project/imposter-go/internal/system"
 	"github.com/imposter-project/imposter-go/pkg/logger"
 )
 
@@ -45,7 +44,6 @@ type ResourceActivity struct {
 type RateLimiterImpl struct {
 	storeProvider store.StoreProvider
 	store         *store.Store
-	instanceID    string
 	ttl           time.Duration
 	cleanupTicker *time.Ticker
 	cleanupDone   chan bool
@@ -77,12 +75,9 @@ func NewRateLimiter(storeProvider store.StoreProvider) RateLimiter {
 
 // NewRateLimiterWithTTL creates a new rate limiter instance with custom TTL
 func NewRateLimiterWithTTL(storeProvider store.StoreProvider, ttl time.Duration) RateLimiter {
-	instanceID := system.GenerateInstanceID()
-
 	rl := &RateLimiterImpl{
 		storeProvider: storeProvider,
 		store:         store.Open(rateLimiterStoreName, nil),
-		instanceID:    instanceID,
 		ttl:           ttl,
 		cleanupTicker: time.NewTicker(defaultCleanupTicker),
 		cleanupDone:   make(chan bool),
@@ -108,42 +103,40 @@ func (rl *RateLimiterImpl) CheckAndIncrement(resourceKey string, limits []config
 		return nil, nil
 	}
 
-	rl.mu.Lock()
-	defer rl.mu.Unlock()
-
-	// Get current total active count
-	totalActive, err := rl.getTotalActiveCount(resourceKey)
+	// Use single atomic counter per resource - no instance ID needed
+	counterKey := rl.getResourceCounterKey(resourceKey)
+	newCount, err := rl.store.AtomicIncrement(counterKey, 1)
 	if err != nil {
-		logger.Warnf("failed to get total active count for resource %s: %v", resourceKey, err)
+		logger.Warnf("failed to atomic increment for resource %s: %v", resourceKey, err)
 		// On error, allow the request to proceed
 		return nil, nil
 	}
 
 	// Check if any limit is exceeded after incrementing
-	futureTotal := totalActive + 1
-	matchedLimit := rl.findMatchingLimit(futureTotal, limits)
+	matchedLimit := rl.findMatchingLimit(int(newCount), limits)
 
 	if matchedLimit != nil {
-		logger.Infof("rate limit exceeded for resource %s: %d > %d", resourceKey, futureTotal, matchedLimit.Limit)
+		// Rate limit exceeded - rollback the increment
+		_, rollbackErr := rl.store.AtomicDecrement(counterKey, 1)
+		if rollbackErr != nil {
+			logger.Warnf("failed to rollback increment for resource %s: %v", resourceKey, rollbackErr)
+		}
+		logger.Infof("rate limit exceeded for resource %s: %d > %d", resourceKey, newCount, matchedLimit.Limit)
 		return matchedLimit, nil
-	}
-
-	err = rl.incrementActiveCount(resourceKey)
-	if err != nil {
-		logger.Warnf("failed to increment active count for resource %s: %v", resourceKey, err)
-		// On error, allow the request to proceed
-		return nil, nil
 	}
 
 	return nil, nil
 }
 
-// Decrement decrements the active count for a resource and instance
+// Decrement decrements the active count for a resource
 func (rl *RateLimiterImpl) Decrement(resourceKey string) error {
-	rl.mu.Lock()
-	defer rl.mu.Unlock()
-
-	return rl.decrementActiveCount(resourceKey)
+	counterKey := rl.getResourceCounterKey(resourceKey)
+	_, err := rl.store.AtomicDecrement(counterKey, 1)
+	if err != nil {
+		logger.Warnf("failed to atomic decrement for resource %s: %v", resourceKey, err)
+		return err
+	}
+	return nil
 }
 
 // findMatchingLimit finds the highest matching limit using "greater than or equal to" logic
@@ -164,83 +157,6 @@ func (rl *RateLimiterImpl) findMatchingLimit(currentCount int, limits []config.C
 	}
 
 	return matchedLimit
-}
-
-// getTotalActiveCount gets the total active count across all instances for a resource
-func (rl *RateLimiterImpl) getTotalActiveCount(resourceKey string) (int, error) {
-	// Get all resource activity data for this resource
-	activityPrefix := rl.getActivityKeyPrefix(resourceKey)
-	activities := rl.store.GetAllValues(activityPrefix)
-
-	total := 0
-	for _, value := range activities {
-		if activityData, err := rl.parseResourceActivity(value); err == nil {
-			// Check if activity data is still valid (not expired)
-			if time.Since(activityData.Timestamp) <= rl.ttl {
-				total += activityData.Count
-			}
-		}
-	}
-
-	return total, nil
-}
-
-// incrementActiveCount increments the active count for a specific server instance
-func (rl *RateLimiterImpl) incrementActiveCount(resourceKey string) error {
-	activityKey := rl.getActivityKey(resourceKey, rl.instanceID)
-
-	// Get current activity data
-	currentData := ResourceActivity{Count: 0, Timestamp: time.Now()}
-	if value, exists := rl.store.GetValue(activityKey); exists {
-		if existingData, err := rl.parseResourceActivity(value); err == nil {
-			currentData.Count = existingData.Count
-		}
-	}
-
-	// Increment and store
-	currentData.Count++
-	currentData.Timestamp = time.Now()
-
-	dataBytes, err := json.Marshal(currentData)
-	if err != nil {
-		return fmt.Errorf("failed to marshal activity data: %w", err)
-	}
-
-	rl.store.StoreValue(activityKey, string(dataBytes))
-	return nil
-}
-
-// decrementActiveCount decrements the active count for a specific server instance
-func (rl *RateLimiterImpl) decrementActiveCount(resourceKey string) error {
-	activityKey := rl.getActivityKey(resourceKey, rl.instanceID)
-
-	// Get current activity data
-	currentData := ResourceActivity{Count: 0, Timestamp: time.Now()}
-	if value, exists := rl.store.GetValue(activityKey); exists {
-		if existingData, err := rl.parseResourceActivity(value); err == nil {
-			currentData = *existingData
-		}
-	}
-
-	// Decrement (but don't go below 0)
-	if currentData.Count > 0 {
-		currentData.Count--
-	}
-	currentData.Timestamp = time.Now()
-
-	if currentData.Count == 0 {
-		// Remove the key if count reaches 0
-		rl.store.DeleteValue(activityKey)
-	} else {
-		// Update the count
-		dataBytes, err := json.Marshal(currentData)
-		if err != nil {
-			return fmt.Errorf("failed to marshal activity data: %w", err)
-		}
-		rl.store.StoreValue(activityKey, string(dataBytes))
-	}
-
-	return nil
 }
 
 // parseResourceActivity parses resource activity data from stored value
@@ -277,29 +193,10 @@ func (rl *RateLimiterImpl) startCleanupRoutine() {
 	}
 }
 
-// Cleanup performs cleanup of expired entries
+// Cleanup performs cleanup of expired entries (mainly for backward compatibility with old JSON format)
 func (rl *RateLimiterImpl) Cleanup() error {
-	rl.mu.Lock()
-	defer rl.mu.Unlock()
-
-	// Get all keys in the rate limiter store
-	allData := rl.store.GetAllValues("")
-
-	for key, value := range allData {
-		// Only process activity keys
-		if !strings.Contains(key, activityKeyPrefix) {
-			continue
-		}
-
-		if activityData, err := rl.parseResourceActivity(value); err == nil {
-			// Check if activity data is expired
-			if time.Since(activityData.Timestamp) > rl.ttl {
-				rl.store.DeleteValue(key)
-				logger.Debugf("cleaned up expired resource activity: %s", key)
-			}
-		}
-	}
-
+	// TTL cleanup is now handled by the store providers themselves
+	// This method is kept for interface compatibility but is essentially a no-op
 	return nil
 }
 
@@ -329,6 +226,10 @@ func getTTLFromEnv() time.Duration {
 }
 
 // Key generation helpers
+func (rl *RateLimiterImpl) getResourceCounterKey(resourceKey string) string {
+	return fmt.Sprintf("counter:%s", resourceKey)
+}
+
 func (rl *RateLimiterImpl) getActivityKeyPrefix(resourceKey string) string {
 	return fmt.Sprintf("%s%s:", activityKeyPrefix, resourceKey)
 }

@@ -29,6 +29,14 @@ func (p *RequestStoreProvider) DeleteStore(storeName string) {
 	p.inMemoryProvider.DeleteStore(storeName)
 }
 
+func (p *RequestStoreProvider) AtomicIncrement(storeName, key string, delta int64) (int64, error) {
+	return p.inMemoryProvider.AtomicIncrement(storeName, key, delta)
+}
+
+func (p *RequestStoreProvider) AtomicDecrement(storeName, key string, delta int64) (int64, error) {
+	return p.inMemoryProvider.AtomicDecrement(storeName, key, delta)
+}
+
 // NewRequestStore creates a new request store, backed by a map
 func NewRequestStore() *Store {
 	// unlike other store implementations, a new provider is created for each request store,

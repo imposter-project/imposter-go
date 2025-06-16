@@ -2,12 +2,12 @@ package store
 
 import (
 	"encoding/json"
-	"github.com/imposter-project/imposter-go/pkg/logger"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/go-redis/redis/v8"
+	"github.com/imposter-project/imposter-go/pkg/logger"
 	"golang.org/x/net/context"
 )
 
@@ -157,4 +157,34 @@ func getExpiration() time.Duration {
 		return -1
 	}
 	return expiration
+}
+
+func (p *RedisStoreProvider) AtomicIncrement(storeName, key string, delta int64) (int64, error) {
+	key = applyKeyPrefix(key)
+	redisKey := buildRedisKey(storeName, key)
+
+	// Use INCRBY for atomic increment
+	newValue, err := p.client.IncrBy(p.ctx, redisKey, delta).Result()
+	if err != nil {
+		logger.Errorf("failed to atomic increment: %v", err)
+		return 0, err
+	}
+
+	// Set expiration if configured and this is a new key (value equals delta)
+	if newValue == delta {
+		expiration := getExpiration()
+		if expiration > 0 {
+			err = p.client.Expire(p.ctx, redisKey, expiration).Err()
+			if err != nil {
+				logger.Warnf("failed to set expiration on atomic increment: %v", err)
+			}
+		}
+	}
+
+	return newValue, nil
+}
+
+func (p *RedisStoreProvider) AtomicDecrement(storeName, key string, delta int64) (int64, error) {
+	// Use negative delta for decrement
+	return p.AtomicIncrement(storeName, key, -delta)
 }

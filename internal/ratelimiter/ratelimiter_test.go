@@ -289,6 +289,17 @@ func TestRateLimiter_ConcurrentAccess(t *testing.T) {
 }
 
 func TestRateLimiter_TTLCleanup(t *testing.T) {
+	// Set InMemory TTL for testing
+	oldTTL := os.Getenv("IMPOSTER_STORE_INMEMORY_TTL")
+	os.Setenv("IMPOSTER_STORE_INMEMORY_TTL", "1") // 1 second TTL
+	defer func() {
+		if oldTTL == "" {
+			os.Unsetenv("IMPOSTER_STORE_INMEMORY_TTL")
+		} else {
+			os.Setenv("IMPOSTER_STORE_INMEMORY_TTL", oldTTL)
+		}
+	}()
+
 	storeProvider := setupTest(t)
 
 	// Create rate limiter with short TTL for testing
@@ -317,15 +328,10 @@ func TestRateLimiter_TTLCleanup(t *testing.T) {
 		}
 	}
 
-	// Wait for TTL to expire
-	time.Sleep(150 * time.Millisecond)
+	// Wait for InMemory TTL to expire (1 second + buffer)
+	time.Sleep(1200 * time.Millisecond)
 
-	// Run cleanup
-	if err := rl.Cleanup(); err != nil {
-		t.Fatalf("cleanup failed: %v", err)
-	}
-
-	// All requests should now pass since expired entries were cleaned up
+	// All requests should now pass since entries have expired
 	for i := 0; i < 4; i++ {
 		result, err := rl.CheckAndIncrement(resourceKey, limits)
 		if err != nil {
