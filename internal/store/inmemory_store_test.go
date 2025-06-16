@@ -1,7 +1,9 @@
 package store
 
 import (
+	"os"
 	"testing"
+	"time"
 )
 
 func setupInMemoryTest(t *testing.T) *InMemoryStoreProvider {
@@ -138,6 +140,115 @@ func TestInMemoryStore_Concurrency(t *testing.T) {
 		// Wait for all goroutines to complete
 		for i := 0; i < 10; i++ {
 			<-done
+		}
+	})
+}
+
+func TestInMemoryStore_TTL(t *testing.T) {
+	// Set up TTL environment variable for testing
+	oldTTL := os.Getenv("IMPOSTER_STORE_INMEMORY_TTL")
+	defer func() {
+		if oldTTL == "" {
+			os.Unsetenv("IMPOSTER_STORE_INMEMORY_TTL")
+		} else {
+			os.Setenv("IMPOSTER_STORE_INMEMORY_TTL", oldTTL)
+		}
+	}()
+
+	t.Run("TTLExpiration", func(t *testing.T) {
+		// Set TTL to 1 second for testing
+		os.Setenv("IMPOSTER_STORE_INMEMORY_TTL", "1")
+
+		provider := setupInMemoryTest(t)
+
+		// Store a value
+		provider.StoreValue("test", "ttl-key", "ttl-value")
+
+		// Verify it exists immediately
+		val, found := provider.GetValue("test", "ttl-key")
+		if !found {
+			t.Fatal("Expected to find value immediately after storing")
+		}
+		if val != "ttl-value" {
+			t.Errorf("Expected 'ttl-value' but got %v", val)
+		}
+
+		// Verify it exists via GetAllValues immediately
+		allValues := provider.GetAllValues("test", "ttl")
+		if len(allValues) != 1 {
+			t.Fatalf("Expected 1 value in GetAllValues immediately, got %d", len(allValues))
+		}
+
+		// Wait for TTL + buffer for slow CI/CD systems (up to 3 seconds)
+		maxWait := 3 * time.Second
+		start := time.Now()
+
+		for time.Since(start) < maxWait {
+			// Check if value has expired
+			_, found := provider.GetValue("test", "ttl-key")
+			if !found {
+				// Value expired successfully
+				t.Logf("TTL expiration detected after %v", time.Since(start))
+				break
+			}
+			// Wait a bit before checking again
+			time.Sleep(100 * time.Millisecond)
+		}
+
+		// Final verification that value is expired
+		_, found = provider.GetValue("test", "ttl-key")
+		if found {
+			t.Error("Expected value to be expired after TTL, but it still exists")
+		}
+
+		// Verify GetAllValues also doesn't return expired key
+		allValues = provider.GetAllValues("test", "ttl")
+		if len(allValues) != 0 {
+			t.Errorf("Expected no values in GetAllValues after TTL, got %d: %v", len(allValues), allValues)
+		}
+	})
+
+	t.Run("NoTTLConfigured", func(t *testing.T) {
+		// Unset TTL environment variable
+		os.Unsetenv("IMPOSTER_STORE_INMEMORY_TTL")
+
+		provider := setupInMemoryTest(t)
+
+		// Store a value
+		provider.StoreValue("test", "no-ttl-key", "no-ttl-value")
+
+		// Wait longer than the previous TTL tests
+		time.Sleep(1500 * time.Millisecond)
+
+		// Verify value still exists (no TTL configured)
+		val, found := provider.GetValue("test", "no-ttl-key")
+		if !found {
+			t.Error("Expected value to persist when no TTL is configured")
+		}
+		if val != "no-ttl-value" {
+			t.Errorf("Expected 'no-ttl-value' but got %v", val)
+		}
+	})
+
+	t.Run("InvalidTTLConfiguration", func(t *testing.T) {
+		// Set invalid TTL value
+		os.Setenv("IMPOSTER_STORE_INMEMORY_TTL", "invalid")
+
+		provider := setupInMemoryTest(t)
+
+		// Store a value (should work despite invalid TTL)
+		provider.StoreValue("test", "invalid-ttl-key", "invalid-ttl-value")
+
+		// Wait a bit
+		time.Sleep(500 * time.Millisecond)
+
+		// Verify value still exists (invalid TTL should be ignored)
+		val, found := provider.GetValue("test", "invalid-ttl-key")
+		if !found {
+			t.Error("Expected value to persist when TTL is invalid")
+		}
+		if val != "invalid-ttl-value" {
+			t.Errorf("Expected 'invalid-ttl-value' but got %v", val)
 		}
 	})
 }
