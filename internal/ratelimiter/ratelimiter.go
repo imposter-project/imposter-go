@@ -1,7 +1,6 @@
 package ratelimiter
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"sort"
@@ -31,13 +30,6 @@ var (
 type RateLimiter interface {
 	CheckAndIncrement(resourceKey string, limits []config.ConcurrencyLimit) (*config.ConcurrencyLimit, error)
 	Decrement(resourceKey string) error
-	Cleanup() error
-}
-
-// ResourceActivity represents per-server-instance resource activity data
-type ResourceActivity struct {
-	Count     int       `json:"count"`
-	Timestamp time.Time `json:"timestamp"`
 }
 
 // RateLimiterImpl implements the RateLimiter interface
@@ -82,18 +74,6 @@ func NewRateLimiterWithTTL(storeProvider store.StoreProvider, ttl time.Duration)
 		cleanupTicker: time.NewTicker(defaultCleanupTicker),
 		cleanupDone:   make(chan bool),
 	}
-
-	// Check if cleanup routine should be enabled (default: false)
-	autoCleanup := os.Getenv("IMPOSTER_RATE_LIMITER_AUTO_CLEANUP")
-	logger.Tracef("rate limiter auto cleanup: %s", autoCleanup)
-
-	if autoCleanup == "true" || autoCleanup == "1" {
-		logger.Tracef("starting rate limiter cleanup routine")
-		go rl.startCleanupRoutine()
-	} else {
-		logger.Tracef("rate limiter cleanup routine disabled")
-	}
-
 	return rl
 }
 
@@ -157,47 +137,6 @@ func (rl *RateLimiterImpl) findMatchingLimit(currentCount int, limits []config.C
 	}
 
 	return matchedLimit
-}
-
-// parseResourceActivity parses resource activity data from stored value
-func (rl *RateLimiterImpl) parseResourceActivity(value interface{}) (*ResourceActivity, error) {
-	var dataStr []byte
-	switch v := value.(type) {
-	case string:
-		dataStr = []byte(v)
-	case []byte:
-		dataStr = v
-	default:
-		return nil, fmt.Errorf("invalid data type: %T", value)
-	}
-
-	var data ResourceActivity
-	if err := json.Unmarshal(dataStr, &data); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal activity data: %w", err)
-	}
-
-	return &data, nil
-}
-
-// startCleanupRoutine starts the periodic cleanup routine
-func (rl *RateLimiterImpl) startCleanupRoutine() {
-	for {
-		select {
-		case <-rl.cleanupTicker.C:
-			if err := rl.Cleanup(); err != nil {
-				logger.Warnf("cleanup failed: %v", err)
-			}
-		case <-rl.cleanupDone:
-			return
-		}
-	}
-}
-
-// Cleanup performs cleanup of expired entries (mainly for backward compatibility with old JSON format)
-func (rl *RateLimiterImpl) Cleanup() error {
-	// TTL cleanup is now handled by the store providers themselves
-	// This method is kept for interface compatibility but is essentially a no-op
-	return nil
 }
 
 // GenerateResourceKey generates a unique key for a resource

@@ -202,7 +202,6 @@ echo "  IMPOSTER_DYNAMODB_TABLE=$DYNAMODB_TABLE_NAME"
 echo "  IMPOSTER_DYNAMODB_REGION=${AWS_REGION:-us-east-1}"
 echo "  IMPOSTER_DYNAMODB_TTL=300 (5 minutes)"
 echo "  IMPOSTER_DYNAMODB_TTL_ATTRIBUTE=ttl"
-echo "  IMPOSTER_RATE_LIMITER_AUTO_CLEANUP=<not set> (default: disabled, DynamoDB handles TTL automatically)"
 
 echo ""
 echo "Test the rate limiting endpoints:"

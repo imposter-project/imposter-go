@@ -48,7 +48,6 @@ This document lists all environment variables that Imposter supports, their purp
 | Variable | Purpose | Default Value | Example |
 |----------|---------|---------------|---------|
 | `IMPOSTER_RATE_LIMITER_TTL` | Rate limiter data TTL (seconds) | `300` (5 minutes) | `IMPOSTER_RATE_LIMITER_TTL=600` |
-| `IMPOSTER_RATE_LIMITER_AUTO_CLEANUP` | Enable automatic cleanup of expired data | `false` | `IMPOSTER_RATE_LIMITER_AUTO_CLEANUP=true` |
 
 ## OpenAPI Validation
 
