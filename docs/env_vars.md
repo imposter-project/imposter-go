@@ -30,10 +30,10 @@ This document lists all environment variables that Imposter supports, their purp
 
 | Variable | Purpose | Default Value | Example |
 |----------|---------|---------------|---------|
-| `IMPOSTER_DYNAMODB_REGION` | AWS region for DynamoDB | `AWS_REGION` value | `IMPOSTER_DYNAMODB_REGION=us-west-2` |
-| `IMPOSTER_DYNAMODB_TABLE` | DynamoDB table name | No default (required) | `IMPOSTER_DYNAMODB_TABLE=imposter-data` |
-| `IMPOSTER_DYNAMODB_TTL` | TTL for DynamoDB items (seconds) | No TTL (-1) | `IMPOSTER_DYNAMODB_TTL=3600` |
-| `IMPOSTER_DYNAMODB_TTL_ATTRIBUTE` | DynamoDB TTL attribute name | `"ttl"` | `IMPOSTER_DYNAMODB_TTL_ATTRIBUTE=expires_at` |
+| `IMPOSTER_STORE_DYNAMODB_REGION` | AWS region for DynamoDB | `AWS_REGION` value | `IMPOSTER_STORE_DYNAMODB_REGION=us-west-2` |
+| `IMPOSTER_STORE_DYNAMODB_TABLE` | DynamoDB table name | No default (required) | `IMPOSTER_STORE_DYNAMODB_TABLE=imposter-data` |
+| `IMPOSTER_STORE_DYNAMODB_TTL` | TTL for DynamoDB items (seconds) | No TTL (-1) | `IMPOSTER_STORE_DYNAMODB_TTL=3600` |
+| `IMPOSTER_STORE_DYNAMODB_TTL_ATTRIBUTE` | DynamoDB TTL attribute name | `"ttl"` | `IMPOSTER_STORE_DYNAMODB_TTL_ATTRIBUTE=expires_at` |
 
 ## Redis Store
 
@@ -91,9 +91,9 @@ imposter
 ### DynamoDB Backend
 ```bash
 export IMPOSTER_STORE_DRIVER=store-dynamodb
-export IMPOSTER_DYNAMODB_REGION=us-west-2
-export IMPOSTER_DYNAMODB_TABLE=imposter-data
-export IMPOSTER_DYNAMODB_TTL=3600
+export IMPOSTER_STORE_DYNAMODB_REGION=us-west-2
+export IMPOSTER_STORE_DYNAMODB_TABLE=imposter-data
+export IMPOSTER_STORE_DYNAMODB_TTL=3600
 imposter
 ```
 
@@ -106,31 +106,11 @@ export IMPOSTER_STORE_REDIS_EXPIRY=1h
 imposter
 ```
 
-### Rate Limiting Configuration
-```bash
-export IMPOSTER_RATE_LIMITER_TTL=600
-export IMPOSTER_RATE_LIMITER_AUTO_CLEANUP=true
-imposter
-```
-
 ### AWS Lambda Deployment
 ```bash
 export AWS_REGION=eu-west-1
 export IMPOSTER_CONFIG_DIR=/var/task/config
 export IMPOSTER_STORE_DRIVER=store-dynamodb
-export IMPOSTER_DYNAMODB_TABLE=imposter-lambda-data
-export IMPOSTER_DYNAMODB_TTL=300
+export IMPOSTER_STORE_DYNAMODB_TABLE=imposter-lambda-data
+export IMPOSTER_STORE_DYNAMODB_TTL=300
 ```
-
-## Notes
-
-1. **Boolean Values**: For boolean environment variables, use `"true"`, `"1"`, `"false"`, or `"0"`
-2. **Duration Values**: Duration strings can use suffixes like `s` (seconds), `m` (minutes), `h` (hours)
-3. **AWS Credentials**: Use IAM roles when possible instead of hardcoding access keys
-4. **Lambda Auto-Detection**: When `AWS_LAMBDA_FUNCTION_NAME` is present, Imposter automatically runs in Lambda mode
-5. **Store Driver Values**: 
-   - `"store-dynamodb"` for DynamoDB backend
-   - `"store-redis"` for Redis backend  
-   - Empty or any other value for in-memory backend
-6. **TTL Values**: Use `-1` or empty string to disable TTL/expiration
-7. **Log Levels**: Valid values are `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`

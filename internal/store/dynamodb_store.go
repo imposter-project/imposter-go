@@ -19,7 +19,7 @@ type DynamoDBStoreProvider struct {
 }
 
 func (p *DynamoDBStoreProvider) InitStores() {
-	region := os.Getenv("IMPOSTER_DYNAMODB_REGION")
+	region := os.Getenv("IMPOSTER_STORE_DYNAMODB_REGION")
 	if region == "" {
 		region = os.Getenv("AWS_REGION")
 	}
@@ -27,7 +27,7 @@ func (p *DynamoDBStoreProvider) InitStores() {
 		Region: aws.String(region),
 	}))
 	p.ddb = dynamodb.New(sess)
-	p.tableName = os.Getenv("IMPOSTER_DYNAMODB_TABLE")
+	p.tableName = os.Getenv("IMPOSTER_STORE_DYNAMODB_TABLE")
 }
 
 func (p *DynamoDBStoreProvider) GetValue(storeName, key string) (interface{}, bool) {
@@ -131,7 +131,7 @@ func (p *DynamoDBStoreProvider) DeleteStore(storeName string) {
 }
 
 func getTTL() int64 {
-	ttlStr := os.Getenv("IMPOSTER_DYNAMODB_TTL")
+	ttlStr := os.Getenv("IMPOSTER_STORE_DYNAMODB_TTL")
 	if ttlStr == "" {
 		return -1
 	}
@@ -144,7 +144,7 @@ func getTTL() int64 {
 }
 
 func getTTLAttributeName() string {
-	attributeName := os.Getenv("IMPOSTER_DYNAMODB_TTL_ATTRIBUTE")
+	attributeName := os.Getenv("IMPOSTER_STORE_DYNAMODB_TTL_ATTRIBUTE")
 	if attributeName == "" {
 		return "ttl"
 	}

@@ -10,9 +10,9 @@ import (
 
 func setupDynamoDBTest(t *testing.T) *DynamoDBStoreProvider {
 	// Skip if DynamoDB configuration is not available
-	tableName := os.Getenv("IMPOSTER_DYNAMODB_TABLE")
+	tableName := os.Getenv("IMPOSTER_STORE_DYNAMODB_TABLE")
 	if tableName == "" {
-		t.Skip("Skipping DynamoDB tests: IMPOSTER_DYNAMODB_TABLE not set")
+		t.Skip("Skipping DynamoDB tests: IMPOSTER_STORE_DYNAMODB_TABLE not set")
 	}
 
 	provider := &DynamoDBStoreProvider{}
@@ -118,8 +118,8 @@ func TestDynamoDBStore(t *testing.T) {
 
 	t.Run("TTL", func(t *testing.T) {
 		// Set a TTL for testing
-		os.Setenv("IMPOSTER_DYNAMODB_TTL", "1")
-		defer os.Unsetenv("IMPOSTER_DYNAMODB_TTL")
+		os.Setenv("IMPOSTER_STORE_DYNAMODB_TTL", "1")
+		defer os.Unsetenv("IMPOSTER_STORE_DYNAMODB_TTL")
 
 		provider.StoreValue("test", "expiring", "value")
 
@@ -177,8 +177,8 @@ func TestDynamoDBConnection(t *testing.T) {
 
 func TestDynamoDBTTLAttribute(t *testing.T) {
 	t.Run("CustomTTLAttribute", func(t *testing.T) {
-		os.Setenv("IMPOSTER_DYNAMODB_TTL_ATTRIBUTE", "customTTL")
-		defer os.Unsetenv("IMPOSTER_DYNAMODB_TTL_ATTRIBUTE")
+		os.Setenv("IMPOSTER_STORE_DYNAMODB_TTL_ATTRIBUTE", "customTTL")
+		defer os.Unsetenv("IMPOSTER_STORE_DYNAMODB_TTL_ATTRIBUTE")
 
 		if getTTLAttributeName() != "customTTL" {
 			t.Error("Expected custom TTL attribute name")
@@ -186,7 +186,7 @@ func TestDynamoDBTTLAttribute(t *testing.T) {
 	})
 
 	t.Run("DefaultTTLAttribute", func(t *testing.T) {
-		os.Unsetenv("IMPOSTER_DYNAMODB_TTL_ATTRIBUTE")
+		os.Unsetenv("IMPOSTER_STORE_DYNAMODB_TTL_ATTRIBUTE")
 		if getTTLAttributeName() != "ttl" {
 			t.Error("Expected default TTL attribute name")
 		}
