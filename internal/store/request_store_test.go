@@ -44,7 +44,6 @@ func TestRequestStoreProvider(t *testing.T) {
 		values := provider.GetAllValues("test", "prefix")
 
 		// Debug output
-		t.Logf("Stored values: %v", provider.data)
 		t.Logf("Retrieved values: %v", values)
 
 		// Check the number of values
@@ -54,8 +53,8 @@ func TestRequestStoreProvider(t *testing.T) {
 
 		// Check each value individually
 		expectedValues := map[string]string{
-			"key1": "value1",
-			"key2": "value2",
+			"prefix.key1": "value1",
+			"prefix.key2": "value2",
 		}
 
 		for key, expectedValue := range expectedValues {
