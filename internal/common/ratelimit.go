@@ -22,7 +22,13 @@ func RateLimitCheck(
 	}
 
 	rateLimiter := ratelimiter.GetGlobalRateLimiter()
-	resourceKey := ratelimiter.GenerateResourceKey(resourceMethod, resourceName)
+
+	resourceKey := resource.ResourceID
+	if resourceKey == "" {
+		// Fallback: generate key if not pre-calculated (dynamically created keys)
+		logger.Warnf("resource ID not pre-calculated for resource, generating at runtime")
+		resourceKey = config.GenerateResourceKey(resourceMethod, resourceName, &resource.RequestMatcher)
+	}
 
 	if limitResponse, err := rateLimiter.CheckAndIncrement(resourceKey, resource.Concurrency); limitResponse != nil {
 		// Rate limit exceeded, return the configured response

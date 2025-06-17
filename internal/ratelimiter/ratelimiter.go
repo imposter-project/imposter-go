@@ -5,7 +5,6 @@ import (
 	"os"
 	"sort"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -137,17 +136,6 @@ func (rl *RateLimiterImpl) findMatchingLimit(currentCount int, limits []config.C
 	}
 
 	return matchedLimit
-}
-
-// GenerateResourceKey generates a unique key for a resource
-func GenerateResourceKey(method, name string) string {
-	if method == "" {
-		method = "*"
-	}
-	if name == "" {
-		name = "*"
-	}
-	return fmt.Sprintf("%s:%s", strings.ToUpper(method), name)
 }
 
 // getTTLFromEnv gets TTL from environment variable or returns default

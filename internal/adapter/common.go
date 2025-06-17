@@ -39,9 +39,18 @@ func InitialiseImposter(configDirArg string) (*config.ImposterConfig, []plugin.P
 
 	// Exit if no configuration files were found
 	if totalConfigs == 0 {
-		logger.Errorf("No configuration files found in specified directories: %v", configDirs)
+		logger.Errorf("no configuration files found in specified directories: %v", configDirs)
 		os.Exit(1)
 	}
+
+	// Pre-calculate resource IDs for all loaded configurations.
+	// Note: retrieving the config from each plugin to ensure it includes
+	// any dynamic resources added by the plugin.
+	allConfigs := make([]config.Config, 0, totalConfigs)
+	for _, plg := range plugins {
+		allConfigs = append(allConfigs, *plg.GetConfig())
+	}
+	config.PreCalculateResourceIDs(allConfigs)
 
 	return imposterConfig, plugins
 }

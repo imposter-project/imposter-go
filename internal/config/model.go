@@ -227,6 +227,9 @@ type BaseResource struct {
 	Concurrency      []ConcurrencyLimit `yaml:"concurrency,omitempty"`
 	Log              string             `yaml:"log,omitempty"`
 	RuntimeGenerated bool               `yaml:"-"`
+
+	// ResourceID is computed at startup
+	ResourceID string `yaml:"-"`
 }
 
 // Resource represents an HTTP resource

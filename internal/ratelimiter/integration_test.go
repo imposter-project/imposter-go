@@ -297,9 +297,9 @@ func TestCrossStoreCompatibility(t *testing.T) {
 			}
 
 			// Resource key generation should be consistent
-			key1 := GenerateResourceKey("GET", "/test")
-			key2 := GenerateResourceKey("get", "/test") // Different case
-			key3 := GenerateResourceKey("", "/test")    // Empty method
+			key1 := config.GenerateResourceKey("GET", "/test", nil)
+			key2 := config.GenerateResourceKey("get", "/test", nil) // Different case
+			key3 := config.GenerateResourceKey("", "/test", nil)    // Empty method
 
 			if key1 != key2 {
 				t.Errorf("resource key generation not case-insensitive: %s != %s", key1, key2)

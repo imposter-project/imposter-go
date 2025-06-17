@@ -1,7 +1,9 @@
 package ratelimiter
 
 import (
+	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -343,7 +345,7 @@ func TestRateLimiter_TTLCleanup(t *testing.T) {
 	}
 }
 
-func TestGenerateResourceKey(t *testing.T) {
+func TestGenerateResourceKeySimple(t *testing.T) {
 	tests := []struct {
 		method   string
 		name     string
@@ -359,9 +361,9 @@ func TestGenerateResourceKey(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		result := GenerateResourceKey(test.method, test.name)
+		result := config.GenerateResourceKey(test.method, test.name, nil)
 		if result != test.expected {
-			t.Errorf("GenerateResourceKey(%q, %q) = %q, expected %q",
+			t.Errorf("config.GenerateResourceKey(%q, %q, nil) = %q, expected %q",
 				test.method, test.name, result, test.expected)
 		}
 	}
@@ -416,5 +418,146 @@ func TestFindMatchingLimit(t *testing.T) {
 					test.count, test.expectedStatus, result.Response.StatusCode)
 			}
 		}
+	}
+}
+
+func TestGenerateResourceKey(t *testing.T) {
+	// Test simple cases that should use the basic key
+	simpleTests := []struct {
+		name     string
+		method   string
+		resName  string
+		matcher  *config.RequestMatcher
+		expected string
+	}{
+		{
+			name:     "empty matcher",
+			method:   "GET",
+			resName:  "/foo",
+			matcher:  &config.RequestMatcher{},
+			expected: "GET:/foo",
+		},
+		{
+			name:     "nil matcher",
+			method:   "POST",
+			resName:  "/bar",
+			matcher:  nil,
+			expected: "POST:/bar",
+		},
+		{
+			name:    "only method and path",
+			method:  "PUT",
+			resName: "/baz",
+			matcher: &config.RequestMatcher{
+				Method: "PUT",
+				Path:   "/baz",
+			},
+			expected: "PUT:/baz",
+		},
+	}
+
+	for _, test := range simpleTests {
+		t.Run(test.name, func(t *testing.T) {
+			result := config.GenerateResourceKey(test.method, test.resName, test.matcher)
+			if result != test.expected {
+				t.Errorf("config.GenerateResourceKey() = %q, expected %q", result, test.expected)
+			}
+		})
+	}
+
+	// Test that resources with different criteria get different keys
+	complexTests := []struct {
+		name    string
+		method  string
+		resName string
+		matcher *config.RequestMatcher
+	}{
+		{
+			name:    "with request headers",
+			method:  "GET",
+			resName: "/foo",
+			matcher: &config.RequestMatcher{
+				RequestHeaders: map[string]config.MatcherUnmarshaler{
+					"Authorization": {},
+				},
+			},
+		},
+		{
+			name:    "with query params",
+			method:  "GET",
+			resName: "/foo",
+			matcher: &config.RequestMatcher{
+				QueryParams: map[string]config.MatcherUnmarshaler{
+					"filter": {},
+				},
+			},
+		},
+		{
+			name:    "with different headers",
+			method:  "GET",
+			resName: "/foo",
+			matcher: &config.RequestMatcher{
+				RequestHeaders: map[string]config.MatcherUnmarshaler{
+					"X-Custom-Header": {},
+				},
+			},
+		},
+		{
+			name:    "SOAP with action",
+			method:  "POST",
+			resName: "getUserDetails",
+			matcher: &config.RequestMatcher{
+				SOAPAction: "getUserAction",
+			},
+		},
+	}
+
+	// Generate keys for all complex tests
+	keys := make([]string, len(complexTests))
+	for i, test := range complexTests {
+		keys[i] = config.GenerateResourceKey(test.method, test.resName, test.matcher)
+	}
+
+	// Verify each key is unique
+	seen := make(map[string]bool)
+	for i, key := range keys {
+		if seen[key] {
+			t.Errorf("Duplicate key generated for test %q: %q", complexTests[i].name, key)
+		}
+		seen[key] = true
+
+		// Verify the key includes the base resource key
+		expectedBase := fmt.Sprintf("%s:%s", strings.ToUpper(complexTests[i].method), complexTests[i].resName)
+		if !strings.HasPrefix(key, expectedBase) {
+			t.Errorf("Key %q should start with base key %q", key, expectedBase)
+		}
+
+		// Verify the key includes a hash suffix for complex matchers
+		parts := strings.Split(key, ":")
+		if len(parts) != 3 {
+			t.Errorf("Expected key format 'method:name:hash', got %q", key)
+		}
+		if len(parts[2]) != 8 {
+			t.Errorf("Expected 8-character hash suffix, got %q", parts[2])
+		}
+	}
+
+	// Test that the same matcher configuration always produces the same key (deterministic)
+	matcher := &config.RequestMatcher{
+		RequestHeaders: map[string]config.MatcherUnmarshaler{
+			"Authorization": {},
+			"X-API-Key":     {},
+		},
+		QueryParams: map[string]config.MatcherUnmarshaler{
+			"filter": {},
+			"sort":   {},
+		},
+	}
+
+	key1 := config.GenerateResourceKey("GET", "/api/test", matcher)
+	key2 := config.GenerateResourceKey("GET", "/api/test", matcher)
+
+	if key1 != key2 {
+		t.Errorf("Same matcher should produce same key: %q != %q", key1, key2)
 	}
 }

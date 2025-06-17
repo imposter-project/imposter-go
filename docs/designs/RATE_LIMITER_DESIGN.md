@@ -39,22 +39,42 @@ Request → Plugin Handler → Rate Limit Check → Counter Increment → Limit 
 
 ### 1. Resource Key Generation
 
-Resources are identified using a standardised key format:
+Resources are identified using a hash-based unique key format that considers all matching criteria:
+
 ```go
-func GenerateResourceKey(method, name string) string {
+func GenerateResourceKey(method, name string, matcher *config.RequestMatcher) string {
     if method == "" {
         method = "*"
     }
     if name == "" {
         name = "*"
     }
-    return fmt.Sprintf("%s:%s", strings.ToUpper(method), name)
+    baseKey := fmt.Sprintf("%s:%s", strings.ToUpper(method), name)
+
+    // If no additional matching criteria, use the simple key
+    if matcher == nil || isEmptyMatcher(matcher) {
+        return baseKey
+    }
+
+    // Generate hash of all matching criteria
+    hash := generateMatcherHash(matcher)
+    return fmt.Sprintf("%s:%s", baseKey, hash)
 }
 ```
 
 **Examples:**
-- REST: `GET:/api/users`, `POST:/api/orders`
-- SOAP: `POST:getUserDetails`, `POST:createOrder`
+- Simple: `GET:/api/users`, `POST:/api/orders` 
+- With headers: `GET:/api/users:8afa6046`, `GET:/api/users:595d8f88`
+- SOAP: `POST:getUserDetails`, `POST:getUserDetails:b59e2e91`
+
+#### Hash Generation
+The hash includes all `RequestMatcher` criteria in deterministic order:
+- RequestHeaders, QueryParams, FormParams, PathParams
+- RequestBody matching conditions  
+- SOAP-specific fields (SOAPAction, Binding)
+- Expression conditions (AllOf, AnyOf)
+
+This ensures that resources with identical method/path but different matching criteria receive separate rate limit counters, solving the multi-config collision issue.
 
 ### 2. Atomic Counter Management
 
