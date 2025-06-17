@@ -54,7 +54,13 @@ func ExecuteScriptStep(step *config.Step, exch *exchange.Exchange, imposterConfi
 
 	vm := goja.New()
 
-	vm.Set("console", buildConsole())
+	console := buildConsole()
+	vm.Set("console", console)
+
+	if imposterConfig.LegacyConfigSupported {
+		vm.Set("logger", console) // deprecated alias for console
+	}
+
 	vm.Set("context", buildContext(exch, reqMatcher))
 	vm.Set("stores", buildStores(vm, exch))
 	vm.Set("random", buildRandomWrapper(vm))
