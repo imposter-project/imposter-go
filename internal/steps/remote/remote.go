@@ -1,4 +1,4 @@
-package steps
+package remote
 
 import (
 	"bytes"
@@ -12,8 +12,8 @@ import (
 	"github.com/imposter-project/imposter-go/internal/template"
 )
 
-// executeRemoteStep executes a remote HTTP request step
-func executeRemoteStep(step *config.Step, exch *exchange.Exchange, imposterConfig *config.ImposterConfig) error {
+// ExecuteRemoteStep executes a remote HTTP request step
+func ExecuteRemoteStep(step *config.Step, exch *exchange.Exchange, imposterConfig *config.ImposterConfig) error {
 	// Process templates in URL, headers, and body
 	url := template.ProcessTemplate(step.URL, exch, imposterConfig, &config.RequestMatcher{})
 	body := template.ProcessTemplate(step.Body, exch, imposterConfig, &config.RequestMatcher{})

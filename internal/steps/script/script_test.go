@@ -1,4 +1,4 @@
-package steps
+package script
 
 import (
 	"net/http"
@@ -451,7 +451,7 @@ func TestExecuteScriptStep(t *testing.T) {
 
 			exch := tt.setupExch()
 			responseState := response.NewResponseState()
-			err := executeScriptStep(&tt.step, exch, &config.ImposterConfig{}, responseState, "", tt.reqMatcher)
+			err := ExecuteScriptStep(&tt.step, exch, &config.ImposterConfig{}, responseState, "", tt.reqMatcher)
 
 			if tt.expectError {
 				assert.Error(t, err)

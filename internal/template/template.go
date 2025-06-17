@@ -227,22 +227,22 @@ func handleRandomReplacement(function, params string) string {
 	case "alphabetic":
 		length := getIntParam(paramMap, "length", 1)
 		uppercase := getBoolParam(paramMap, "uppercase", false)
-		return randomAlphabetic(length, uppercase)
+		return RandomAlphabetic(length, uppercase)
 	case "alphanumeric":
 		length := getIntParam(paramMap, "length", 1)
 		uppercase := getBoolParam(paramMap, "uppercase", false)
-		return randomAlphanumeric(length, uppercase)
+		return RandomAlphanumeric(length, uppercase)
 	case "any":
 		chars := getStringParam(paramMap, "chars", "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
 		length := getIntParam(paramMap, "length", 1)
 		uppercase := getBoolParam(paramMap, "uppercase", false)
-		return randomAny(chars, length, uppercase)
+		return RandomAny(chars, length, uppercase)
 	case "numeric":
 		length := getIntParam(paramMap, "length", 1)
-		return randomNumeric(length)
+		return RandomNumeric(length)
 	case "uuid":
 		uppercase := getBoolParam(paramMap, "uppercase", false)
-		return randomUUID(uppercase)
+		return RandomUUID(uppercase)
 	default:
 		return ""
 	}
@@ -268,8 +268,8 @@ func handleSystemReplacement(subcategory, field string, exch *exchange.Exchange,
 	}
 }
 
-// randomUUID generates a random UUID string.
-func randomUUID(uppercase bool) string {
+// RandomUUID generates a random UUID string.
+func RandomUUID(uppercase bool) string {
 	uuidStr := uuid.NewV4().String()
 	if uppercase {
 		return strings.ToUpper(uuidStr)
@@ -320,8 +320,8 @@ func getStringParam(params map[string]string, key string, defaultValue string) s
 	return defaultValue
 }
 
-// randomAlphabetic generates a random alphabetic string.
-func randomAlphabetic(length int, uppercase bool) string {
+// RandomAlphabetic generates a random alphabetic string.
+func RandomAlphabetic(length int, uppercase bool) string {
 	letters := "abcdefghijklmnopqrstuvwxyz"
 	if uppercase {
 		letters = strings.ToUpper(letters)
@@ -329,8 +329,8 @@ func randomAlphabetic(length int, uppercase bool) string {
 	return randomStringFromCharset(length, letters)
 }
 
-// randomAlphanumeric generates a random alphanumeric string.
-func randomAlphanumeric(length int, uppercase bool) string {
+// RandomAlphanumeric generates a random alphanumeric string.
+func RandomAlphanumeric(length int, uppercase bool) string {
 	letters := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	if uppercase {
 		letters = strings.ToUpper(letters)
@@ -338,16 +338,16 @@ func randomAlphanumeric(length int, uppercase bool) string {
 	return randomStringFromCharset(length, letters)
 }
 
-// randomAny generates a random string from a given character set.
-func randomAny(chars string, length int, uppercase bool) string {
+// RandomAny generates a random string from a given character set.
+func RandomAny(chars string, length int, uppercase bool) string {
 	if uppercase {
 		chars = strings.ToUpper(chars)
 	}
 	return randomStringFromCharset(length, chars)
 }
 
-// randomNumeric generates a random numeric string.
-func randomNumeric(length int) string {
+// RandomNumeric generates a random numeric string.
+func RandomNumeric(length int) string {
 	digits := "0123456789"
 	return randomStringFromCharset(length, digits)
 }

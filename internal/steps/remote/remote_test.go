@@ -1,4 +1,4 @@
-package steps
+package remote
 
 import (
 	"net/http"
@@ -162,7 +162,7 @@ func TestExecuteRemoteStep(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			exch := tt.setupExch()
-			err := executeRemoteStep(&tt.step, exch, imposterConfig)
+			err := ExecuteRemoteStep(&tt.step, exch, imposterConfig)
 
 			if tt.expectError {
 				assert.Error(t, err)

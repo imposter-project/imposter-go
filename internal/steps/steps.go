@@ -2,6 +2,8 @@ package steps
 
 import (
 	"fmt"
+	"github.com/imposter-project/imposter-go/internal/steps/remote"
+	"github.com/imposter-project/imposter-go/internal/steps/script"
 
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/exchange"
@@ -14,9 +16,9 @@ func RunSteps(steps []config.Step, exch *exchange.Exchange, imposterConfig *conf
 		var err error
 		switch step.Type {
 		case config.ScriptStepType:
-			err = executeScriptStep(&step, exch, imposterConfig, responseState, configDir, reqMatcher)
+			err = script.ExecuteScriptStep(&step, exch, imposterConfig, responseState, configDir, reqMatcher)
 		case config.RemoteStepType:
-			err = executeRemoteStep(&step, exch, imposterConfig)
+			err = remote.ExecuteRemoteStep(&step, exch, imposterConfig)
 		default:
 			err = fmt.Errorf("unknown step type: %s", step.Type)
 		}
