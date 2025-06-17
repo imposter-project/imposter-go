@@ -2,6 +2,7 @@ package script
 
 import (
 	"net/http"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -461,6 +462,187 @@ func TestExecuteScriptStep(t *testing.T) {
 
 			if tt.validate != nil {
 				tt.validate(t, responseState)
+			}
+		})
+	}
+}
+
+func TestRandomFunctions(t *testing.T) {
+	tests := []struct {
+		name      string
+		script    string
+		validator func(t *testing.T, output string)
+	}{
+		{
+			name: "random.alphabetic with default options",
+			script: `
+				var result = random.alphabetic();
+				respond().withContent(result);
+			`,
+			validator: func(t *testing.T, output string) {
+				assert.Len(t, output, 1)
+				assert.Regexp(t, regexp.MustCompile(`^[a-z]$`), output)
+			},
+		},
+		{
+			name: "random.alphabetic with custom length",
+			script: `
+				var result = random.alphabetic({ length: 10 });
+				respond().withContent(result);
+			`,
+			validator: func(t *testing.T, output string) {
+				assert.Len(t, output, 10)
+				assert.Regexp(t, regexp.MustCompile(`^[a-z]{10}$`), output)
+			},
+		},
+		{
+			name: "random.alphabetic with uppercase",
+			script: `
+				var result = random.alphabetic({ length: 10, uppercase: true });
+				respond().withContent(result);
+			`,
+			validator: func(t *testing.T, output string) {
+				assert.Len(t, output, 10)
+				assert.Regexp(t, regexp.MustCompile(`^[A-Z]{10}$`), output)
+			},
+		},
+		{
+			name: "random.alphanumeric with default options",
+			script: `
+				var result = random.alphanumeric();
+				respond().withContent(result);
+			`,
+			validator: func(t *testing.T, output string) {
+				assert.Len(t, output, 1)
+				assert.Regexp(t, regexp.MustCompile(`^[a-zA-Z0-9]$`), output)
+			},
+		},
+		{
+			name: "random.alphanumeric with custom length",
+			script: `
+				var result = random.alphanumeric({ length: 15 });
+				respond().withContent(result);
+			`,
+			validator: func(t *testing.T, output string) {
+				assert.Len(t, output, 15)
+				assert.Regexp(t, regexp.MustCompile(`^[a-zA-Z0-9]{15}$`), output)
+			},
+		},
+		{
+			name: "random.alphanumeric with uppercase",
+			script: `
+				var result = random.alphanumeric({ length: 15, uppercase: true });
+				respond().withContent(result);
+			`,
+			validator: func(t *testing.T, output string) {
+				assert.Len(t, output, 15)
+				// When uppercase is true, lowercase letters should be converted to uppercase
+				assert.Regexp(t, regexp.MustCompile(`^[A-Z0-9]{15}$`), output)
+			},
+		},
+		{
+			name: "random.any with default options",
+			script: `
+				var result = random.any();
+				respond().withContent(result);
+			`,
+			validator: func(t *testing.T, output string) {
+				assert.Len(t, output, 1)
+				assert.Regexp(t, regexp.MustCompile(`^[a-zA-Z0-9]$`), output)
+			},
+		},
+		{
+			name: "random.any with custom character set",
+			script: `
+				var result = random.any({ chars: "abc123", length: 10 });
+				respond().withContent(result);
+			`,
+			validator: func(t *testing.T, output string) {
+				assert.Len(t, output, 10)
+				assert.Regexp(t, regexp.MustCompile(`^[abc123]{10}$`), output)
+			},
+		},
+		{
+			name: "random.any with uppercase",
+			script: `
+				var result = random.any({ chars: "abc123", length: 10, uppercase: true });
+				respond().withContent(result);
+			`,
+			validator: func(t *testing.T, output string) {
+				assert.Len(t, output, 10)
+				assert.Regexp(t, regexp.MustCompile(`^[ABC123]{10}$`), output)
+			},
+		},
+		{
+			name: "random.numeric with default options",
+			script: `
+				var result = random.numeric();
+				respond().withContent(result);
+			`,
+			validator: func(t *testing.T, output string) {
+				assert.Len(t, output, 1)
+				assert.Regexp(t, regexp.MustCompile(`^[0-9]$`), output)
+			},
+		},
+		{
+			name: "random.numeric with custom length",
+			script: `
+				var result = random.numeric({ length: 8 });
+				respond().withContent(result);
+			`,
+			validator: func(t *testing.T, output string) {
+				assert.Len(t, output, 8)
+				assert.Regexp(t, regexp.MustCompile(`^[0-9]{8}$`), output)
+			},
+		},
+		{
+			name: "random.uuid with default options",
+			script: `
+				var result = random.uuid();
+				respond().withContent(result);
+			`,
+			validator: func(t *testing.T, output string) {
+				assert.Regexp(t, regexp.MustCompile(`^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$`), output)
+			},
+		},
+		{
+			name: "random.uuid with uppercase",
+			script: `
+				var result = random.uuid({ uppercase: true });
+				respond().withContent(result);
+			`,
+			validator: func(t *testing.T, output string) {
+				assert.Regexp(t, regexp.MustCompile(`^[A-F0-9]{8}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{12}$`), output)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create step with test script
+			step := config.Step{
+				Type: config.ScriptStepType,
+				Lang: "javascript",
+				Code: tt.script,
+			}
+
+			// Setup exchange
+			req, _ := http.NewRequest("GET", "/test", nil)
+			exch := &exchange.Exchange{
+				Request: &exchange.RequestContext{
+					Request: req,
+					Body:    []byte{},
+				},
+			}
+
+			// Execute script
+			responseState := response.NewResponseState()
+			err := ExecuteScriptStep(&step, exch, &config.ImposterConfig{}, responseState, "", nil)
+			assert.NoError(t, err)
+
+			// Validate the output
+			if tt.validator != nil {
+				tt.validator(t, string(responseState.Body))
 			}
 		})
 	}
