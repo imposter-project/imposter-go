@@ -4,7 +4,7 @@ resources:
   - path: /api/simple
     method: GET
     concurrency:
-      - limit: 10
+      - threshold: 10
         response:
           statusCode: 429
           delay:
@@ -35,7 +35,7 @@ resources:
   - path: /api/light
     method: GET
     concurrency:
-      - limit: 10
+      - threshold: 10
         response:
           statusCode: 429
           template: true
@@ -67,7 +67,7 @@ resources:
     method: GET
     concurrency:
       # First tier: add delay to slow down requests
-      - limit: 3
+      - threshold: 3
         response:
           template: true
           content: |
@@ -86,7 +86,7 @@ resources:
             X-Delay-Applied: "2000ms"
       
       # Second tier: reject with 503 Service Unavailable
-      - limit: 5
+      - threshold: 5
         response:
           statusCode: 503
           template: true
@@ -124,7 +124,7 @@ resources:
   - path: /api/critical
     method: POST
     concurrency:
-      - limit: 2
+      - threshold: 2
         response:
           statusCode: 429
           template: true
@@ -162,7 +162,7 @@ resources:
     method: GET
     concurrency:
       # Tier 1: Warning response with small delay
-      - limit: 5
+      - threshold: 5
         response:
           template: true
           content: |
@@ -182,7 +182,7 @@ resources:
             X-Query-Priority: "low"
       
       # Tier 2: Circuit breaker simulation
-      - limit: 8
+      - threshold: 8
         response:
           statusCode: 503
           template: true
@@ -221,7 +221,7 @@ resources:
   - path: /api/upload
     method: POST
     concurrency:
-      - limit: 1
+      - threshold: 1
         response:
           statusCode: 429
           template: true
@@ -281,11 +281,11 @@ resources:
               "path": "/api/heavy", 
               "tiers": [
                 {
-                  "limit": 3,
+                  "threshold": 3,
                   "behavior": "throttle with 2s delay"
                 },
                 {
-                  "limit": 5,
+                  "threshold": 5,
                   "behavior": "503 service unavailable"
                 }
               ]
@@ -299,11 +299,11 @@ resources:
               "path": "/api/database",
               "tiers": [
                 {
-                  "limit": 5,
+                  "threshold": 5,
                   "behavior": "throttle with 1.5s delay"
                 },
                 {
-                  "limit": 8,
+                  "threshold": 8,
                   "behavior": "503 circuit breaker"
                 }
               ]

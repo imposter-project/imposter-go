@@ -59,7 +59,7 @@ func TestRateLimiter_CheckAndIncrement_BelowLimit(t *testing.T) {
 	resourceKey := "GET:/test"
 	limits := []config.ConcurrencyLimit{
 		{
-			Limit: 5,
+			Threshold: 5,
 			Response: &config.Response{
 				StatusCode: 429,
 				Content:    "Rate limited",
@@ -88,7 +88,7 @@ func TestRateLimiter_CheckAndIncrement_ExceedsLimit(t *testing.T) {
 	resourceKey := "GET:/test"
 	limits := []config.ConcurrencyLimit{
 		{
-			Limit: 3,
+			Threshold: 3,
 			Response: &config.Response{
 				StatusCode: 429,
 				Content:    "Rate limited",
@@ -129,14 +129,14 @@ func TestRateLimiter_CheckAndIncrement_MultipleLimits(t *testing.T) {
 	resourceKey := "GET:/test"
 	limits := []config.ConcurrencyLimit{
 		{
-			Limit: 3,
+			Threshold: 3,
 			Response: &config.Response{
 				StatusCode: 503,
 				Content:    "Server overloaded",
 			},
 		},
 		{
-			Limit: 5,
+			Threshold: 5,
 			Response: &config.Response{
 				StatusCode: 429,
 				Content:    "Too many requests",
@@ -192,7 +192,7 @@ func TestRateLimiter_Decrement(t *testing.T) {
 	resourceKey := "GET:/test"
 	limits := []config.ConcurrencyLimit{
 		{
-			Limit: 2,
+			Threshold: 2,
 			Response: &config.Response{
 				StatusCode: 429,
 				Content:    "Rate limited",
@@ -236,7 +236,7 @@ func TestRateLimiter_ConcurrentAccess(t *testing.T) {
 	resourceKey := "GET:/test"
 	limits := []config.ConcurrencyLimit{
 		{
-			Limit: 10,
+			Threshold: 10,
 			Response: &config.Response{
 				StatusCode: 429,
 				Content:    "Rate limited",
@@ -311,7 +311,7 @@ func TestRateLimiter_TTLCleanup(t *testing.T) {
 	resourceKey := "GET:/test"
 	limits := []config.ConcurrencyLimit{
 		{
-			Limit: 5,
+			Threshold: 5,
 			Response: &config.Response{
 				StatusCode: 429,
 				Content:    "Rate limited",
@@ -374,16 +374,16 @@ func TestFindMatchingLimit(t *testing.T) {
 
 	limits := []config.ConcurrencyLimit{
 		{
-			Limit:    10,
-			Response: &config.Response{StatusCode: 429},
+			Threshold: 10,
+			Response:  &config.Response{StatusCode: 429},
 		},
 		{
-			Limit:    5,
-			Response: &config.Response{StatusCode: 503},
+			Threshold: 5,
+			Response:  &config.Response{StatusCode: 503},
 		},
 		{
-			Limit:    15,
-			Response: &config.Response{StatusCode: 502},
+			Threshold: 15,
+			Response:  &config.Response{StatusCode: 502},
 		},
 	}
 

@@ -100,7 +100,7 @@ func (rl *RateLimiterImpl) CheckAndIncrement(resourceKey string, limits []config
 		if rollbackErr != nil {
 			logger.Warnf("failed to rollback increment for resource %s: %v", resourceKey, rollbackErr)
 		}
-		logger.Infof("rate limit exceeded for resource %s: %d > %d", resourceKey, newCount, matchedLimit.Limit)
+		logger.Infof("rate limit exceeded for resource %s: %d > %d", resourceKey, newCount, matchedLimit.Threshold)
 		return matchedLimit, nil
 	}
 
@@ -124,13 +124,13 @@ func (rl *RateLimiterImpl) findMatchingLimit(currentCount int, limits []config.C
 	sortedLimits := make([]config.ConcurrencyLimit, len(limits))
 	copy(sortedLimits, limits)
 	sort.Slice(sortedLimits, func(i, j int) bool {
-		return sortedLimits[i].Limit < sortedLimits[j].Limit
+		return sortedLimits[i].Threshold < sortedLimits[j].Threshold
 	})
 
 	// Find the highest matching limit (> logic)
 	var matchedLimit *config.ConcurrencyLimit
 	for _, limit := range sortedLimits {
-		if currentCount > limit.Limit {
+		if currentCount > limit.Threshold {
 			matchedLimit = &limit
 		}
 	}

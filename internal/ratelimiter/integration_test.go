@@ -82,7 +82,7 @@ func runRateLimiterIntegrationTest(t *testing.T, storeProvider store.StoreProvid
 		resourceKey := "GET:/test"
 		limits := []config.ConcurrencyLimit{
 			{
-				Limit: 3,
+				Threshold: 3,
 				Response: &config.Response{
 					StatusCode: 429,
 					Content:    "Rate limited",
@@ -135,7 +135,7 @@ func runRateLimiterIntegrationTest(t *testing.T, storeProvider store.StoreProvid
 		resourceKey := "GET:/multi-instance"
 		limits := []config.ConcurrencyLimit{
 			{
-				Limit: 5,
+				Threshold: 5,
 				Response: &config.Response{
 					StatusCode: 503,
 					Content:    "Service overloaded",
@@ -178,7 +178,7 @@ func runRateLimiterIntegrationTest(t *testing.T, storeProvider store.StoreProvid
 		resourceKey := "GET:/ttl-test"
 		limits := []config.ConcurrencyLimit{
 			{
-				Limit: 2,
+				Threshold: 2,
 				Response: &config.Response{
 					StatusCode: 429,
 					Content:    "Rate limited",
@@ -271,7 +271,7 @@ func TestCrossStoreCompatibility(t *testing.T) {
 			resourceKey := "GET:/compatibility-test"
 			limits := []config.ConcurrencyLimit{
 				{
-					Limit: 3,
+					Threshold: 3,
 					Response: &config.Response{
 						StatusCode: 429,
 						Content:    "Rate limited",
@@ -365,7 +365,7 @@ func BenchmarkRateLimiterStores(b *testing.B) {
 			resourceKey := "GET:/benchmark"
 			limits := []config.ConcurrencyLimit{
 				{
-					Limit: 1000, // High limit to avoid rate limiting during benchmark
+					Threshold: 1000, // High limit to avoid rate limiting during benchmark
 					Response: &config.Response{
 						StatusCode: 429,
 						Content:    "Rate limited",

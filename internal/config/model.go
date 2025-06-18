@@ -99,8 +99,8 @@ type RequestBody struct {
 
 // ConcurrencyLimit represents a concurrency limit with its associated response
 type ConcurrencyLimit struct {
-	Limit    int       `yaml:"limit" json:"limit"`
-	Response *Response `yaml:"response" json:"response"`
+	Threshold int       `yaml:"threshold" json:"threshold"`
+	Response  *Response `yaml:"response" json:"response"`
 }
 
 // UnmarshalYAML implements custom unmarshaling for RequestBody

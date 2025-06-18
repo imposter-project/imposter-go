@@ -28,7 +28,7 @@ Rate limiting data is stored using the configured store provider:
 ### Request Processing Flow
 
 ```
-Request → Plugin Handler → Rate Limit Check → Counter Increment → Limit Evaluation
+Request → Plugin Handler → Rate Limit Check → Counter Increment → Threshold Evaluation
                                     ↓
                           Rate Limited? → Process Limit Response → Return
                                     ↓ No
@@ -88,9 +88,9 @@ counter:{resourceKey}
 - **Rollback**: Atomic decrement if rate limit exceeded  
 - **Cleanup**: Atomic decrement when request completes
 
-### 3. Concurrency Limit Evaluation
+### 3. Concurrency Threshold Evaluation
 
-Limits are evaluated using "greater than" logic with highest matching threshold selection:
+Thresholds are evaluated using "greater than" logic with highest matching threshold selection:
 
 ```go
 func (rl *RateLimiterImpl) findMatchingLimit(currentCount int, limits []config.ConcurrencyLimit) *config.ConcurrencyLimit {
@@ -98,13 +98,13 @@ func (rl *RateLimiterImpl) findMatchingLimit(currentCount int, limits []config.C
     sortedLimits := make([]config.ConcurrencyLimit, len(limits))
     copy(sortedLimits, limits)
     sort.Slice(sortedLimits, func(i, j int) bool {
-        return sortedLimits[i].Limit < sortedLimits[j].Limit
+        return sortedLimits[i].Threshold < sortedLimits[j].Threshold
     })
 
     // Find the highest matching limit (> logic)
     var matchedLimit *config.ConcurrencyLimit
     for _, limit := range sortedLimits {
-        if currentCount > limit.Limit {
+        if currentCount > limit.Threshold {
             matchedLimit = &limit
         }
     }
@@ -113,7 +113,7 @@ func (rl *RateLimiterImpl) findMatchingLimit(currentCount int, limits []config.C
 }
 ```
 
-**Example:** With limits `[3, 5, 10]` and current count `7`:
+**Example:** With thresholds `[3, 5, 10]` and current count `7`:
 - Count `7 > 3` ✓ (match)
 - Count `7 > 5` ✓ (match, overwrites previous)
 - Count `7 > 10` ✗ (no match)
@@ -222,7 +222,7 @@ resources:
 - path: /api/users
   method: GET
   concurrency:
-    - limit: 5
+    - threshold: 5
       response:
         statusCode: 429
         content: "Too many concurrent requests"
@@ -238,17 +238,17 @@ resources:
 - path: /api/heavy-operation
   method: POST
   concurrency:
-    - limit: 2
+    - threshold: 2
       response:
         delay:
           exact: 1000
-    - limit: 5
+    - threshold: 5
       response:
         statusCode: 503
         headers:
           Retry-After: "30"
         content: "Service temporarily overloaded"
-    - limit: 10
+    - threshold: 10
       response:
         statusCode: 429
         content: "Rate limit exceeded"
@@ -263,7 +263,7 @@ plugin: soap
 resources:
 - operation: getUserDetails
   concurrency:
-    - limit: 3
+    - threshold: 3
       response:
         statusCode: 503
         content: |
@@ -296,7 +296,7 @@ The rate limiter follows a fail-open approach:
 ### Rollback Protection
 When rate limits are exceeded:
 1. Counter is atomically incremented
-2. Limit evaluation performed
+2. Threshold evaluation performed
 3. If exceeded, counter is immediately rolled back
 4. Ensures accurate counting even under high concurrency
 
@@ -309,7 +309,7 @@ When rate limits are exceeded:
 
 ### Throughput Optimisation
 - Single atomic operation per request (increment)
-- Minimal store queries for limit evaluation
+- Minimal store queries for threshold evaluation
 - Efficient key structures for store access patterns
 
 ### Memory Management
@@ -333,7 +333,7 @@ When rate limits are exceeded:
 
 ### Unit Testing
 - Mock store providers for isolated rate limiter logic testing
-- Limit matching algorithm verification
+- Threshold matching algorithm verification
 - Counter rollback scenarios
 - Cleanup function execution
 
