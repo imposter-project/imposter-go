@@ -39,10 +39,10 @@ Request → Plugin Handler → Rate Limit Check → Counter Increment → Thresh
 
 ### 1. Resource Key Generation
 
-Resources are identified using a hash-based unique key format that considers all matching criteria:
+Resources are identified using a deterministic hash-based key format that considers all matching criteria. The implementation uses the `GenerateResourceKey` function from the `config` package:
 
 ```go
-func GenerateResourceKey(method, name string, matcher *config.RequestMatcher) string {
+func GenerateResourceKey(method, name string, matcher *RequestMatcher) string {
     if method == "" {
         method = "*"
     }
@@ -62,19 +62,46 @@ func GenerateResourceKey(method, name string, matcher *config.RequestMatcher) st
 }
 ```
 
-**Examples:**
-- Simple: `GET:/api/users`, `POST:/api/orders` 
-- With headers: `GET:/api/users:8afa6046`, `GET:/api/users:595d8f88`
-- SOAP: `POST:getUserDetails`, `POST:getUserDetails:b59e2e91`
+This key is then used to generate the resource counter key in the rate limiter:
+
+```go
+func (rl *RateLimiterImpl) getResourceCounterKey(resourceKey string) string {
+    return fmt.Sprintf("counter:%s", resourceKey)
+}
+```
+
+**Resource Key Format:**
+- Simple resources: `METHOD:PATH` (e.g., `GET:/api/users`, `POST:/api/orders`)
+- Complex resources: `METHOD:PATH:HASH` (e.g., `GET:/api/users:8afa6046`)
+- SOAP resources: `POST:OPERATION[:HASH]` (e.g., `POST:getUserDetails`, `POST:getUserDetails:b59e2e91`)
+- Wildcards: Method or path can be `*` for wildcards (e.g., `*:/api/users`, `GET:*`)
 
 #### Hash Generation
-The hash includes all `RequestMatcher` criteria in deterministic order:
-- RequestHeaders, QueryParams, FormParams, PathParams
-- RequestBody matching conditions  
-- SOAP-specific fields (SOAPAction, Binding)
-- Expression conditions (AllOf, AnyOf)
+The hash component is an 8-character SHA-256 hash that includes all matcher criteria in deterministic order:
 
-This ensures that resources with identical method/path but different matching criteria receive separate rate limit counters, solving the multi-config collision issue.
+1. **Request Headers**: Sorted by name (e.g., `Authorization`, `Content-Type`)
+2. **Query Parameters**: Sorted by name (e.g., `filter`, `sort`, `limit`)
+3. **Form Parameters**: Sorted by name for form submissions
+4. **Path Parameters**: Variable parts of URLs in RESTful resources
+5. **Request Body**: Matchers for JSON/XML paths, operators, and values
+6. **Expression Conditions**: AllOf and AnyOf expressions
+7. **SOAP-specific Fields**: SOAPAction, Binding
+
+By including these criteria in the hash, the system ensures that:
+1. Resources with identical method/path but different matching criteria get separate rate limit counters
+2. Identical matcher configurations always produce the same hash (deterministic)
+3. Resource keys remain reasonably short while being highly unique
+
+#### Counter Key Generation
+For any given resource key, the rate limiter uses atomic counters with this format:
+```
+counter:METHOD:PATH[:HASH]
+```
+
+This design allows for efficient tracking of concurrent requests across resources with:
+- Minimal key length (important for Redis and other stores)
+- High collision resistance (avoiding false rate limiting)
+- Support for complex matching criteria
 
 ### 2. Atomic Counter Management
 
