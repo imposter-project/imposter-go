@@ -6,6 +6,8 @@ import (
 	"github.com/imposter-project/imposter-go/pkg/logger"
 
 	"github.com/imposter-project/imposter-go/internal/capture"
+	"github.com/imposter-project/imposter-go/internal/common"
+	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/exchange"
 	"github.com/imposter-project/imposter-go/internal/matcher"
 	"github.com/imposter-project/imposter-go/internal/response"
@@ -76,6 +78,26 @@ func (h *PluginHandler) HandleRequest(
 	best, tie := matcher.FindBestMatch(matches)
 	if tie {
 		logger.Warnf("multiple equally specific matches, using the first")
+	}
+
+	// Check rate limiting if configured
+	if len(best.Resource.Concurrency) > 0 {
+		processResponseFunc := func(exch *exchange.Exchange, requestMatcher *config.RequestMatcher, response *config.Response, respProc response.Processor) {
+			h.processResponse(exch, requestMatcher, response, respProc)
+		}
+
+		shouldLimit := common.RateLimitCheck(
+			best.Resource,
+			best.Resource.Method,
+			best.Resource.Path, // resourceName (path for REST)
+			exch,
+			respProc,
+			processResponseFunc,
+		)
+
+		if shouldLimit {
+			return
+		}
 	}
 
 	// Capture request data

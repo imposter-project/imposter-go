@@ -1,6 +1,8 @@
 package rest
 
-import "github.com/imposter-project/imposter-go/internal/config"
+import (
+	"github.com/imposter-project/imposter-go/internal/config"
+)
 
 // PluginHandler handles REST API requests
 type PluginHandler struct {

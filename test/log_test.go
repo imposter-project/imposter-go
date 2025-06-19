@@ -107,7 +107,7 @@ func TestInterceptorLog(t *testing.T) {
 		StatusCode: 200,
 		Content:    "Authenticated",
 	}, false)
-	
+
 	// Add the log message to the interceptor
 	interceptor.BaseResource.Log = "Authenticated request from agent: ${context.request.headers.User-Agent}"
 
@@ -157,13 +157,13 @@ func TestInterceptorLog(t *testing.T) {
 
 func TestComplexLogTemplates(t *testing.T) {
 	// Test complex template combinations in log messages
-	
+
 	// Create resources with complex log templates
 	resource := testutils.NewResource("POST", "/data", &config.Response{
 		StatusCode: 201,
 		Content:    "Created",
 	})
-	
+
 	// Add a log template with various template functions
 	resource.BaseResource.Log = "Request: method=${context.request.method}, " +
 		"timestamp=${datetime.now.iso8601_datetime}, " +
@@ -195,10 +195,10 @@ func TestComplexLogTemplates(t *testing.T) {
 	// Send request
 	req, err := http.NewRequest("POST", "/data", strings.NewReader("test data"))
 	require.NoError(t, err)
-	
+
 	// Test 1: With client ID header
 	req.Header.Set("X-Client-ID", "test-app")
-	
+
 	rec := httptest.NewRecorder()
 	handler.HandleRequest(imposterConfig, rec, req, plugins)
 
@@ -208,16 +208,16 @@ func TestComplexLogTemplates(t *testing.T) {
 	// Check log output - it should contain all templated parts
 	logString := logOutput.String()
 	assert.Contains(t, logString, "Request: method=POST")
-	assert.Contains(t, logString, "timestamp=")  // We can't check the exact timestamp
-	assert.Contains(t, logString, "id=")         // We can't check the exact UUID
+	assert.Contains(t, logString, "timestamp=") // We can't check the exact timestamp
+	assert.Contains(t, logString, "id=")        // We can't check the exact UUID
 	assert.Contains(t, logString, "client=test-app")
-	
+
 	// Reset log buffer for next test
 	logOutput.Reset()
-	
+
 	// Test 2: Without client ID header (should use default)
 	req.Header.Del("X-Client-ID")
-	
+
 	rec = httptest.NewRecorder()
 	handler.HandleRequest(imposterConfig, rec, req, plugins)
 

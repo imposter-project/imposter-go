@@ -43,6 +43,12 @@ This document lists all environment variables that Imposter supports, their purp
 | `REDIS_PASSWORD` | Redis authentication password | No password | `REDIS_PASSWORD=secretpassword` |
 | `IMPOSTER_STORE_REDIS_EXPIRY` | Redis key expiration duration | No expiration (-1) | `IMPOSTER_STORE_REDIS_EXPIRY=30m` |
 
+## Rate Limiter
+
+| Variable | Purpose | Default Value | Example |
+|----------|---------|---------------|---------|
+| `IMPOSTER_RATE_LIMITER_TTL` | Rate limiter data TTL (seconds) | `300` (5 minutes) | `IMPOSTER_RATE_LIMITER_TTL=600` |
+
 ## OpenAPI Validation
 
 | Variable | Purpose | Default Value | Example |

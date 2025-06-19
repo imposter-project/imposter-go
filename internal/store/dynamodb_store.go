@@ -150,3 +150,60 @@ func getTTLAttributeName() string {
 	}
 	return attributeName
 }
+
+func (p *DynamoDBStoreProvider) AtomicIncrement(storeName, key string, delta int64) (int64, error) {
+	key = applyKeyPrefix(key)
+
+	// Use UpdateItem with ADD operation for atomic increment
+	updateExpression := "ADD #counter :delta"
+	expressionAttributeNames := map[string]*string{
+		"#counter": aws.String("Counter"),
+	}
+	expressionAttributeValues := map[string]*dynamodb.AttributeValue{
+		":delta": {N: aws.String(fmt.Sprintf("%d", delta))},
+	}
+
+	// Add TTL if configured
+	ttl := getTTL()
+	if ttl > 0 {
+		updateExpression += ", #ttl :ttl"
+		expressionAttributeNames["#ttl"] = aws.String(getTTLAttributeName())
+		expressionAttributeValues[":ttl"] = &dynamodb.AttributeValue{
+			N: aws.String(fmt.Sprintf("%d", time.Now().Add(time.Duration(ttl)*time.Second).Unix())),
+		}
+	}
+
+	result, err := p.ddb.UpdateItem(&dynamodb.UpdateItemInput{
+		TableName: aws.String(p.tableName),
+		Key: map[string]*dynamodb.AttributeValue{
+			"StoreName": {S: aws.String(storeName)},
+			"Key":       {S: aws.String(key)},
+		},
+		UpdateExpression:          aws.String(updateExpression),
+		ExpressionAttributeNames:  expressionAttributeNames,
+		ExpressionAttributeValues: expressionAttributeValues,
+		ReturnValues:              aws.String("ALL_NEW"),
+	})
+
+	if err != nil {
+		logger.Errorf("failed to atomic increment: %v", err)
+		return 0, err
+	}
+
+	// Extract the new counter value
+	if counterAttr, exists := result.Attributes["Counter"]; exists && counterAttr.N != nil {
+		newValue, err := strconv.ParseInt(*counterAttr.N, 10, 64)
+		if err != nil {
+			logger.Errorf("failed to parse counter value: %v", err)
+			return 0, err
+		}
+		return newValue, nil
+	}
+
+	return delta, nil // Should not happen, but return delta as fallback
+}
+
+func (p *DynamoDBStoreProvider) AtomicDecrement(storeName, key string, delta int64) (int64, error) {
+	// Decrement is just increment with negative delta
+	return p.AtomicIncrement(storeName, key, -delta)
+}
