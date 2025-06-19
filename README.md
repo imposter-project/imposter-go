@@ -11,7 +11,7 @@ A Go implementation of the [Imposter Mock Engine](https://www.imposter.sh). This
 - ✅ [OpenAPI/Swagger mock](https://docs.imposter.sh/openapi_plugin/) support
 - ✅ JavaScript [scripting](https://docs.imposter.sh/scripting/)
 - ✅ Support for [steps](https://docs.imposter.sh/steps/)
-- ✅ Support for [simulated delays](https://docs.imposter.sh/performance_simulation/) and [simulated errors](https://docs.imposter.sh/failure_simulation/)
+- ✅ Support for [simulated delays](https://docs.imposter.sh/performance_simulation/), [simulated errors](https://docs.imposter.sh/failure_simulation/) and [rate limiting](./docs/rate_limiting.md)
 
 ## ⚠️ Limitations
 
