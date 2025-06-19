@@ -1,6 +1,6 @@
 # imposter-go [![CI](https://github.com/imposter-project/imposter-go/actions/workflows/ci.yml/badge.svg)](https://github.com/imposter-project/imposter-go/actions/workflows/ci.yml)
 
-A Go implementation of the [Imposter Mock Engine](https://www.imposter.sh).
+A Go implementation of the [Imposter Mock Engine](https://www.imposter.sh). This project is now considered stable.
 
 ## Features
 
