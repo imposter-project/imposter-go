@@ -41,7 +41,7 @@ func StartExternalPlugins() {
 
 func start(pluginName string, hclogger hclog.Logger) {
 	logger.Debugf("loading external plugin: %s", pluginName)
-	pluginPath := path.Join(getPluginDir(), pluginName)
+	pluginPath := path.Join(getPluginDir(), "plugin-"+pluginName)
 
 	// We're a host! Start by launching the plugin process.
 	client := plugin.NewClient(&plugin.ClientConfig{

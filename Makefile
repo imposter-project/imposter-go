@@ -5,9 +5,13 @@ LDFLAGS := -X github.com/imposter-project/imposter-go/internal/version.Version=$
 build:
 	go build -tags lambda.norpc -ldflags "$(LDFLAGS)" -o imposter-go ./cmd/imposter
 
-.PHONY: build-prod
-build-prod:
-	go build -tags lambda.norpc -ldflags "$(LDFLAGS) -s -w" -trimpath -o imposter-go ./cmd/imposter
+.PHONY: build-plugins
+build-plugins:
+	rm bin/* && mkdir -p bin
+	for p in swaggerui; do \
+		echo "Building plugin $$p"; \
+		go build -tags lambda.norpc -ldflags "$(LDFLAGS)" -o ./bin/plugin-$$p ./external/$$p/impl; \
+	done
 
 .PHONY: fmt
 fmt:

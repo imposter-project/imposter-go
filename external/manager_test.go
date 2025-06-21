@@ -7,8 +7,7 @@ import (
 )
 
 func TestIntegration_ExternalPluginLifecycle(t *testing.T) {
-	// Set the IMPOSTER_PLUGIN_DIR to the swaggerui/impl directory
-	pluginDir := filepath.Join("./swaggerui", "impl")
+	pluginDir, _ := filepath.Abs("../bin")
 	os.Setenv("IMPOSTER_PLUGIN_DIR", pluginDir)
 
 	// Start plugins

@@ -9,11 +9,12 @@ import (
 )
 
 type SwaggerUI struct {
-	logger hclog.Logger
+	pluginName string
+	logger     hclog.Logger
 }
 
 func (s *SwaggerUI) Handle(path string) string {
-	s.logger.Debug("handling swagger ui", "path", path)
+	s.logger.Debug(s.pluginName+" handling swagger ui", "path", path)
 	return "Swagger UI response for path: " + path
 }
 
@@ -35,7 +36,8 @@ func main() {
 	})
 
 	impl := &SwaggerUI{
-		logger: logger,
+		pluginName: "swaggerui",
+		logger:     logger,
 	}
 	// pluginMap is the map of plugins we can dispense.
 	var pluginMap = map[string]goplugin.Plugin{
