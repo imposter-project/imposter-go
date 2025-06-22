@@ -1,6 +1,7 @@
 package external
 
 import (
+	"github.com/imposter-project/imposter-go/external/common"
 	"os"
 	"path/filepath"
 	"testing"
@@ -14,7 +15,7 @@ func TestIntegration_ExternalPluginLifecycle(t *testing.T) {
 	StartExternalPlugins()
 
 	// Call handlers
-	InvokeExternalHandlers("/test-path")
+	InvokeExternalHandlers(common.HandlerArgs{Method: "get", Path: "/test-path"})
 
 	// Stop plugins
 	StopExternalPlugins()

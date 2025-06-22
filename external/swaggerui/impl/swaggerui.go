@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/imposter-project/imposter-go/external/common"
 	"github.com/imposter-project/imposter-go/external/swaggerui"
 	"os"
 
@@ -13,9 +14,9 @@ type SwaggerUI struct {
 	logger     hclog.Logger
 }
 
-func (s *SwaggerUI) Handle(path string) string {
-	s.logger.Debug(s.pluginName+" handling swagger ui", "path", path)
-	return "Swagger UI response for path: " + path
+func (s *SwaggerUI) Handle(args common.HandlerArgs) string {
+	s.logger.Debug(s.pluginName+" handling swagger ui", "method", args.Method, "path", args.Path)
+	return "Swagger UI response for " + args.Method + " " + args.Path
 }
 
 // handshakeConfigs are used to just do a basic handshake between
@@ -44,7 +45,7 @@ func main() {
 		"swaggerui": &swaggerui.SwaggerUIPlugin{Impl: impl},
 	}
 
-	logger.Debug("message from plugin", "foo", "bar")
+	logger.Debug("swaggerui plugin initialising")
 
 	goplugin.Serve(&goplugin.ServeConfig{
 		HandshakeConfig: handshakeConfig,

@@ -74,9 +74,9 @@ func start(pluginName string, hclogger hclog.Logger) {
 	})
 }
 
-func InvokeExternalHandlers(path string) {
+func InvokeExternalHandlers(args common.HandlerArgs) {
 	for _, l := range loaded {
-		resp := l.impl.Handle(path)
+		resp := l.impl.Handle(args)
 		fmt.Println("Response from plugin:", resp)
 	}
 }

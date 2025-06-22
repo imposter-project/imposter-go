@@ -6,16 +6,12 @@ import (
 	"net/rpc"
 )
 
-type RPCArgs struct {
-	Path string
-}
-
-// Here is an implementation that talks over RPC
+// SwaggerUIRPC is the RPC client
 type SwaggerUIRPC struct{ client *rpc.Client }
 
-func (s *SwaggerUIRPC) Handle(path string) string {
+func (s *SwaggerUIRPC) Handle(args common.HandlerArgs) string {
 	var resp string
-	err := s.client.Call("Plugin.Handle", RPCArgs{Path: path}, &resp)
+	err := s.client.Call("Plugin.Handle", args, &resp)
 	if err != nil {
 		// You usually want your interfaces to return errors. If they don't,
 		// there isn't much other choice here.
@@ -32,9 +28,8 @@ type SwaggerUIRPCServer struct {
 	Impl common.ExternalHandler
 }
 
-func (s *SwaggerUIRPCServer) Handle(args RPCArgs, resp *string) error {
-	path := args.Path
-	*resp = s.Impl.Handle(path)
+func (s *SwaggerUIRPCServer) Handle(args common.HandlerArgs, resp *string) error {
+	*resp = s.Impl.Handle(args)
 	return nil
 }
 
