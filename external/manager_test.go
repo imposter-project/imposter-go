@@ -2,6 +2,7 @@ package external
 
 import (
 	"github.com/imposter-project/imposter-go/external/common"
+	"github.com/stretchr/testify/require"
 	"os"
 	"path/filepath"
 	"testing"
@@ -18,9 +19,11 @@ func TestIntegration_ExternalPluginLifecycle(t *testing.T) {
 
 	// Call handlers
 	resp := InvokeExternalHandlers(common.HandlerRequest{Method: "get", Path: "/index.html"})
+	require.NotNil(t, resp)
 	assert.Contains(t, string(resp.Body), "<html", "Expected HTML response from Swagger UI plugin")
 
 	resp2 := InvokeExternalHandlers(common.HandlerRequest{Method: "get", Path: "/does-not-exist"})
+	require.NotNil(t, resp2)
 	assert.Equal(t, 404, resp2.StatusCode, "Expected 404 response for non-existent path")
 
 	// Stop plugins

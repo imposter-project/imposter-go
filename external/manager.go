@@ -23,9 +23,16 @@ type LoadedPlugin struct {
 	impl   common.ExternalHandler
 }
 
+var hasPlugins bool
 var loaded []LoadedPlugin
 
 func StartExternalPlugins() {
+	hasPlugins = len(pluginMap) > 0
+	if !hasPlugins {
+		logger.Tracef("no external plugins found to load")
+		return
+	}
+
 	// Create an hclog.Logger
 	hclogger := hclog.New(&hclog.LoggerOptions{
 		Name:   "plugin",
@@ -73,26 +80,33 @@ func start(pluginName string, hclogger hclog.Logger) {
 	})
 }
 
-func InvokeExternalHandlers(args common.HandlerRequest) common.HandlerResponse {
+func InvokeExternalHandlers(args common.HandlerRequest) *common.HandlerResponse {
+	if !hasPlugins {
+		return nil
+	}
+
 	var resp common.HandlerResponse
 	for _, l := range loaded {
 		resp = l.impl.Handle(args)
 		if resp.StatusCode >= 100 && resp.StatusCode < 300 {
-			logger.Debugf("Response from plugin %s: status=%d body=%d bytes", l.name, resp.StatusCode, len(resp.Body))
+			logger.Debugf("response from plugin %s: status=%d body=%d bytes", l.name, resp.StatusCode, len(resp.Body))
 			break
 		} else if resp.StatusCode == 404 {
 			// plugin did not handle the request, continue to the next plugin
-			logger.Debugf("Plugin %s did not handle the request, continuing to next plugin", l.name)
+			logger.Tracef("plugin %s did not handle the request, continuing to next plugin", l.name)
 			continue
 		} else {
-			logger.Errorf("Error response from plugin %s: status=%d body=%d bytes", l.name, resp.StatusCode, len(resp.Body))
+			logger.Errorf("error response from plugin %s: status=%d body=%d bytes", l.name, resp.StatusCode, len(resp.Body))
 			break
 		}
 	}
-	return resp
+	return &resp
 }
 
 func StopExternalPlugins() {
+	if !hasPlugins {
+		return
+	}
 	for _, l := range loaded {
 		logger.Debugf("unloading external plugin: %s", l.name)
 		l.client.Kill()
@@ -117,6 +131,6 @@ func getPluginDir() string {
 // directory. It is a UX feature, not a security feature.
 var handshakeConfig = plugin.HandshakeConfig{
 	ProtocolVersion:  1,
-	MagicCookieKey:   "BASIC_PLUGIN",
-	MagicCookieValue: "hello",
+	MagicCookieKey:   "HANDLER_PLUGIN",
+	MagicCookieValue: "imposter",
 }

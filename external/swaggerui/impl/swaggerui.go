@@ -48,8 +48,8 @@ func (s *SwaggerUI) Handle(args common.HandlerRequest) common.HandlerResponse {
 // directory. It is a UX feature, not a security feature.
 var handshakeConfig = goplugin.HandshakeConfig{
 	ProtocolVersion:  1,
-	MagicCookieKey:   "BASIC_PLUGIN",
-	MagicCookieValue: "hello",
+	MagicCookieKey:   "HANDLER_PLUGIN",
+	MagicCookieValue: "imposter",
 }
 
 func main() {
