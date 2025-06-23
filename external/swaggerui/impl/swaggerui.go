@@ -21,19 +21,25 @@ type SwaggerUI struct {
 	logger     hclog.Logger
 }
 
-func (s *SwaggerUI) Handle(args common.HandlerArgs) []byte {
+func (s *SwaggerUI) Handle(args common.HandlerRequest) common.HandlerResponse {
 	s.logger.Debug(s.pluginName+" handling swagger ui", "method", args.Method, "path", args.Path)
 	if !strings.EqualFold(args.Method, "get") {
-		return []byte("HTTP 405 Method Not Allowed")
+		return common.HandlerResponse{StatusCode: 405, Body: []byte("Method Not Allowed")}
 	}
 	file, err := www.ReadFile("www" + args.Path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return []byte("HTTP 404 File not found")
+			return common.HandlerResponse{StatusCode: 404, Body: []byte("File not found")}
 		}
-		return []byte(fmt.Sprintf("Error reading file: %s - %v", args.Path, err.Error()))
+		return common.HandlerResponse{
+			StatusCode: 500,
+			Body:       []byte(fmt.Sprintf("Error reading file: %s - %v", args.Path, err.Error())),
+		}
 	}
-	return file
+	return common.HandlerResponse{
+		StatusCode: 200,
+		Body:       file,
+	}
 }
 
 // handshakeConfigs are used to just do a basic handshake between

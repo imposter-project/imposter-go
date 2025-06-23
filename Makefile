@@ -7,7 +7,7 @@ build:
 
 .PHONY: build-plugins
 build-plugins:
-	rm bin/* && mkdir -p bin
+	mkdir -p bin
 	for p in swaggerui; do \
 		echo "Building plugin $$p"; \
 		go build -tags lambda.norpc -ldflags "$(LDFLAGS)" -o ./bin/plugin-$$p ./external/$$p/impl; \

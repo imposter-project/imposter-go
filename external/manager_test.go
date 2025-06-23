@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestIntegration_ExternalPluginLifecycle(t *testing.T) {
@@ -15,7 +17,11 @@ func TestIntegration_ExternalPluginLifecycle(t *testing.T) {
 	StartExternalPlugins()
 
 	// Call handlers
-	InvokeExternalHandlers(common.HandlerArgs{Method: "get", Path: "/index.html"})
+	resp := InvokeExternalHandlers(common.HandlerRequest{Method: "get", Path: "/index.html"})
+	assert.Contains(t, string(resp.Body), "<html", "Expected HTML response from Swagger UI plugin")
+
+	resp2 := InvokeExternalHandlers(common.HandlerRequest{Method: "get", Path: "/does-not-exist"})
+	assert.Equal(t, 404, resp2.StatusCode, "Expected 404 response for non-existent path")
 
 	// Stop plugins
 	StopExternalPlugins()

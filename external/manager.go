@@ -1,7 +1,6 @@
 package external
 
 import (
-	"fmt"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 	"github.com/imposter-project/imposter-go/external/common"
@@ -74,11 +73,23 @@ func start(pluginName string, hclogger hclog.Logger) {
 	})
 }
 
-func InvokeExternalHandlers(args common.HandlerArgs) {
+func InvokeExternalHandlers(args common.HandlerRequest) common.HandlerResponse {
+	var resp common.HandlerResponse
 	for _, l := range loaded {
-		resp := l.impl.Handle(args)
-		fmt.Println("Response from plugin:", string(resp))
+		resp = l.impl.Handle(args)
+		if resp.StatusCode >= 100 && resp.StatusCode < 300 {
+			logger.Debugf("Response from plugin %s: status=%d body=%d bytes", l.name, resp.StatusCode, len(resp.Body))
+			break
+		} else if resp.StatusCode == 404 {
+			// plugin did not handle the request, continue to the next plugin
+			logger.Debugf("Plugin %s did not handle the request, continuing to next plugin", l.name)
+			continue
+		} else {
+			logger.Errorf("Error response from plugin %s: status=%d body=%d bytes", l.name, resp.StatusCode, len(resp.Body))
+			break
+		}
 	}
+	return resp
 }
 
 func StopExternalPlugins() {
