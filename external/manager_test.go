@@ -15,7 +15,7 @@ func TestIntegration_ExternalPluginLifecycle(t *testing.T) {
 	StartExternalPlugins()
 
 	// Call handlers
-	InvokeExternalHandlers(common.HandlerArgs{Method: "get", Path: "/test-path"})
+	InvokeExternalHandlers(common.HandlerArgs{Method: "get", Path: "/index.html"})
 
 	// Stop plugins
 	StopExternalPlugins()

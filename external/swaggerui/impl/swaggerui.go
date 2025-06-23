@@ -1,13 +1,20 @@
 package main
 
 import (
+	"embed"
+	"errors"
+	"fmt"
 	"github.com/imposter-project/imposter-go/external/common"
 	"github.com/imposter-project/imposter-go/external/swaggerui"
 	"os"
+	"strings"
 
 	"github.com/hashicorp/go-hclog"
 	goplugin "github.com/hashicorp/go-plugin"
 )
+
+//go:embed www/*
+var www embed.FS
 
 type SwaggerUI struct {
 	pluginName string
@@ -16,7 +23,17 @@ type SwaggerUI struct {
 
 func (s *SwaggerUI) Handle(args common.HandlerArgs) []byte {
 	s.logger.Debug(s.pluginName+" handling swagger ui", "method", args.Method, "path", args.Path)
-	return []byte("Swagger UI response for " + args.Method + " " + args.Path)
+	if !strings.EqualFold(args.Method, "get") {
+		return []byte("HTTP 405 Method Not Allowed")
+	}
+	file, err := www.ReadFile("www" + args.Path)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return []byte("HTTP 404 File not found")
+		}
+		return []byte(fmt.Sprintf("Error reading file: %s - %v", args.Path, err.Error()))
+	}
+	return file
 }
 
 // handshakeConfigs are used to just do a basic handshake between
@@ -46,6 +63,16 @@ func main() {
 	}
 
 	logger.Debug("swaggerui plugin initialising")
+
+	if logger.IsTrace() {
+		entries, err := www.ReadDir("www")
+		if err != nil {
+			panic(fmt.Errorf("failed to read static files: %v", err))
+		}
+		for _, entry := range entries {
+			logger.Trace(entry.Name())
+		}
+	}
 
 	goplugin.Serve(&goplugin.ServeConfig{
 		HandshakeConfig: handshakeConfig,
