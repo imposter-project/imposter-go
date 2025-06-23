@@ -9,8 +9,8 @@ import (
 // SwaggerUIRPC is the RPC client
 type SwaggerUIRPC struct{ client *rpc.Client }
 
-func (s *SwaggerUIRPC) Handle(args common.HandlerArgs) string {
-	var resp string
+func (s *SwaggerUIRPC) Handle(args common.HandlerArgs) []byte {
+	var resp []byte
 	err := s.client.Call("Plugin.Handle", args, &resp)
 	if err != nil {
 		// You usually want your interfaces to return errors. If they don't,
@@ -28,7 +28,7 @@ type SwaggerUIRPCServer struct {
 	Impl common.ExternalHandler
 }
 
-func (s *SwaggerUIRPCServer) Handle(args common.HandlerArgs, resp *string) error {
+func (s *SwaggerUIRPCServer) Handle(args common.HandlerArgs, resp *[]byte) error {
 	*resp = s.Impl.Handle(args)
 	return nil
 }

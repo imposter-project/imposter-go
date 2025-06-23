@@ -14,9 +14,9 @@ type SwaggerUI struct {
 	logger     hclog.Logger
 }
 
-func (s *SwaggerUI) Handle(args common.HandlerArgs) string {
+func (s *SwaggerUI) Handle(args common.HandlerArgs) []byte {
 	s.logger.Debug(s.pluginName+" handling swagger ui", "method", args.Method, "path", args.Path)
-	return "Swagger UI response for " + args.Method + " " + args.Path
+	return []byte("Swagger UI response for " + args.Method + " " + args.Path)
 }
 
 // handshakeConfigs are used to just do a basic handshake between
