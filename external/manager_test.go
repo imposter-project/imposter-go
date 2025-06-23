@@ -20,6 +20,12 @@ func TestIntegration_ExternalPluginLifecycle(t *testing.T) {
 	// Call handlers
 	resp := InvokeExternalHandlers(common.HandlerRequest{Method: "get", Path: "/index.html"})
 	require.NotNil(t, resp)
+	assert.Equal(t, 200, resp.StatusCode, "Expected 200 response for index.html")
+	assert.Contains(t, string(resp.Body), "<html", "Expected HTML response from Swagger UI plugin")
+
+	resp = InvokeExternalHandlers(common.HandlerRequest{Method: "get", Path: "/"})
+	require.NotNil(t, resp)
+	assert.Equal(t, 200, resp.StatusCode, "Expected 200 response for /")
 	assert.Contains(t, string(resp.Body), "<html", "Expected HTML response from Swagger UI plugin")
 
 	resp2 := InvokeExternalHandlers(common.HandlerRequest{Method: "get", Path: "/does-not-exist"})

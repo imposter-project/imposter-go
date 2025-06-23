@@ -26,6 +26,9 @@ func (s *SwaggerUI) Handle(args common.HandlerRequest) common.HandlerResponse {
 	if !strings.EqualFold(args.Method, "get") {
 		return common.HandlerResponse{StatusCode: 405, Body: []byte("Method Not Allowed")}
 	}
+	if args.Path == "/" {
+		args.Path = "/index.html"
+	}
 	file, err := www.ReadFile("www" + args.Path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
