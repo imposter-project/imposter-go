@@ -26,6 +26,10 @@ func TestIntegration_ExternalPluginLifecycle(t *testing.T) {
 	require.NotNil(t, resp2)
 	assert.Equal(t, 404, resp2.StatusCode, "Expected 404 response for non-existent path")
 
+	resp3 := InvokeExternalHandlers(common.HandlerRequest{Method: "post", Path: "/index.html"})
+	require.NotNil(t, resp3)
+	assert.Equal(t, 405, resp3.StatusCode, "Expected 405 response for unsupported method")
+
 	// Stop plugins
 	StopExternalPlugins()
 }
