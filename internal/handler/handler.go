@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"github.com/imposter-project/imposter-go/external"
+	exthandler "github.com/imposter-project/imposter-go/external/handler"
 	"github.com/imposter-project/imposter-go/internal/matcher"
 	"net/http"
 	"strings"
@@ -63,6 +65,10 @@ func HandleRequest(imposterConfig *config.ImposterConfig, w http.ResponseWriter,
 		}
 	}
 
+	if !responseState.Handled {
+		invokeExternalHandlers(req, responseState)
+	}
+
 	// If no handler handled the response, return 404
 	if !responseState.Handled {
 		handleNotFound(req, responseState, plugins)
@@ -89,6 +95,21 @@ func HandleRequest(imposterConfig *config.ImposterConfig, w http.ResponseWriter,
 
 	// Write response to client
 	responseState.WriteToResponseWriter(w)
+}
+
+// invokeExternalHandlers attempts to handle the request using external plugins
+func invokeExternalHandlers(req *http.Request, responseState *exchange.ResponseState) {
+	resp := external.InvokeExternalHandlers(exthandler.HandlerRequest{
+		Method:  req.Method,
+		Path:    req.URL.Path,
+		Headers: nil,
+	})
+	if resp != nil {
+		responseState.StatusCode = resp.StatusCode
+		responseState.Body = resp.Body
+		responseState.Headers = resp.Headers
+		responseState.Handled = true
+	}
 }
 
 // handleSystemEndpoint handles system-level endpoints like /system/store and /system/status

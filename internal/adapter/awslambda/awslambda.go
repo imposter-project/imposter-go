@@ -2,6 +2,7 @@ package awslambda
 
 import (
 	"encoding/json"
+	"github.com/imposter-project/imposter-go/external"
 	"github.com/imposter-project/imposter-go/pkg/logger"
 	"net/http"
 	"os"
@@ -53,6 +54,9 @@ func init() {
 
 	// Load configuration once during cold start
 	imposterConfig, plugins = adapter.InitialiseImposter("")
+
+	external.StartExternalPlugins()
+	defer external.StopExternalPlugins()
 }
 
 // HandleLambdaRequest handles incoming Lambda requests and routes them to the appropriate handler.

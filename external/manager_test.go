@@ -11,7 +11,7 @@ import (
 )
 
 func TestIntegration_ExternalPluginLifecycle(t *testing.T) {
-	pluginDir, _ := filepath.Abs("../../bin")
+	pluginDir, _ := filepath.Abs("../bin")
 	os.Setenv("IMPOSTER_PLUGIN_DIR", pluginDir)
 
 	// Start plugins
