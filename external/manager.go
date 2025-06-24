@@ -20,18 +20,20 @@ var pluginMap = map[string]plugin.Plugin{
 type LoadedPlugin struct {
 	name   string
 	client *plugin.Client
-	impl   handler.ExternalHandler
+	impl   *handler.ExternalHandler
 }
 
+var envPluginDir = os.Getenv("IMPOSTER_PLUGIN_DIR")
 var hasPlugins bool
 var loaded []LoadedPlugin
 
 func StartExternalPlugins() {
-	hasPlugins = len(os.Getenv("IMPOSTER_PLUGIN_DIR")) > 0 && len(pluginMap) > 0
+	hasPlugins = len(envPluginDir) > 0 && len(pluginMap) > 0
 	if !hasPlugins {
 		logger.Tracef("no external plugins found to load")
 		return
 	}
+	logger.Tracef("external plugins enabled, loading plugins from %s", envPluginDir)
 
 	// Create an hclog.Logger
 	hclogger := hclog.New(&hclog.LoggerOptions{
@@ -76,7 +78,7 @@ func start(pluginName string, hclogger hclog.Logger) {
 	loaded = append(loaded, LoadedPlugin{
 		name:   pluginName,
 		client: client,
-		impl:   impl,
+		impl:   &impl,
 	})
 }
 
@@ -87,7 +89,8 @@ func InvokeExternalHandlers(args handler.HandlerRequest) *handler.HandlerRespons
 
 	var resp handler.HandlerResponse
 	for _, l := range loaded {
-		resp = l.impl.Handle(args)
+		impl := *l.impl
+		resp = impl.Handle(args)
 		if resp.StatusCode >= 100 && resp.StatusCode < 300 {
 			logger.Debugf("response from plugin %s: status=%d body=%d bytes", l.name, resp.StatusCode, len(resp.Body))
 			break
@@ -114,15 +117,17 @@ func StopExternalPlugins() {
 }
 
 func getPluginDir() string {
-	envPath := os.Getenv("IMPOSTER_PLUGIN_DIR")
-	if envPath == "" {
+	var pluginDir string
+	if len(envPluginDir) > 0 {
+		pluginDir = path.Clean(envPluginDir)
+	} else {
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
 			log.Fatalf("failed to get user home directory: %v", err)
 		}
-		envPath = path.Join(homeDir, ".imposter", "plugins")
+		pluginDir = path.Join(homeDir, ".imposter", "plugins")
 	}
-	return envPath
+	return pluginDir
 }
 
 // handshakeConfigs are used to just do a basic handshake between

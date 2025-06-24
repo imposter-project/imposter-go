@@ -17,17 +17,18 @@ import (
 var www embed.FS
 
 type SwaggerUI struct {
-	pluginName string
-	logger     hclog.Logger
+	logger hclog.Logger
 }
 
 func (s *SwaggerUI) Handle(args handler.HandlerRequest) handler.HandlerResponse {
-	s.logger.Debug(s.pluginName+" handling swagger ui", "method", args.Method, "path", args.Path)
+	s.logger.Debug("handling swagger ui request", "method", args.Method, "path", args.Path)
 	if !strings.EqualFold(args.Method, "get") {
 		return handler.HandlerResponse{StatusCode: 405, Body: []byte("Method Not Allowed")}
 	}
+	respHeaders := make(map[string]string)
 	if args.Path == "/" {
 		args.Path = "/index.html"
+		respHeaders["Content-Type"] = "text/html; charset=utf-8"
 	}
 	file, err := www.ReadFile("www" + args.Path)
 	if err != nil {
@@ -41,6 +42,7 @@ func (s *SwaggerUI) Handle(args handler.HandlerRequest) handler.HandlerResponse 
 	}
 	return handler.HandlerResponse{
 		StatusCode: 200,
+		Headers:    respHeaders,
 		Body:       file,
 	}
 }
@@ -63,8 +65,7 @@ func main() {
 	})
 
 	impl := &SwaggerUI{
-		pluginName: "swaggerui",
-		logger:     logger,
+		logger: logger,
 	}
 	// pluginMap is the map of plugins we can dispense.
 	var pluginMap = map[string]goplugin.Plugin{

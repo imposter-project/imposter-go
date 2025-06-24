@@ -81,10 +81,7 @@ func processResponse(
 		rs.StatusCode = resp.StatusCode
 	}
 
-	// Set resp headers
-	for key, value := range resp.Headers {
-		rs.Headers[key] = value
-	}
+	CopyResponseHeaders(resp.Headers, rs)
 
 	// Handle failure simulation from ResponseState or Response config
 	if rs.Fail != "" {
@@ -168,7 +165,25 @@ func processResponse(
 		logger.Tracef("response body: %s", rs.Body)
 	}
 
-	// Set Content-Type header if not already set
+	SetContentTypeHeader(rs, respFile)
+
+	logger.Debugf("updated response state - method:%s, path:%s, status:%d, length:%d",
+		req.Method, req.URL.Path, rs.StatusCode, len(rs.Body))
+}
+
+// CopyResponseHeaders copies headers from a map to an exchange.ResponseState
+// If a header already exists, it will be overwritten
+func CopyResponseHeaders(src map[string]string, rs *exchange.ResponseState) {
+	if src == nil {
+		return
+	}
+	for key, value := range src {
+		rs.Headers[key] = value
+	}
+}
+
+// SetContentTypeHeader sets the Content-Type header based on the response file extension or defaults to JSON
+func SetContentTypeHeader(rs *exchange.ResponseState, respFile string) {
 	if _, exists := rs.Headers["Content-Type"]; !exists {
 		// If response is from file, try to determine content type from extension
 		if respFile != "" {
@@ -185,7 +200,4 @@ func processResponse(
 			rs.Headers["Content-Type"] = "application/json"
 		}
 	}
-
-	logger.Debugf("updated response state - method:%s, path:%s, status:%d, length:%d",
-		req.Method, req.URL.Path, rs.StatusCode, len(rs.Body))
 }

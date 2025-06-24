@@ -5,6 +5,7 @@ import (
 	exthandler "github.com/imposter-project/imposter-go/external/handler"
 	"github.com/imposter-project/imposter-go/internal/matcher"
 	"net/http"
+	"path"
 	"strings"
 
 	"github.com/imposter-project/imposter-go/internal/config"
@@ -107,7 +108,8 @@ func invokeExternalHandlers(req *http.Request, responseState *exchange.ResponseS
 	if resp != nil {
 		responseState.StatusCode = resp.StatusCode
 		responseState.Body = resp.Body
-		responseState.Headers = resp.Headers
+		response.CopyResponseHeaders(resp.Headers, responseState)
+		response.SetContentTypeHeader(responseState, path.Base(req.URL.Path))
 		responseState.Handled = true
 	}
 }
