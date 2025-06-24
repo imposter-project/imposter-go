@@ -2,15 +2,15 @@ package swaggerui
 
 import (
 	goplugin "github.com/hashicorp/go-plugin"
-	"github.com/imposter-project/imposter-go/external/common"
+	"github.com/imposter-project/imposter-go/external/handler"
 	"net/rpc"
 )
 
 // SwaggerUIRPC is the RPC client
 type SwaggerUIRPC struct{ client *rpc.Client }
 
-func (s *SwaggerUIRPC) Handle(args common.HandlerRequest) common.HandlerResponse {
-	var resp common.HandlerResponse
+func (s *SwaggerUIRPC) Handle(args handler.HandlerRequest) handler.HandlerResponse {
+	var resp handler.HandlerResponse
 	err := s.client.Call("Plugin.Handle", args, &resp)
 	if err != nil {
 		// You usually want your interfaces to return errors. If they don't,
@@ -25,10 +25,10 @@ func (s *SwaggerUIRPC) Handle(args common.HandlerRequest) common.HandlerResponse
 // the requirements of net/rpc
 type SwaggerUIRPCServer struct {
 	// This is the real implementation
-	Impl common.ExternalHandler
+	Impl handler.ExternalHandler
 }
 
-func (s *SwaggerUIRPCServer) Handle(args common.HandlerRequest, resp *common.HandlerResponse) error {
+func (s *SwaggerUIRPCServer) Handle(args handler.HandlerRequest, resp *handler.HandlerResponse) error {
 	*resp = s.Impl.Handle(args)
 	return nil
 }
@@ -42,7 +42,7 @@ func (s *SwaggerUIRPCServer) Handle(args common.HandlerRequest, resp *common.Han
 // over an RPC client. We return SwaggerUIRPC for this.
 type SwaggerUIPlugin struct {
 	// Impl Injection
-	Impl common.ExternalHandler
+	Impl handler.ExternalHandler
 }
 
 func (p *SwaggerUIPlugin) Server(*goplugin.MuxBroker) (interface{}, error) {

@@ -3,8 +3,8 @@ package external
 import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
-	"github.com/imposter-project/imposter-go/external/common"
-	"github.com/imposter-project/imposter-go/external/swaggerui"
+	"github.com/imposter-project/imposter-go/external/handler"
+	"github.com/imposter-project/imposter-go/external/plugins/swaggerui"
 	"github.com/imposter-project/imposter-go/pkg/logger"
 	"log"
 	"os"
@@ -20,7 +20,7 @@ var pluginMap = map[string]plugin.Plugin{
 type LoadedPlugin struct {
 	name   string
 	client *plugin.Client
-	impl   common.ExternalHandler
+	impl   handler.ExternalHandler
 }
 
 var hasPlugins bool
@@ -71,7 +71,7 @@ func start(pluginName string, hclogger hclog.Logger) {
 
 	// We should have a plugin stub now! This feels like a normal interface
 	// implementation but is in fact over an RPC connection.
-	impl := raw.(common.ExternalHandler)
+	impl := raw.(handler.ExternalHandler)
 
 	loaded = append(loaded, LoadedPlugin{
 		name:   pluginName,
@@ -80,12 +80,12 @@ func start(pluginName string, hclogger hclog.Logger) {
 	})
 }
 
-func InvokeExternalHandlers(args common.HandlerRequest) *common.HandlerResponse {
+func InvokeExternalHandlers(args handler.HandlerRequest) *handler.HandlerResponse {
 	if !hasPlugins {
 		return nil
 	}
 
-	var resp common.HandlerResponse
+	var resp handler.HandlerResponse
 	for _, l := range loaded {
 		resp = l.impl.Handle(args)
 		if resp.StatusCode >= 100 && resp.StatusCode < 300 {

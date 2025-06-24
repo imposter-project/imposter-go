@@ -1,4 +1,4 @@
-package common
+package handler
 
 type HandlerRequest struct {
 	Method  string

@@ -4,8 +4,8 @@ import (
 	"embed"
 	"errors"
 	"fmt"
-	"github.com/imposter-project/imposter-go/external/common"
-	"github.com/imposter-project/imposter-go/external/swaggerui"
+	"github.com/imposter-project/imposter-go/external/handler"
+	"github.com/imposter-project/imposter-go/external/plugins/swaggerui"
 	"os"
 	"strings"
 
@@ -21,10 +21,10 @@ type SwaggerUI struct {
 	logger     hclog.Logger
 }
 
-func (s *SwaggerUI) Handle(args common.HandlerRequest) common.HandlerResponse {
+func (s *SwaggerUI) Handle(args handler.HandlerRequest) handler.HandlerResponse {
 	s.logger.Debug(s.pluginName+" handling swagger ui", "method", args.Method, "path", args.Path)
 	if !strings.EqualFold(args.Method, "get") {
-		return common.HandlerResponse{StatusCode: 405, Body: []byte("Method Not Allowed")}
+		return handler.HandlerResponse{StatusCode: 405, Body: []byte("Method Not Allowed")}
 	}
 	if args.Path == "/" {
 		args.Path = "/index.html"
@@ -32,14 +32,14 @@ func (s *SwaggerUI) Handle(args common.HandlerRequest) common.HandlerResponse {
 	file, err := www.ReadFile("www" + args.Path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return common.HandlerResponse{StatusCode: 404, Body: []byte("File not found")}
+			return handler.HandlerResponse{StatusCode: 404, Body: []byte("File not found")}
 		}
-		return common.HandlerResponse{
+		return handler.HandlerResponse{
 			StatusCode: 500,
 			Body:       []byte(fmt.Sprintf("Error reading file: %s - %v", args.Path, err.Error())),
 		}
 	}
-	return common.HandlerResponse{
+	return handler.HandlerResponse{
 		StatusCode: 200,
 		Body:       file,
 	}
