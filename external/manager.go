@@ -27,7 +27,7 @@ var hasPlugins bool
 var loaded []LoadedPlugin
 
 func StartExternalPlugins() {
-	hasPlugins = len(pluginMap) > 0
+	hasPlugins = len(os.Getenv("IMPOSTER_PLUGIN_DIR")) > 0 && len(pluginMap) > 0
 	if !hasPlugins {
 		logger.Tracef("no external plugins found to load")
 		return
