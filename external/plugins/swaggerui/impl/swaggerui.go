@@ -20,24 +20,40 @@ type SwaggerUI struct {
 	logger hclog.Logger
 }
 
+var specPrefixPath string
+
+func init() {
+	specPrefixPath = os.Getenv("IMPOSTER_OPENAPI_SPEC_PATH_PREFIX")
+	if specPrefixPath == "" {
+		specPrefixPath = "/_spec"
+	}
+}
+
 func (s *SwaggerUI) Handle(args handler.HandlerRequest) handler.HandlerResponse {
-	s.logger.Debug("handling swagger ui request", "method", args.Method, "path", args.Path)
+	path := args.Path
+	s.logger.Debug("handling swagger ui request", "method", args.Method, "path", path)
 	if !strings.EqualFold(args.Method, "get") {
 		return handler.HandlerResponse{StatusCode: 405, Body: []byte("Method Not Allowed")}
 	}
+	if !strings.HasPrefix(path, specPrefixPath) {
+		return handler.HandlerResponse{StatusCode: 404, Body: []byte("File Not Found")}
+	} else {
+		path = strings.TrimPrefix(path, specPrefixPath)
+	}
+
 	respHeaders := make(map[string]string)
-	if args.Path == "/" {
-		args.Path = "/index.html"
+	if path == "/" {
+		path = "/index.html"
 		respHeaders["Content-Type"] = "text/html; charset=utf-8"
 	}
-	file, err := www.ReadFile("www" + args.Path)
+	file, err := www.ReadFile("www" + path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return handler.HandlerResponse{StatusCode: 404, Body: []byte("File not found")}
+			return handler.HandlerResponse{StatusCode: 404, Body: []byte("File Not Found")}
 		}
 		return handler.HandlerResponse{
 			StatusCode: 500,
-			Body:       []byte(fmt.Sprintf("Error reading file: %s - %v", args.Path, err.Error())),
+			Body:       []byte(fmt.Sprintf("Error reading file: %s - %v", path, err.Error())),
 		}
 	}
 	return handler.HandlerResponse{
@@ -72,7 +88,7 @@ func main() {
 		"swaggerui": &swaggerui.SwaggerUIPlugin{Impl: impl},
 	}
 
-	logger.Debug("swaggerui plugin initialising")
+	logger.Debug("swaggerui plugin initialising", "path", specPrefixPath)
 
 	if logger.IsTrace() {
 		entries, err := www.ReadDir("www")
