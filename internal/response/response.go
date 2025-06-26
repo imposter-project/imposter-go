@@ -18,6 +18,7 @@ import (
 )
 
 const defaultIndexFile = "index.html"
+const defaultBinaryContentType = "application/octet-stream"
 
 // NewResponseState creates a new ResponseState with default values
 func NewResponseState() *exchange.ResponseState {
@@ -164,8 +165,7 @@ func processResponse(
 		logger.Tracef("response headers: %v", rs.Headers)
 		logger.Tracef("response body: %s", rs.Body)
 	}
-
-	SetContentTypeHeader(rs, respFile)
+	SetContentTypeHeader(rs, respFile, defaultBinaryContentType, "application/json")
 
 	logger.Debugf("updated response state - method:%s, path:%s, status:%d, length:%d",
 		req.Method, req.URL.Path, rs.StatusCode, len(rs.Body))
@@ -183,21 +183,33 @@ func CopyResponseHeaders(src map[string]string, rs *exchange.ResponseState) {
 }
 
 // SetContentTypeHeader sets the Content-Type header based on the response file extension or defaults to JSON
-func SetContentTypeHeader(rs *exchange.ResponseState, respFile string) {
+func SetContentTypeHeader(
+	rs *exchange.ResponseState,
+	fileNameMIMEHint string,
+	defaultFileContentType string,
+	fallbackContentType string,
+) {
 	if _, exists := rs.Headers["Content-Type"]; !exists {
 		// If response is from file, try to determine content type from extension
-		if respFile != "" {
-			ext := filepath.Ext(respFile)
+		if fileNameMIMEHint != "" {
+			ext := filepath.Ext(fileNameMIMEHint)
 			contentType := mime.TypeByExtension(ext)
 			if contentType == "" {
-				contentType = "application/octet-stream"
+				switch ext {
+				case ".yaml", ".yml":
+					contentType = "application/x-yaml"
+				default:
+					contentType = defaultFileContentType
+				}
 			}
-			rs.Headers["Content-Type"] = contentType
-			logger.Debugf("inferred Content-Type %s from file extension %s", contentType, ext)
-		} else {
+			if len(contentType) > 0 {
+				rs.Headers["Content-Type"] = contentType
+				logger.Debugf("inferred Content-Type %s from file extension %s", contentType, ext)
+			}
+		} else if fallbackContentType != "" {
 			// If no file specified, assume JSON
-			logger.Infoln("no file extension available - assuming JSON content type")
-			rs.Headers["Content-Type"] = "application/json"
+			logger.Infoln("no file extension available - assuming " + fallbackContentType + " content type")
+			rs.Headers["Content-Type"] = fallbackContentType
 		}
 	}
 }

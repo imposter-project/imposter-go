@@ -110,13 +110,13 @@ func invokeExternalHandlers(
 	})
 	if handlerResp != nil {
 		rs := exch.ResponseState
+		rs.Handled = true
 		rs.StatusCode = handlerResp.StatusCode
-		if handlerResp.Headers != nil {
-			rs.Headers = handlerResp.Headers
-		}
 		rs.File = handlerResp.File
 		rs.Body = handlerResp.Body
-		rs.Handled = true
+
+		response.CopyResponseHeaders(handlerResp.Headers, rs)
+		response.SetContentTypeHeader(rs, handlerResp.FileName, "", "")
 
 		responseProc := response.NewProcessor(imposterConfig, handlerResp.ConfigDir)
 		responseProc(exch, nil, &config.Response{})

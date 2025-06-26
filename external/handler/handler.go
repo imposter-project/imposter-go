@@ -12,6 +12,9 @@ type HandlerResponse struct {
 	Headers    map[string]string
 	Body       []byte
 	File       string
+
+	// FileName is the name of the file, not its path. Used for MIME type detection.
+	FileName string
 }
 
 type LightweightConfig struct {

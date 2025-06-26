@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/imposter-project/imposter-go/external/handler"
 	"os"
+	path2 "path"
 	"strings"
 	"text/template"
 )
@@ -16,8 +17,12 @@ var www embed.FS
 
 var specPrefixPath string
 
+// serveStaticContent serves static content from the embedded filesystem.
 func serveStaticContent(path string) handler.HandlerResponse {
 	path = strings.TrimPrefix(path, specPrefixPath)
+	if len(path) == 0 {
+		return handler.HandlerResponse{StatusCode: 404, Body: []byte("File Not Found")}
+	}
 
 	respHeaders := make(map[string]string)
 
@@ -40,11 +45,13 @@ func serveStaticContent(path string) handler.HandlerResponse {
 				Body:       []byte(fmt.Sprintf("error executing template: %v", err.Error())),
 			}
 		}
-		respHeaders["Content-Type"] = "text/html; charset=utf-8"
 		return handler.HandlerResponse{
 			StatusCode: 200,
 			Headers:    respHeaders,
 			Body:       output.Bytes(),
+
+			// used for MIME type detection
+			FileName: "index.html",
 		}
 	}
 
@@ -58,9 +65,13 @@ func serveStaticContent(path string) handler.HandlerResponse {
 			Body:       []byte(fmt.Sprintf("error reading file: %s - %v", path, err.Error())),
 		}
 	}
+	fileName := path2.Base(path)
 	return handler.HandlerResponse{
 		StatusCode: 200,
 		Headers:    respHeaders,
 		Body:       file,
+
+		// used for MIME type detection
+		FileName: fileName,
 	}
 }

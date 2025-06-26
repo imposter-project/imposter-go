@@ -39,3 +39,20 @@ func generateSpecConfig(configs []handler.LightweightConfig) error {
 	specConfigJSON = string(jsonData)
 	return nil
 }
+
+// serveRawSpec serves the raw OpenAPI spec file based on the provided path.
+// If no matching spec is found, it returns nil.
+func serveRawSpec(path string) *handler.HandlerResponse {
+	var response *handler.HandlerResponse
+	for _, specConfig := range specConfigs {
+		if path == specConfig.URL {
+			response = &handler.HandlerResponse{
+				ConfigDir:  specConfig.ConfigDir,
+				StatusCode: 200,
+				File:       specConfig.OriginalPath,
+			}
+			break
+		}
+	}
+	return response
+}
