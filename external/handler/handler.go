@@ -1,7 +1,5 @@
 package handler
 
-import "github.com/imposter-project/imposter-go/internal/config"
-
 type HandlerRequest struct {
 	Method  string
 	Path    string
@@ -12,12 +10,18 @@ type HandlerResponse struct {
 	StatusCode int
 	Headers    map[string]string
 	Body       []byte
+	File       string
+}
+
+type LightweightConfig struct {
+	Plugin   string
+	SpecFile string
 }
 
 // ExternalHandler defines the interface for external plugins to implement.
 type ExternalHandler interface {
 	// Configure is called to initialise the plugin with the loaded configuration.
-	Configure(configs []config.Config) error
+	Configure(configs []LightweightConfig) error
 
 	// Handle processes the given request and returns a response.
 	// If the response code is 0 or 404, the plugin did not handle the request.

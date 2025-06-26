@@ -46,8 +46,16 @@ func StartExternalPlugins(configs []config.Config) error {
 		Level:  hclog.Debug,
 	})
 
+	var lightweight []handler.LightweightConfig
+	for _, cfg := range configs {
+		lightweight = append(lightweight, handler.LightweightConfig{
+			Plugin:   cfg.Plugin,
+			SpecFile: cfg.SpecFile,
+		})
+	}
+
 	for pluginName := range pluginMap {
-		err := start(pluginName, hclogger, configs)
+		err := start(pluginName, hclogger, lightweight)
 		if err != nil {
 			return fmt.Errorf("failed to start plugin %s: %v", pluginName, err)
 		}
@@ -58,7 +66,7 @@ func StartExternalPlugins(configs []config.Config) error {
 }
 
 // start initialises and starts a single external plugin by its name.
-func start(pluginName string, hclogger hclog.Logger, configs []config.Config) error {
+func start(pluginName string, hclogger hclog.Logger, configs []handler.LightweightConfig) error {
 	logger.Debugf("loading external plugin: %s", pluginName)
 	pluginPath := path.Join(pluginDir, "plugin-"+pluginName)
 

@@ -1,29 +1,18 @@
 package main
 
 import (
-	"embed"
-	"errors"
 	"fmt"
-	"github.com/imposter-project/imposter-go/external/handler"
-	"github.com/imposter-project/imposter-go/external/plugins/swaggerui"
-	"github.com/imposter-project/imposter-go/internal/config"
-	"os"
-	"strings"
-
 	"github.com/hashicorp/go-hclog"
 	goplugin "github.com/hashicorp/go-plugin"
+	"github.com/imposter-project/imposter-go/external/handler"
+	"github.com/imposter-project/imposter-go/external/plugins/swaggerui"
+	"os"
+	"strings"
 )
-
-//go:embed www/*
-var www embed.FS
 
 type SwaggerUI struct {
 	logger hclog.Logger
 }
-
-var specPrefixPath string
-
-var configs []config.Config
 
 func init() {
 	specPrefixPath = os.Getenv("IMPOSTER_OPENAPI_SPEC_PATH_PREFIX")
@@ -32,44 +21,34 @@ func init() {
 	}
 }
 
-func (s *SwaggerUI) Configure(c []config.Config) error {
-	configs = c
-	// TODO implement me
+func (s *SwaggerUI) Configure(configs []handler.LightweightConfig) error {
+	s.logger.Trace("generating spec config")
+	if err := generateSpecConfig(configs); err != nil {
+		return fmt.Errorf("could not generate swagger UI plugin config: %w", err)
+	}
 	return nil
 }
 
 func (s *SwaggerUI) Handle(args handler.HandlerRequest) handler.HandlerResponse {
 	path := args.Path
-	s.logger.Debug("handling swagger ui request", "method", args.Method, "path", path)
 	if !strings.EqualFold(args.Method, "get") {
 		return handler.HandlerResponse{StatusCode: 405, Body: []byte("Method Not Allowed")}
 	}
 	if !strings.HasPrefix(path, specPrefixPath) {
 		return handler.HandlerResponse{StatusCode: 404, Body: []byte("File Not Found")}
-	} else {
-		path = strings.TrimPrefix(path, specPrefixPath)
 	}
 
-	respHeaders := make(map[string]string)
-	if path == "/" {
-		path = "/index.html"
-		respHeaders["Content-Type"] = "text/html; charset=utf-8"
-	}
-	file, err := www.ReadFile("www" + path)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return handler.HandlerResponse{StatusCode: 404, Body: []byte("File Not Found")}
-		}
-		return handler.HandlerResponse{
-			StatusCode: 500,
-			Body:       []byte(fmt.Sprintf("Error reading file: %s - %v", path, err.Error())),
+	// raw specification requests
+	for _, specConfig := range specConfigs {
+		if path == specConfig.URL {
+			return handler.HandlerResponse{
+				StatusCode: 200,
+				File:       specConfig.OriginalPath,
+			}
 		}
 	}
-	return handler.HandlerResponse{
-		StatusCode: 200,
-		Headers:    respHeaders,
-		Body:       file,
-	}
+
+	return serveStaticContent(path)
 }
 
 // handshakeConfigs are used to just do a basic handshake between

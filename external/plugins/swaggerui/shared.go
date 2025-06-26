@@ -4,14 +4,13 @@ import (
 	"fmt"
 	goplugin "github.com/hashicorp/go-plugin"
 	"github.com/imposter-project/imposter-go/external/handler"
-	"github.com/imposter-project/imposter-go/internal/config"
 	"net/rpc"
 )
 
 // SwaggerUIRPC is the RPC client
 type SwaggerUIRPC struct{ client *rpc.Client }
 
-func (s *SwaggerUIRPC) Configure(configs []config.Config) error {
+func (s *SwaggerUIRPC) Configure(configs []handler.LightweightConfig) error {
 	var resp struct{} // No response needed
 	err := s.client.Call("Plugin.Configure", configs, &resp)
 	if err != nil {
@@ -38,7 +37,7 @@ type SwaggerUIRPCServer struct {
 	Impl handler.ExternalHandler
 }
 
-func (s *SwaggerUIRPCServer) Configure(configs []config.Config, resp *struct{}) error {
+func (s *SwaggerUIRPCServer) Configure(configs []handler.LightweightConfig, resp *struct{}) error {
 	err := s.Impl.Configure(configs)
 	if err != nil {
 		return fmt.Errorf("plugin.Configure: %w", err)

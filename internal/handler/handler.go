@@ -108,6 +108,7 @@ func invokeExternalHandlers(req *http.Request, responseState *exchange.ResponseS
 	if resp != nil {
 		responseState.StatusCode = resp.StatusCode
 		responseState.Body = resp.Body
+		responseState.File = resp.File
 		response.CopyResponseHeaders(resp.Headers, responseState)
 		response.SetContentTypeHeader(responseState, path.Base(req.URL.Path))
 		responseState.Handled = true
