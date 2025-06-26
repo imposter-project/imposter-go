@@ -1,6 +1,7 @@
 package adapter
 
 import (
+	"github.com/imposter-project/imposter-go/external"
 	"github.com/imposter-project/imposter-go/internal/version"
 	"github.com/imposter-project/imposter-go/pkg/logger"
 	"os"
@@ -44,13 +45,17 @@ func InitialiseImposter(configDirArg string) (*config.ImposterConfig, []plugin.P
 	}
 
 	// Pre-calculate resource IDs for all loaded configurations.
-	// Note: retrieving the config from each plugin to ensure it includes
+	// Note: we retrieve the config from each plugin to ensure it includes
 	// any dynamic resources added by the plugin.
 	allConfigs := make([]config.Config, 0, totalConfigs)
 	for _, plg := range plugins {
 		allConfigs = append(allConfigs, *plg.GetConfig())
 	}
 	config.PreCalculateResourceIDs(allConfigs)
+
+	if err := external.StartExternalPlugins(allConfigs); err != nil {
+		panic(err)
+	}
 
 	return imposterConfig, plugins
 }

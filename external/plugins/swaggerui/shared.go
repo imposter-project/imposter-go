@@ -1,31 +1,50 @@
 package swaggerui
 
 import (
+	"fmt"
 	goplugin "github.com/hashicorp/go-plugin"
 	"github.com/imposter-project/imposter-go/external/handler"
+	"github.com/imposter-project/imposter-go/internal/config"
 	"net/rpc"
 )
 
 // SwaggerUIRPC is the RPC client
 type SwaggerUIRPC struct{ client *rpc.Client }
 
+func (s *SwaggerUIRPC) Configure(configs []config.Config) error {
+	var resp struct{} // No response needed
+	err := s.client.Call("Plugin.Configure", configs, &resp)
+	if err != nil {
+		return fmt.Errorf("plugin.Configure: %w", err)
+	}
+	return nil
+}
+
 func (s *SwaggerUIRPC) Handle(args handler.HandlerRequest) handler.HandlerResponse {
 	var resp handler.HandlerResponse
 	err := s.client.Call("Plugin.Handle", args, &resp)
 	if err != nil {
-		// You usually want your interfaces to return errors. If they don't,
-		// there isn't much other choice here.
+		// TODO return an error instead of panic
 		panic(err)
 	}
 
 	return resp
 }
 
-// Here is the RPC server that SwaggerUIRPC talks to, conforming to
+// SwaggerUIRPCServer is the RPC server that SwaggerUIRPC talks to, conforming to
 // the requirements of net/rpc
 type SwaggerUIRPCServer struct {
 	// This is the real implementation
 	Impl handler.ExternalHandler
+}
+
+func (s *SwaggerUIRPCServer) Configure(configs []config.Config, resp *struct{}) error {
+	err := s.Impl.Configure(configs)
+	if err != nil {
+		return fmt.Errorf("plugin.Configure: %w", err)
+	}
+	*resp = struct{}{} // No response needed
+	return nil
 }
 
 func (s *SwaggerUIRPCServer) Handle(args handler.HandlerRequest, resp *handler.HandlerResponse) error {
@@ -33,12 +52,14 @@ func (s *SwaggerUIRPCServer) Handle(args handler.HandlerRequest, resp *handler.H
 	return nil
 }
 
-// This is the implementation of plugin.Plugin so we can serve/consume this
+// SwaggerUIPlugin is the implementation of plugin.Plugin
 //
-// This has two methods: Server must return an RPC server for this plugin
+// This must have two methods:
+//
+// 1. Server must return an RPC server for this plugin
 // type. We construct a SwaggerUIRPCServer for this.
 //
-// Client must return an implementation of our interface that communicates
+// 2. Client must return an implementation of our interface that communicates
 // over an RPC client. We return SwaggerUIRPC for this.
 type SwaggerUIPlugin struct {
 	// Impl Injection

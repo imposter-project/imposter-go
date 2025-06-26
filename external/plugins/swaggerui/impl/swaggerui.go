@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/imposter-project/imposter-go/external/handler"
 	"github.com/imposter-project/imposter-go/external/plugins/swaggerui"
+	"github.com/imposter-project/imposter-go/internal/config"
 	"os"
 	"strings"
 
@@ -22,11 +23,19 @@ type SwaggerUI struct {
 
 var specPrefixPath string
 
+var configs []config.Config
+
 func init() {
 	specPrefixPath = os.Getenv("IMPOSTER_OPENAPI_SPEC_PATH_PREFIX")
 	if specPrefixPath == "" {
 		specPrefixPath = "/_spec"
 	}
+}
+
+func (s *SwaggerUI) Configure(c []config.Config) error {
+	configs = c
+	// TODO implement me
+	return nil
 }
 
 func (s *SwaggerUI) Handle(args handler.HandlerRequest) handler.HandlerResponse {

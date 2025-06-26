@@ -1,10 +1,12 @@
 package external
 
 import (
+	"fmt"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 	"github.com/imposter-project/imposter-go/external/handler"
 	"github.com/imposter-project/imposter-go/external/plugins/swaggerui"
+	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/pkg/logger"
 	"log"
 	"os"
@@ -23,19 +25,21 @@ type LoadedPlugin struct {
 	impl   *handler.ExternalHandler
 }
 
-var envPluginDir = os.Getenv("IMPOSTER_PLUGIN_DIR")
+var pluginDir string
 var hasPlugins bool
 var loaded []LoadedPlugin
 
-func StartExternalPlugins() {
-	hasPlugins = len(envPluginDir) > 0 && len(pluginMap) > 0
+// StartExternalPlugins initialises and starts all external plugins defined in the pluginMap,
+// passing the current configuration to each plugin.
+func StartExternalPlugins(configs []config.Config) error {
+	discoverPluginDir()
+	hasPlugins = len(pluginDir) > 0 && len(pluginMap) > 0
 	if !hasPlugins {
 		logger.Tracef("no external plugins found to load")
-		return
+		return nil
 	}
-	logger.Tracef("external plugins enabled, loading plugins from %s", envPluginDir)
+	logger.Tracef("external plugins enabled")
 
-	// Create an hclog.Logger
 	hclogger := hclog.New(&hclog.LoggerOptions{
 		Name:   "plugin",
 		Output: os.Stdout,
@@ -43,15 +47,22 @@ func StartExternalPlugins() {
 	})
 
 	for pluginName := range pluginMap {
-		start(pluginName, hclogger)
+		err := start(pluginName, hclogger, configs)
+		if err != nil {
+			return fmt.Errorf("failed to start plugin %s: %v", pluginName, err)
+		}
 	}
+
+	logger.Debugf("successfully loaded %d external plugins", len(loaded))
+	return nil
 }
 
-func start(pluginName string, hclogger hclog.Logger) {
+// start initialises and starts a single external plugin by its name.
+func start(pluginName string, hclogger hclog.Logger, configs []config.Config) error {
 	logger.Debugf("loading external plugin: %s", pluginName)
-	pluginPath := path.Join(getPluginDir(), "plugin-"+pluginName)
+	pluginPath := path.Join(pluginDir, "plugin-"+pluginName)
 
-	// We're a host! Start by launching the plugin process.
+	// launch the plugin process
 	client := plugin.NewClient(&plugin.ClientConfig{
 		HandshakeConfig: handshakeConfig,
 		Plugins:         pluginMap,
@@ -59,29 +70,34 @@ func start(pluginName string, hclogger hclog.Logger) {
 		Logger:          hclogger,
 	})
 
-	// Connect via RPC
+	// connect via RPC
 	rpcClient, err := client.Client()
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("error connecting to plugin %s: %v", pluginName, err)
 	}
 
-	// Request the plugin
+	// request the plugin
 	raw, err := rpcClient.Dispense(pluginName)
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("error dispensing plugin %s: %v", pluginName, err)
 	}
-
-	// We should have a plugin stub now! This feels like a normal interface
-	// implementation but is in fact over an RPC connection.
 	impl := raw.(handler.ExternalHandler)
+
+	err = impl.Configure(configs)
+	if err != nil {
+		return fmt.Errorf("failed to configure plugin %s: %v", pluginName, err)
+	}
 
 	loaded = append(loaded, LoadedPlugin{
 		name:   pluginName,
 		client: client,
 		impl:   &impl,
 	})
+	return nil
 }
 
+// InvokeExternalHandlers calls the external plugins with the provided handler request
+// and returns the first successful response, or none if no plugin handled the request.
 func InvokeExternalHandlers(args handler.HandlerRequest) *handler.HandlerResponse {
 	if !hasPlugins {
 		return nil
@@ -94,7 +110,7 @@ func InvokeExternalHandlers(args handler.HandlerRequest) *handler.HandlerRespons
 		if resp.StatusCode >= 100 && resp.StatusCode < 300 {
 			logger.Debugf("response from plugin %s: status=%d body=%d bytes", l.name, resp.StatusCode, len(resp.Body))
 			break
-		} else if resp.StatusCode == 404 {
+		} else if resp.StatusCode == 0 || resp.StatusCode == 404 {
 			// plugin did not handle the request, continue to the next plugin
 			logger.Tracef("plugin %s did not handle the request, continuing to next plugin", l.name)
 			continue
@@ -106,6 +122,7 @@ func InvokeExternalHandlers(args handler.HandlerRequest) *handler.HandlerRespons
 	return &resp
 }
 
+// StopExternalPlugins stops all loaded external plugins by killing their processes.
 func StopExternalPlugins() {
 	if !hasPlugins {
 		return
@@ -116,8 +133,9 @@ func StopExternalPlugins() {
 	}
 }
 
-func getPluginDir() string {
-	var pluginDir string
+// discoverPluginDir finds the directory from which plugins are loaded.
+func discoverPluginDir() {
+	var envPluginDir = os.Getenv("IMPOSTER_PLUGIN_DIR")
 	if len(envPluginDir) > 0 {
 		pluginDir = path.Clean(envPluginDir)
 	} else {
@@ -127,11 +145,10 @@ func getPluginDir() string {
 		}
 		pluginDir = path.Join(homeDir, ".imposter", "plugins")
 	}
-	return pluginDir
 }
 
 // handshakeConfigs are used to just do a basic handshake between
-// a plugin and host. If the handshake fails, a user friendly error is shown.
+// a plugin and host. If the handshake fails, a user-friendly error is shown.
 // This prevents users from executing bad plugins or executing a plugin
 // directory. It is a UX feature, not a security feature.
 var handshakeConfig = plugin.HandshakeConfig{

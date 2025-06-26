@@ -2,6 +2,7 @@ package external
 
 import (
 	"github.com/imposter-project/imposter-go/external/handler"
+	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/stretchr/testify/require"
 	"os"
 	"path/filepath"
@@ -14,16 +15,19 @@ func TestIntegration_ExternalPluginLifecycle(t *testing.T) {
 	pluginDir, _ := filepath.Abs("../bin")
 	os.Setenv("IMPOSTER_PLUGIN_DIR", pluginDir)
 
+	var configs []config.Config
+
 	// Start plugins
-	StartExternalPlugins()
+	err := StartExternalPlugins(configs)
+	require.NoError(t, err)
 
 	// Call handlers
-	resp := InvokeExternalHandlers(handler.HandlerRequest{Method: "get", Path: "/index.html"})
+	resp := InvokeExternalHandlers(handler.HandlerRequest{Method: "get", Path: "/_spec/index.html"})
 	require.NotNil(t, resp)
 	assert.Equal(t, 200, resp.StatusCode, "Expected 200 response for index.html")
 	assert.Contains(t, string(resp.Body), "<html", "Expected HTML response from Swagger UI plugin")
 
-	resp = InvokeExternalHandlers(handler.HandlerRequest{Method: "get", Path: "/"})
+	resp = InvokeExternalHandlers(handler.HandlerRequest{Method: "get", Path: "/_spec/"})
 	require.NotNil(t, resp)
 	assert.Equal(t, 200, resp.StatusCode, "Expected 200 response for /")
 	assert.Contains(t, string(resp.Body), "<html", "Expected HTML response from Swagger UI plugin")

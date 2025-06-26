@@ -55,7 +55,7 @@ func init() {
 	// Load configuration once during cold start
 	imposterConfig, plugins = adapter.InitialiseImposter("")
 
-	external.StartExternalPlugins()
+	// Clean up resources on exit
 	defer external.StopExternalPlugins()
 }
 

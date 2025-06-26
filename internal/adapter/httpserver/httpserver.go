@@ -31,7 +31,7 @@ func (a *HTTPAdapter) Start() {
 
 	imposterConfig, configs := adapter.InitialiseImposter(configDirArg)
 
-	external.StartExternalPlugins()
+	// clean up resources on exit
 	defer external.StopExternalPlugins()
 
 	// Initialise and start the server with multiple configs
