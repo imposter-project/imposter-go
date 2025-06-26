@@ -1,14 +1,11 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
 	"github.com/imposter-project/imposter-go/external/handler"
 	"strings"
 )
 
 var specConfigs []SpecConfig
-var specConfigJSON string
 
 type SpecConfig struct {
 	Name         string `json:"name"`
@@ -30,13 +27,6 @@ func generateSpecConfig(configs []handler.LightweightConfig) error {
 			ConfigDir:    cfg.ConfigDir,
 		})
 	}
-
-	// serialise configs to JSON and return from the function
-	jsonData, err := json.Marshal(specConfigs)
-	if err != nil {
-		return fmt.Errorf("failed to marshal spec config JSON: %w", err)
-	}
-	specConfigJSON = string(jsonData)
 	return nil
 }
 

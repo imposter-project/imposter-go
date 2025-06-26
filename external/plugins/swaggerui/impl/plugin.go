@@ -14,13 +14,6 @@ type SwaggerUI struct {
 	logger hclog.Logger
 }
 
-func init() {
-	specPrefixPath = os.Getenv("IMPOSTER_OPENAPI_SPEC_PATH_PREFIX")
-	if specPrefixPath == "" {
-		specPrefixPath = "/_spec"
-	}
-}
-
 func main() {
 	logger := hclog.New(&hclog.LoggerOptions{
 		Level:      hclog.Trace,
@@ -67,6 +60,11 @@ func (s *SwaggerUI) Configure(configs []handler.LightweightConfig) error {
 	s.logger.Trace("generating spec config")
 	if err := generateSpecConfig(configs); err != nil {
 		return fmt.Errorf("could not generate swagger UI plugin config: %w", err)
+	}
+
+	s.logger.Trace("generating index page")
+	if err := generateIndexPage(); err != nil {
+		return fmt.Errorf("could not generate index page: %w", err)
 	}
 	return nil
 }
