@@ -8,45 +8,41 @@ import (
 	"strings"
 )
 
-// PreCalculateResourceIDs pre-calculates and stores resource IDs for all resources
+// PreCalculateResourceID pre-calculates and stores resource IDs for all resources
 // This should be called once after loading all configuration files to avoid repeated computation
-func PreCalculateResourceIDs(configs []Config) {
-	for configIdx := range configs {
-		cfg := &configs[configIdx]
+func PreCalculateResourceID(cfg *Config) {
+	// Process resources
+	for resIdx := range cfg.Resources {
+		res := &cfg.Resources[resIdx]
+		method := res.Method
+		var name string
 
-		// Process resources
-		for resIdx := range cfg.Resources {
-			res := &cfg.Resources[resIdx]
-			method := res.Method
-			var name string
-
-			// Determine resource name based on plugin type
-			switch cfg.Plugin {
-			case "soap":
-				name = res.Operation
-			default: // rest and other plugins
-				name = res.Path
-			}
-
-			res.ResourceID = GenerateResourceKey(method, name, &res.RequestMatcher)
+		// Determine resource name based on plugin type
+		switch cfg.Plugin {
+		case "soap":
+			name = res.Operation
+		default: // rest and other plugins
+			name = res.Path
 		}
 
-		// Process interceptors
-		for intIdx := range cfg.Interceptors {
-			interceptor := &cfg.Interceptors[intIdx]
-			method := interceptor.Method
-			var name string
+		res.ResourceID = GenerateResourceKey(method, name, &res.RequestMatcher)
+	}
 
-			// Determine resource name based on plugin type
-			switch cfg.Plugin {
-			case "soap":
-				name = interceptor.Operation
-			default: // rest and other plugins
-				name = interceptor.Path
-			}
+	// Process interceptors
+	for intIdx := range cfg.Interceptors {
+		interceptor := &cfg.Interceptors[intIdx]
+		method := interceptor.Method
+		var name string
 
-			interceptor.ResourceID = GenerateResourceKey(method, name, &interceptor.RequestMatcher)
+		// Determine resource name based on plugin type
+		switch cfg.Plugin {
+		case "soap":
+			name = interceptor.Operation
+		default: // rest and other plugins
+			name = interceptor.Path
 		}
+
+		interceptor.ResourceID = GenerateResourceKey(method, name, &interceptor.RequestMatcher)
 	}
 }
 

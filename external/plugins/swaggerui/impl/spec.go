@@ -14,6 +14,7 @@ type SpecConfig struct {
 	Name         string `json:"name"`
 	URL          string `json:"url"`
 	OriginalPath string `json:"-"`
+	ConfigDir    string `json:"-"`
 }
 
 func generateSpecConfig(configs []handler.LightweightConfig) error {
@@ -24,8 +25,9 @@ func generateSpecConfig(configs []handler.LightweightConfig) error {
 		specFile := strings.TrimPrefix(cfg.SpecFile, "/")
 		specConfigs = append(specConfigs, SpecConfig{
 			Name:         specFile,
-			OriginalPath: cfg.SpecFile,
 			URL:          specPrefixPath + "/openapi/" + specFile,
+			OriginalPath: cfg.SpecFile,
+			ConfigDir:    cfg.ConfigDir,
 		})
 	}
 

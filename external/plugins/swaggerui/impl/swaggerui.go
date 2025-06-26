@@ -42,6 +42,7 @@ func (s *SwaggerUI) Handle(args handler.HandlerRequest) handler.HandlerResponse 
 	for _, specConfig := range specConfigs {
 		if path == specConfig.URL {
 			return handler.HandlerResponse{
+				ConfigDir:  specConfig.ConfigDir,
 				StatusCode: 200,
 				File:       specConfig.OriginalPath,
 			}

@@ -7,6 +7,7 @@ type HandlerRequest struct {
 }
 
 type HandlerResponse struct {
+	ConfigDir  string
 	StatusCode int
 	Headers    map[string]string
 	Body       []byte
@@ -14,8 +15,9 @@ type HandlerResponse struct {
 }
 
 type LightweightConfig struct {
-	Plugin   string
-	SpecFile string
+	ConfigDir string
+	Plugin    string
+	SpecFile  string
 }
 
 // ExternalHandler defines the interface for external plugins to implement.

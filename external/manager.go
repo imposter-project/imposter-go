@@ -6,8 +6,8 @@ import (
 	"github.com/hashicorp/go-plugin"
 	"github.com/imposter-project/imposter-go/external/handler"
 	"github.com/imposter-project/imposter-go/external/plugins/swaggerui"
-	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/pkg/logger"
+	plugin2 "github.com/imposter-project/imposter-go/plugin"
 	"log"
 	"os"
 	"os/exec"
@@ -31,7 +31,7 @@ var loaded []LoadedPlugin
 
 // StartExternalPlugins initialises and starts all external plugins defined in the pluginMap,
 // passing the current configuration to each plugin.
-func StartExternalPlugins(configs []config.Config) error {
+func StartExternalPlugins(plugins []plugin2.Plugin) error {
 	discoverPluginDir()
 	hasPlugins = len(pluginDir) > 0 && len(pluginMap) > 0
 	if !hasPlugins {
@@ -47,10 +47,12 @@ func StartExternalPlugins(configs []config.Config) error {
 	})
 
 	var lightweight []handler.LightweightConfig
-	for _, cfg := range configs {
+	for _, plg := range plugins {
+		cfg := plg.GetConfig()
 		lightweight = append(lightweight, handler.LightweightConfig{
-			Plugin:   cfg.Plugin,
-			SpecFile: cfg.SpecFile,
+			ConfigDir: plg.GetConfigDir(),
+			Plugin:    cfg.Plugin,
+			SpecFile:  cfg.SpecFile,
 		})
 	}
 

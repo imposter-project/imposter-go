@@ -5,7 +5,6 @@ import (
 	exthandler "github.com/imposter-project/imposter-go/external/handler"
 	"github.com/imposter-project/imposter-go/internal/matcher"
 	"net/http"
-	"path"
 	"strings"
 
 	"github.com/imposter-project/imposter-go/internal/config"
@@ -67,7 +66,7 @@ func HandleRequest(imposterConfig *config.ImposterConfig, w http.ResponseWriter,
 	}
 
 	if !responseState.Handled {
-		invokeExternalHandlers(req, responseState)
+		invokeExternalHandlers(req, exch, imposterConfig)
 	}
 
 	// If no handler handled the response, return 404
@@ -99,19 +98,28 @@ func HandleRequest(imposterConfig *config.ImposterConfig, w http.ResponseWriter,
 }
 
 // invokeExternalHandlers attempts to handle the request using external plugins
-func invokeExternalHandlers(req *http.Request, responseState *exchange.ResponseState) {
-	resp := external.InvokeExternalHandlers(exthandler.HandlerRequest{
+func invokeExternalHandlers(
+	req *http.Request,
+	exch *exchange.Exchange,
+	imposterConfig *config.ImposterConfig,
+) {
+	handlerResp := external.InvokeExternalHandlers(exthandler.HandlerRequest{
 		Method:  req.Method,
 		Path:    req.URL.Path,
 		Headers: nil,
 	})
-	if resp != nil {
-		responseState.StatusCode = resp.StatusCode
-		responseState.Body = resp.Body
-		responseState.File = resp.File
-		response.CopyResponseHeaders(resp.Headers, responseState)
-		response.SetContentTypeHeader(responseState, path.Base(req.URL.Path))
-		responseState.Handled = true
+	if handlerResp != nil {
+		rs := exch.ResponseState
+		rs.StatusCode = handlerResp.StatusCode
+		if handlerResp.Headers != nil {
+			rs.Headers = handlerResp.Headers
+		}
+		rs.File = handlerResp.File
+		rs.Body = handlerResp.Body
+		rs.Handled = true
+
+		responseProc := response.NewProcessor(imposterConfig, handlerResp.ConfigDir)
+		responseProc(exch, nil, &config.Response{})
 	}
 }
 

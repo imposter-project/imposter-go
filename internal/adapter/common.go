@@ -47,13 +47,11 @@ func InitialiseImposter(configDirArg string) (*config.ImposterConfig, []plugin.P
 	// Pre-calculate resource IDs for all loaded configurations.
 	// Note: we retrieve the config from each plugin to ensure it includes
 	// any dynamic resources added by the plugin.
-	allConfigs := make([]config.Config, 0, totalConfigs)
 	for _, plg := range plugins {
-		allConfigs = append(allConfigs, *plg.GetConfig())
+		config.PreCalculateResourceID(plg.GetConfig())
 	}
-	config.PreCalculateResourceIDs(allConfigs)
 
-	if err := external.StartExternalPlugins(allConfigs); err != nil {
+	if err := external.StartExternalPlugins(plugins); err != nil {
 		panic(err)
 	}
 
