@@ -1,16 +1,15 @@
-package swaggerui
+package shared
 
 import (
 	"fmt"
 	goplugin "github.com/hashicorp/go-plugin"
-	"github.com/imposter-project/imposter-go/external/handler"
 	"net/rpc"
 )
 
 // SwaggerUIRPC is the RPC client
 type SwaggerUIRPC struct{ client *rpc.Client }
 
-func (s *SwaggerUIRPC) Configure(configs []handler.LightweightConfig) error {
+func (s *SwaggerUIRPC) Configure(configs []LightweightConfig) error {
 	var resp struct{} // No response needed
 	err := s.client.Call("Plugin.Configure", configs, &resp)
 	if err != nil {
@@ -19,8 +18,8 @@ func (s *SwaggerUIRPC) Configure(configs []handler.LightweightConfig) error {
 	return nil
 }
 
-func (s *SwaggerUIRPC) Handle(args handler.HandlerRequest) handler.HandlerResponse {
-	var resp handler.HandlerResponse
+func (s *SwaggerUIRPC) Handle(args HandlerRequest) HandlerResponse {
+	var resp HandlerResponse
 	err := s.client.Call("Plugin.Handle", args, &resp)
 	if err != nil {
 		// TODO return an error instead of panic
@@ -34,10 +33,10 @@ func (s *SwaggerUIRPC) Handle(args handler.HandlerRequest) handler.HandlerRespon
 // the requirements of net/rpc
 type SwaggerUIRPCServer struct {
 	// This is the real implementation
-	Impl handler.ExternalHandler
+	Impl ExternalHandler
 }
 
-func (s *SwaggerUIRPCServer) Configure(configs []handler.LightweightConfig, resp *struct{}) error {
+func (s *SwaggerUIRPCServer) Configure(configs []LightweightConfig, resp *struct{}) error {
 	err := s.Impl.Configure(configs)
 	if err != nil {
 		return fmt.Errorf("plugin.Configure: %w", err)
@@ -46,7 +45,7 @@ func (s *SwaggerUIRPCServer) Configure(configs []handler.LightweightConfig, resp
 	return nil
 }
 
-func (s *SwaggerUIRPCServer) Handle(args handler.HandlerRequest, resp *handler.HandlerResponse) error {
+func (s *SwaggerUIRPCServer) Handle(args HandlerRequest, resp *HandlerResponse) error {
 	*resp = s.Impl.Handle(args)
 	return nil
 }
@@ -62,7 +61,7 @@ func (s *SwaggerUIRPCServer) Handle(args handler.HandlerRequest, resp *handler.H
 // over an RPC client. We return SwaggerUIRPC for this.
 type SwaggerUIPlugin struct {
 	// Impl Injection
-	Impl handler.ExternalHandler
+	Impl ExternalHandler
 }
 
 func (p *SwaggerUIPlugin) Server(*goplugin.MuxBroker) (interface{}, error) {

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/imposter-project/imposter-go/external/handler"
+	"github.com/imposter-project/imposter-go/external/shared"
 	"strings"
 )
 
@@ -14,7 +14,7 @@ type SpecConfig struct {
 	ConfigDir    string `json:"-"`
 }
 
-func generateSpecConfig(configs []handler.LightweightConfig) error {
+func generateSpecConfig(configs []shared.LightweightConfig) error {
 	for _, cfg := range configs {
 		if cfg.SpecFile == "" {
 			continue
@@ -32,11 +32,11 @@ func generateSpecConfig(configs []handler.LightweightConfig) error {
 
 // serveRawSpec serves the raw OpenAPI spec file based on the provided path.
 // If no matching spec is found, it returns nil.
-func serveRawSpec(path string) *handler.HandlerResponse {
-	var response *handler.HandlerResponse
+func serveRawSpec(path string) *shared.HandlerResponse {
+	var response *shared.HandlerResponse
 	for _, specConfig := range specConfigs {
 		if path == specConfig.URL {
-			response = &handler.HandlerResponse{
+			response = &shared.HandlerResponse{
 				ConfigDir:  specConfig.ConfigDir,
 				StatusCode: 200,
 				File:       specConfig.OriginalPath,

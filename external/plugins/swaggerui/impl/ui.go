@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/imposter-project/imposter-go/external/handler"
+	"github.com/imposter-project/imposter-go/external/shared"
 	"os"
 	path2 "path"
 	"strings"
@@ -19,7 +19,7 @@ var www embed.FS
 var specPrefixPath string
 
 // indexResp is the cached response for the index page.
-var indexResp handler.HandlerResponse
+var indexResp shared.HandlerResponse
 
 func init() {
 	specPrefixPath = os.Getenv("IMPOSTER_OPENAPI_SPEC_PATH_PREFIX")
@@ -29,10 +29,10 @@ func init() {
 }
 
 // serveStaticContent serves static content from the embedded filesystem.
-func serveStaticContent(path string) handler.HandlerResponse {
+func serveStaticContent(path string) shared.HandlerResponse {
 	path = strings.TrimPrefix(path, specPrefixPath)
 	if len(path) == 0 {
-		return handler.HandlerResponse{StatusCode: 404, Body: []byte("File Not Found")}
+		return shared.HandlerResponse{StatusCode: 404, Body: []byte("File Not Found")}
 	}
 
 	// index is a special case
@@ -43,15 +43,15 @@ func serveStaticContent(path string) handler.HandlerResponse {
 	file, err := www.ReadFile("www" + path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return handler.HandlerResponse{StatusCode: 404, Body: []byte("File Not Found")}
+			return shared.HandlerResponse{StatusCode: 404, Body: []byte("File Not Found")}
 		}
-		return handler.HandlerResponse{
+		return shared.HandlerResponse{
 			StatusCode: 500,
 			Body:       []byte(fmt.Sprintf("error reading file: %s - %v", path, err.Error())),
 		}
 	}
 	fileName := path2.Base(path)
-	return handler.HandlerResponse{
+	return shared.HandlerResponse{
 		StatusCode: 200,
 		Body:       file,
 
@@ -81,7 +81,7 @@ func generateIndexPage() error {
 	}
 
 	// cache the index response
-	indexResp = handler.HandlerResponse{
+	indexResp = shared.HandlerResponse{
 		StatusCode: 200,
 		Body:       output.Bytes(),
 

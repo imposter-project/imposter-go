@@ -1,7 +1,7 @@
 package external
 
 import (
-	"github.com/imposter-project/imposter-go/external/handler"
+	"github.com/imposter-project/imposter-go/external/shared"
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/stretchr/testify/require"
 	"os"

@@ -2,7 +2,7 @@ package handler
 
 import (
 	"github.com/imposter-project/imposter-go/external"
-	exthandler "github.com/imposter-project/imposter-go/external/handler"
+	exthandler "github.com/imposter-project/imposter-go/external/shared"
 	"github.com/imposter-project/imposter-go/internal/matcher"
 	"net/http"
 	"strings"

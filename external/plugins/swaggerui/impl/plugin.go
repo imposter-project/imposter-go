@@ -4,8 +4,7 @@ import (
 	"fmt"
 	"github.com/hashicorp/go-hclog"
 	goplugin "github.com/hashicorp/go-plugin"
-	"github.com/imposter-project/imposter-go/external/handler"
-	"github.com/imposter-project/imposter-go/external/plugins/swaggerui"
+	"github.com/imposter-project/imposter-go/external/shared"
 	"os"
 	"strings"
 )
@@ -25,7 +24,7 @@ func main() {
 		logger: logger,
 	}
 	pluginMap := map[string]goplugin.Plugin{
-		"swaggerui": &swaggerui.SwaggerUIPlugin{Impl: impl},
+		"swaggerui": &shared.SwaggerUIPlugin{Impl: impl},
 	}
 
 	logger.Debug("swaggerui plugin initialising", "path", specPrefixPath)
@@ -56,7 +55,7 @@ func main() {
 	})
 }
 
-func (s *SwaggerUI) Configure(configs []handler.LightweightConfig) error {
+func (s *SwaggerUI) Configure(configs []shared.LightweightConfig) error {
 	s.logger.Trace("generating spec config")
 	if err := generateSpecConfig(configs); err != nil {
 		return fmt.Errorf("could not generate swagger UI plugin config: %w", err)
@@ -69,13 +68,13 @@ func (s *SwaggerUI) Configure(configs []handler.LightweightConfig) error {
 	return nil
 }
 
-func (s *SwaggerUI) Handle(args handler.HandlerRequest) handler.HandlerResponse {
+func (s *SwaggerUI) Handle(args shared.HandlerRequest) shared.HandlerResponse {
 	path := args.Path
 	if !strings.EqualFold(args.Method, "get") {
-		return handler.HandlerResponse{StatusCode: 405, Body: []byte("Method Not Allowed")}
+		return shared.HandlerResponse{StatusCode: 405, Body: []byte("Method Not Allowed")}
 	}
 	if !strings.HasPrefix(path, specPrefixPath) {
-		return handler.HandlerResponse{StatusCode: 404, Body: []byte("File Not Found")}
+		return shared.HandlerResponse{StatusCode: 404, Body: []byte("File Not Found")}
 	}
 
 	if response := serveRawSpec(path); response != nil {

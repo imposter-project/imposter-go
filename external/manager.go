@@ -3,11 +3,10 @@ package external
 import (
 	"fmt"
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-plugin"
-	"github.com/imposter-project/imposter-go/external/handler"
-	"github.com/imposter-project/imposter-go/external/plugins/swaggerui"
+	goplugin "github.com/hashicorp/go-plugin"
+	"github.com/imposter-project/imposter-go/external/shared"
 	"github.com/imposter-project/imposter-go/pkg/logger"
-	plugin2 "github.com/imposter-project/imposter-go/plugin"
+	"github.com/imposter-project/imposter-go/plugin"
 	"log"
 	"os"
 	"os/exec"
@@ -15,14 +14,14 @@ import (
 )
 
 // pluginMap is the map of plugins we can dispense.
-var pluginMap = map[string]plugin.Plugin{
-	"swaggerui": &swaggerui.SwaggerUIPlugin{},
+var pluginMap = map[string]goplugin.Plugin{
+	"swaggerui": &shared.SwaggerUIPlugin{},
 }
 
 type LoadedPlugin struct {
 	name   string
-	client *plugin.Client
-	impl   *handler.ExternalHandler
+	client *goplugin.Client
+	impl   *shared.ExternalHandler
 }
 
 var pluginDir string
@@ -31,7 +30,7 @@ var loaded []LoadedPlugin
 
 // StartExternalPlugins initialises and starts all external plugins defined in the pluginMap,
 // passing the current configuration to each plugin.
-func StartExternalPlugins(plugins []plugin2.Plugin) error {
+func StartExternalPlugins(plugins []plugin.Plugin) error {
 	discoverPluginDir()
 	hasPlugins = len(pluginDir) > 0 && len(pluginMap) > 0
 	if !hasPlugins {
@@ -46,10 +45,10 @@ func StartExternalPlugins(plugins []plugin2.Plugin) error {
 		Level:  hclog.Debug,
 	})
 
-	var lightweight []handler.LightweightConfig
+	var lightweight []shared.LightweightConfig
 	for _, plg := range plugins {
 		cfg := plg.GetConfig()
-		lightweight = append(lightweight, handler.LightweightConfig{
+		lightweight = append(lightweight, shared.LightweightConfig{
 			ConfigDir: plg.GetConfigDir(),
 			Plugin:    cfg.Plugin,
 			SpecFile:  cfg.SpecFile,
@@ -68,12 +67,12 @@ func StartExternalPlugins(plugins []plugin2.Plugin) error {
 }
 
 // start initialises and starts a single external plugin by its name.
-func start(pluginName string, hclogger hclog.Logger, configs []handler.LightweightConfig) error {
+func start(pluginName string, hclogger hclog.Logger, configs []shared.LightweightConfig) error {
 	logger.Debugf("loading external plugin: %s", pluginName)
 	pluginPath := path.Join(pluginDir, "plugin-"+pluginName)
 
 	// launch the plugin process
-	client := plugin.NewClient(&plugin.ClientConfig{
+	client := goplugin.NewClient(&goplugin.ClientConfig{
 		HandshakeConfig: handshakeConfig,
 		Plugins:         pluginMap,
 		Cmd:             exec.Command(pluginPath),
@@ -91,7 +90,7 @@ func start(pluginName string, hclogger hclog.Logger, configs []handler.Lightweig
 	if err != nil {
 		return fmt.Errorf("error dispensing plugin %s: %v", pluginName, err)
 	}
-	impl := raw.(handler.ExternalHandler)
+	impl := raw.(shared.ExternalHandler)
 
 	err = impl.Configure(configs)
 	if err != nil {
@@ -108,12 +107,12 @@ func start(pluginName string, hclogger hclog.Logger, configs []handler.Lightweig
 
 // InvokeExternalHandlers calls the external plugins with the provided handler request
 // and returns the first successful response, or none if no plugin handled the request.
-func InvokeExternalHandlers(args handler.HandlerRequest) *handler.HandlerResponse {
+func InvokeExternalHandlers(args shared.HandlerRequest) *shared.HandlerResponse {
 	if !hasPlugins {
 		return nil
 	}
 
-	var resp handler.HandlerResponse
+	var resp shared.HandlerResponse
 	for _, l := range loaded {
 		impl := *l.impl
 		resp = impl.Handle(args)
@@ -161,7 +160,7 @@ func discoverPluginDir() {
 // a plugin and host. If the handshake fails, a user-friendly error is shown.
 // This prevents users from executing bad plugins or executing a plugin
 // directory. It is a UX feature, not a security feature.
-var handshakeConfig = plugin.HandshakeConfig{
+var handshakeConfig = goplugin.HandshakeConfig{
 	ProtocolVersion:  1,
 	MagicCookieKey:   "HANDLER_PLUGIN",
 	MagicCookieValue: "imposter",
