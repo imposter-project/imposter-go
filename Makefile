@@ -5,6 +5,10 @@ LDFLAGS := -X github.com/imposter-project/imposter-go/internal/version.Version=$
 build:
 	go build -tags lambda.norpc -ldflags "$(LDFLAGS)" -o imposter-go ./cmd/imposter
 
+.PHONY: build-prod
+build-prod:
+	go build -tags lambda.norpc -ldflags "$(LDFLAGS) -s -w" -trimpath -o imposter-go ./cmd/imposter
+
 .PHONY: build-plugins
 build-plugins:
 	mkdir -p bin
