@@ -15,7 +15,7 @@ import (
 
 // pluginMap is the map of plugins we can dispense.
 var pluginMap = map[string]goplugin.Plugin{
-	"swaggerui": &shared.SwaggerUIPlugin{},
+	"swaggerui": &shared.ExternalPlugin{},
 }
 
 type LoadedPlugin struct {

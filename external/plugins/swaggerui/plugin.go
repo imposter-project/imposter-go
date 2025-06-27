@@ -24,7 +24,7 @@ func main() {
 		logger: logger,
 	}
 	pluginMap := map[string]goplugin.Plugin{
-		"swaggerui": &shared.SwaggerUIPlugin{Impl: impl},
+		"swaggerui": &shared.ExternalPlugin{Impl: impl},
 	}
 
 	logger.Debug("swaggerui plugin initialising", "path", specPrefixPath)
