@@ -13,7 +13,13 @@ import (
 
 func TestIntegration_ExternalPluginLifecycle(t *testing.T) {
 	pluginDir, _ := filepath.Abs("../bin")
+
+	if _, err := os.Stat(pluginDir); os.IsNotExist(err) {
+		t.Skipf("Plugin directory %s does not exist, skipping test", pluginDir)
+	}
+
 	_ = os.Setenv("IMPOSTER_PLUGIN_DIR", pluginDir)
+	_ = os.Setenv("IMPOSTER_EXTERNAL_PLUGINS", "true")
 
 	var plugins []plugin.Plugin
 

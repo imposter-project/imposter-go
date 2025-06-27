@@ -7,16 +7,13 @@ import (
 	"github.com/imposter-project/imposter-go/external/shared"
 	"github.com/imposter-project/imposter-go/pkg/logger"
 	"github.com/imposter-project/imposter-go/plugin"
-	"log"
 	"os"
 	"os/exec"
 	"path"
+	"strings"
 )
 
-// pluginMap is the map of plugins we can dispense.
-var pluginMap = map[string]goplugin.Plugin{
-	"swaggerui": &shared.ExternalPlugin{},
-}
+var pluginMap map[string]goplugin.Plugin
 
 type LoadedPlugin struct {
 	name   string
@@ -31,8 +28,9 @@ var loaded []LoadedPlugin
 // StartExternalPlugins initialises and starts all external plugins defined in the pluginMap,
 // passing the current configuration to each plugin.
 func StartExternalPlugins(plugins []plugin.Plugin) error {
-	discoverPluginDir()
-	hasPlugins = len(pluginDir) > 0 && len(pluginMap) > 0
+	if err := discoverPlugins(); err != nil {
+		return fmt.Errorf("failed to discover plugins: %v", err)
+	}
 	if !hasPlugins {
 		logger.Tracef("no external plugins found to load")
 		return nil
@@ -142,18 +140,46 @@ func StopExternalPlugins() {
 	}
 }
 
-// discoverPluginDir finds the directory from which plugins are loaded.
-func discoverPluginDir() {
+// discoverPlugins finds the directory from which plugins are loaded.
+func discoverPlugins() error {
+	if os.Getenv("IMPOSTER_EXTERNAL_PLUGINS") != "true" {
+		logger.Tracef("external plugins are disabled by environment variable IMPOSTER_EXTERNAL_PLUGINS")
+		hasPlugins = false
+		return nil
+	}
+
 	var envPluginDir = os.Getenv("IMPOSTER_PLUGIN_DIR")
 	if len(envPluginDir) > 0 {
 		pluginDir = path.Clean(envPluginDir)
 	} else {
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
-			log.Fatalf("failed to get user home directory: %v", err)
+			return fmt.Errorf("failed to get user home directory: %v", err)
 		}
 		pluginDir = path.Join(homeDir, ".imposter", "plugins")
 	}
+
+	// find available plugins
+	entries, err := os.ReadDir(pluginDir)
+	if err != nil {
+		return fmt.Errorf("failed to read plugin directory %s: %v", pluginDir, err)
+	}
+	pluginMap = make(map[string]goplugin.Plugin)
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		if !strings.HasPrefix(entry.Name(), "plugin-") {
+			continue
+		}
+
+		pluginName := strings.TrimPrefix(entry.Name(), "plugin-")
+		logger.Debugf("found plugin: %s", pluginName)
+		pluginMap[pluginName] = &shared.ExternalPlugin{}
+	}
+
+	hasPlugins = len(pluginMap) > 0
+	return nil
 }
 
 // handshakeConfigs are used to just do a basic handshake between

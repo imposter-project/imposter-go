@@ -13,6 +13,13 @@ This document lists all environment variables that Imposter supports, their purp
 | `IMPOSTER_AUTO_BASE_PATH` | Auto-generate base paths from directory structure | `false` | `IMPOSTER_AUTO_BASE_PATH=true` |
 | `IMPOSTER_SUPPORT_LEGACY_CONFIG` | Enable legacy configuration format support | `false` | `IMPOSTER_SUPPORT_LEGACY_CONFIG=true` |
 
+## Plugin System
+
+| Variable | Purpose | Default Value | Example |
+|----------|---------|---------------|---------|
+| `IMPOSTER_EXTERNAL_PLUGINS` | Enable external plugin support | `false` | `IMPOSTER_EXTERNAL_PLUGINS=true` |
+| `IMPOSTER_PLUGIN_DIR` | Directory containing external plugins | `~/.imposter/plugins` | `IMPOSTER_PLUGIN_DIR=/app/plugins` |
+
 ## Logging
 
 | Variable | Purpose | Default Value | Example |
@@ -119,4 +126,12 @@ export IMPOSTER_CONFIG_DIR=/var/task/config
 export IMPOSTER_STORE_DRIVER=store-dynamodb
 export IMPOSTER_STORE_DYNAMODB_TABLE=imposter-lambda-data
 export IMPOSTER_STORE_DYNAMODB_TTL=300
+```
+
+### External Plugins
+```bash
+export IMPOSTER_EXTERNAL_PLUGINS=true
+export IMPOSTER_PLUGIN_DIR=/app/plugins
+export IMPOSTER_CONFIG_DIR=/app/config
+imposter
 ```

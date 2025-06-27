@@ -12,7 +12,7 @@ build-prod:
 .PHONY: build-plugins
 build-plugins:
 	mkdir -p bin
-	for p in swaggerui; do \
+	for p in $$( cd ./external/plugins && ls ); do \
 		echo "Building plugin $$p"; \
 		go build -tags lambda.norpc -ldflags "$(LDFLAGS)" -o ./bin/plugin-$$p ./external/plugins/$$p; \
 	done
