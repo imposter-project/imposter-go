@@ -13,7 +13,7 @@ import (
 
 func TestIntegration_ExternalPluginLifecycle(t *testing.T) {
 	pluginDir, _ := filepath.Abs("../bin")
-	os.Setenv("IMPOSTER_PLUGIN_DIR", pluginDir)
+	_ = os.Setenv("IMPOSTER_PLUGIN_DIR", pluginDir)
 
 	var plugins []plugin.Plugin
 
