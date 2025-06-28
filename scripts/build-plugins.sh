@@ -45,6 +45,12 @@ for plugin in $plugins; do
             "./external/plugins/$plugin"
         
         echo "Built: $OUTPUT_DIR/$output_name"
+        
+        # Compress the binary
+        archive_name="plugin-$plugin-$os-$arch.zip"
+        (cd "$OUTPUT_DIR" && zip "$archive_name" "$output_name")
+        rm "$OUTPUT_DIR/$output_name"
+        echo "Compressed: $OUTPUT_DIR/$archive_name"
     done
 done
 
