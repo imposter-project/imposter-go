@@ -27,7 +27,9 @@ jobs:
         go-version: '1.23'
 
     - name: Build
-      run: make build
+      run: |
+        make build-plugins
+        make build
 
     - name: Test
       run: go test -v ./...
@@ -49,3 +51,55 @@ jobs:
         distribution: goreleaser
         version: latest
         args: release --snapshot --clean
+
+  publish-plugins:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.23'
+
+    - name: Extract version
+      id: version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+    - name: Create draft release in imposter-go-plugins repo
+      id: create_release
+      run: |
+        gh release create ${{ steps.version.outputs.VERSION }} \
+          --repo imposter-project/imposter-go-plugins \
+          --title "Plugins ${{ steps.version.outputs.VERSION }}" \
+          --notes "External plugins for Imposter ${{ steps.version.outputs.VERSION }}" \
+          --draft
+      env:
+        GITHUB_TOKEN: ${{ secrets.PLUGIN_REPO_TOKEN }}
+
+    - name: Build plugins for multiple platforms
+      run: ./scripts/build-plugins.sh ${{ steps.version.outputs.VERSION }} dist
+
+    - name: Upload plugin binaries as release assets
+      run: |
+        for file in dist/*; do
+          if [ -f "$file" ]; then
+            echo "Uploading $(basename "$file")"
+            gh release upload ${{ steps.version.outputs.VERSION }} "$file" \
+              --repo imposter-project/imposter-go-plugins
+          fi
+        done
+      env:
+        GITHUB_TOKEN: ${{ secrets.PLUGIN_REPO_TOKEN }}
+
+    - name: Publish release
+      run: |
+        gh release edit ${{ steps.version.outputs.VERSION }} \
+          --repo imposter-project/imposter-go-plugins \
+          --draft=false
+      env:
+        GITHUB_TOKEN: ${{ secrets.PLUGIN_REPO_TOKEN }}

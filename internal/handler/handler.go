@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"github.com/imposter-project/imposter-go/external"
+	exthandler "github.com/imposter-project/imposter-go/external/shared"
 	"github.com/imposter-project/imposter-go/internal/matcher"
 	"net/http"
 	"strings"
@@ -63,6 +65,10 @@ func HandleRequest(imposterConfig *config.ImposterConfig, w http.ResponseWriter,
 		}
 	}
 
+	if !responseState.Handled {
+		invokeExternalHandlers(req, exch, imposterConfig)
+	}
+
 	// If no handler handled the response, return 404
 	if !responseState.Handled {
 		handleNotFound(req, responseState, plugins)
@@ -89,6 +95,32 @@ func HandleRequest(imposterConfig *config.ImposterConfig, w http.ResponseWriter,
 
 	// Write response to client
 	responseState.WriteToResponseWriter(w)
+}
+
+// invokeExternalHandlers attempts to handle the request using external plugins
+func invokeExternalHandlers(
+	req *http.Request,
+	exch *exchange.Exchange,
+	imposterConfig *config.ImposterConfig,
+) {
+	handlerResp := external.InvokeExternalHandlers(exthandler.HandlerRequest{
+		Method:  req.Method,
+		Path:    req.URL.Path,
+		Headers: nil,
+	})
+	if handlerResp != nil {
+		rs := exch.ResponseState
+		rs.Handled = true
+		rs.StatusCode = handlerResp.StatusCode
+		rs.File = handlerResp.File
+		rs.Body = handlerResp.Body
+
+		response.CopyResponseHeaders(handlerResp.Headers, rs)
+		response.SetContentTypeHeader(rs, handlerResp.FileName, "", "")
+
+		responseProc := response.NewProcessor(imposterConfig, handlerResp.ConfigDir)
+		responseProc(exch, nil, &config.Response{})
+	}
 }
 
 // handleSystemEndpoint handles system-level endpoints like /system/store and /system/status

@@ -73,7 +73,9 @@ func TestPreCalculateResourceIDs(t *testing.T) {
 	}
 
 	// Pre-calculate IDs
-	PreCalculateResourceIDs(configs)
+	for i := range configs {
+		PreCalculateResourceID(&configs[i])
+	}
 
 	// Verify REST resources have correct IDs
 	t.Run("REST resources", func(t *testing.T) {
@@ -159,14 +161,18 @@ func TestPreCalculateResourceIDs(t *testing.T) {
 func TestPreCalculateResourceIDs_EmptyConfigs(t *testing.T) {
 	// Test with empty configs - should not panic
 	configs := []Config{}
-	PreCalculateResourceIDs(configs)
+	for i := range configs {
+		PreCalculateResourceID(&configs[i])
+	}
 
 	// Test with configs with no resources/interceptors
 	configs = []Config{
 		{Plugin: "rest"},
 		{Plugin: "soap"},
 	}
-	PreCalculateResourceIDs(configs)
+	for i := range configs {
+		PreCalculateResourceID(&configs[i])
+	}
 }
 
 func TestGenerateResourceKey(t *testing.T) {
