@@ -33,23 +33,23 @@ for plugin in $plugins; do
         IFS='/' read -r os arch <<< "$platform"
         echo "Building $plugin for $os/$arch"
         
-        output_name="plugin-${plugin}_${os}_${arch}"
+        binary_name="plugin-$plugin"
         if [ "$os" = "windows" ]; then
-            output_name="$output_name.exe"
+            binary_name="$binary_name.exe"
         fi
         
         GOOS=$os GOARCH=$arch go build \
             -tags lambda.norpc \
             -ldflags "-X github.com/imposter-project/imposter-go/internal/version.Version=$VERSION" \
-            -o "$OUTPUT_DIR/$output_name" \
+            -o "$OUTPUT_DIR/$binary_name" \
             "./external/plugins/$plugin"
         
-        echo "Built: $OUTPUT_DIR/$output_name"
+        echo "Built: $OUTPUT_DIR/$binary_name"
         
         # Compress the binary
         archive_name="plugin-${plugin}_${os}_${arch}.zip"
-        (cd "$OUTPUT_DIR" && zip "$archive_name" "$output_name")
-        rm "$OUTPUT_DIR/$output_name"
+        (cd "$OUTPUT_DIR" && zip "$archive_name" "$binary_name")
+        rm "$OUTPUT_DIR/$binary_name"
         echo "Compressed: $OUTPUT_DIR/$archive_name"
     done
 done
