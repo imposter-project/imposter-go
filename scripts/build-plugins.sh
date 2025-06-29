@@ -33,7 +33,7 @@ for plugin in $plugins; do
         IFS='/' read -r os arch <<< "$platform"
         echo "Building $plugin for $os/$arch"
         
-        output_name="plugin-$plugin-$os-$arch"
+        output_name="plugin-${plugin}_${os}_${arch}"
         if [ "$os" = "windows" ]; then
             output_name="$output_name.exe"
         fi
@@ -47,7 +47,7 @@ for plugin in $plugins; do
         echo "Built: $OUTPUT_DIR/$output_name"
         
         # Compress the binary
-        archive_name="plugin-$plugin-$os-$arch.zip"
+        archive_name="plugin-${plugin}_${os}_${arch}.zip"
         (cd "$OUTPUT_DIR" && zip "$archive_name" "$output_name")
         rm "$OUTPUT_DIR/$output_name"
         echo "Compressed: $OUTPUT_DIR/$archive_name"
