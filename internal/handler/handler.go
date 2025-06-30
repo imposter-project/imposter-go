@@ -118,7 +118,7 @@ func invokeExternalHandlers(
 		response.CopyResponseHeaders(handlerResp.Headers, rs)
 		response.SetContentTypeHeader(rs, handlerResp.FileName, "", "")
 
-		responseProc := response.NewProcessor(imposterConfig, handlerResp.ConfigDir)
+		responseProc := response.NewProcessor(imposterConfig, handlerResp.FileBaseDir)
 		responseProc(exch, nil, &config.Response{})
 	}
 }

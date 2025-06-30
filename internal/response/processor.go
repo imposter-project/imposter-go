@@ -13,8 +13,8 @@ type Processor func(
 )
 
 // NewProcessor creates a new standard response processor
-func NewProcessor(imposterConfig *config.ImposterConfig, configDir string) Processor {
+func NewProcessor(imposterConfig *config.ImposterConfig, fileBaseDir string) Processor {
 	return func(exch *exchange.Exchange, reqMatcher *config.RequestMatcher, resp *config.Response) {
-		processResponse(exch, reqMatcher, resp, configDir, imposterConfig)
+		processResponse(exch, reqMatcher, resp, fileBaseDir, imposterConfig)
 	}
 }

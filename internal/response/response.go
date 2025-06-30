@@ -59,12 +59,13 @@ func SimulateFailure(rs *exchange.ResponseState, failureType string, r *http.Req
 	return false
 }
 
-// processResponse handles common response processing logic
+// processResponse handles common response processing logic.
+// The fileBaseDir is the base path from which response files will be resolved.
 func processResponse(
 	exch *exchange.Exchange,
 	reqMatcher *config.RequestMatcher,
 	resp *config.Response,
-	configDir string,
+	fileBaseDir string,
 	imposterConfig *config.ImposterConfig,
 ) {
 	req := exch.Request.Request
@@ -128,7 +129,7 @@ func processResponse(
 	if respFile != "" || respContent != "" {
 		var responseContent string
 		if respFile != "" {
-			filePath, err := utils.ValidatePath(respFile, configDir)
+			filePath, err := utils.ValidatePath(respFile, fileBaseDir)
 			if err != nil {
 				rs.StatusCode = http.StatusInternalServerError
 				rs.Body = []byte("Invalid file path")

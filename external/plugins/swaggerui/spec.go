@@ -36,10 +36,11 @@ func serveRawSpec(path string) *shared.HandlerResponse {
 	var response *shared.HandlerResponse
 	for _, specConfig := range specConfigs {
 		if path == specConfig.URL {
+			// TODO instead of serving the raw spec, parse it and add the server URL as the first server entry, then marshal it back to JSON.
 			response = &shared.HandlerResponse{
-				ConfigDir:  specConfig.ConfigDir,
-				StatusCode: 200,
-				File:       specConfig.OriginalPath,
+				FileBaseDir: specConfig.ConfigDir,
+				StatusCode:  200,
+				File:        specConfig.OriginalPath,
 			}
 			break
 		}

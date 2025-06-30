@@ -7,11 +7,13 @@ type HandlerRequest struct {
 }
 
 type HandlerResponse struct {
-	ConfigDir  string
 	StatusCode int
 	Headers    map[string]string
 	Body       []byte
 	File       string
+
+	// FileBaseDir is the base directory from which the response file path should be resolved.
+	FileBaseDir string
 
 	// FileName is the name of the file, not its path. Used for MIME type detection.
 	FileName string
