@@ -8,6 +8,7 @@ import (
 	"github.com/imposter-project/imposter-go/pkg/logger"
 	"io"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/imposter-project/imposter-go/internal/config"
@@ -65,15 +66,27 @@ func CalculateMatchScore(exch *exchange.Exchange, matcher *config.RequestMatcher
 
 		// Match path segments, including path parameters
 		for i, segment := range resourceSegments {
-			if strings.HasPrefix(segment, "{") && strings.HasSuffix(segment, "}") {
-				paramName := strings.Trim(segment, "{}")
-				if condition, hasParam := matcher.PathParams[paramName]; hasParam {
-					if !condition.Matcher.Match(requestSegments[i]) {
+			if strings.Contains(segment, "{") && strings.Contains(segment, "}") {
+				// Check if it's a pure parameter (entire segment is just {param}) or mixed
+				if strings.HasPrefix(segment, "{") && strings.HasSuffix(segment, "}") && strings.Count(segment, "{") == 1 && strings.Count(segment, "}") == 1 {
+					// Pure parameter segment like {id}
+					paramName := strings.Trim(segment, "{}")
+					if condition, hasParam := matcher.PathParams[paramName]; hasParam {
+						if !condition.Matcher.Match(requestSegments[i]) {
+							return NegativeMatchScore, false
+						}
+						score++
+					}
+				} else {
+					// Mixed segment with parameters and literal text like {param}.diff or {name}.{ext}
+					matched, segmentScore := matchMixedSegment(segment, requestSegments[i], matcher.PathParams)
+					if !matched {
 						return NegativeMatchScore, false
 					}
-					score++
+					score += segmentScore
 				}
 			} else {
+				// Exact literal segment
 				if requestSegments[i] != segment {
 					return NegativeMatchScore, false
 				}
@@ -232,6 +245,81 @@ func FindBestMatch(matches []MatchResult) (best MatchResult, tie bool) {
 	}
 
 	return best, tie
+}
+
+// matchMixedSegment matches a segment that contains both path parameters and literal text
+// For example: "{param}.diff" should match "123.diff" and extract param=123
+// Returns: (matched bool, score int)
+func matchMixedSegment(resourceSegment, requestSegment string, pathParams map[string]config.MatcherUnmarshaler) (bool, int) {
+	// Parse the resource segment to extract parameters and build a proper regex
+	pattern := ""
+	paramNames := []string{}
+	lastEnd := 0
+
+	// Find all parameters in the segment and build regex incrementally
+	for {
+		start := strings.Index(resourceSegment[lastEnd:], "{")
+		if start == -1 {
+			// No more parameters, add remaining literal text
+			if lastEnd < len(resourceSegment) {
+				pattern += regexp.QuoteMeta(resourceSegment[lastEnd:])
+			}
+			break
+		}
+		start += lastEnd
+
+		// Add literal text before the parameter
+		if start > lastEnd {
+			pattern += regexp.QuoteMeta(resourceSegment[lastEnd:start])
+		}
+
+		end := strings.Index(resourceSegment[start:], "}")
+		if end == -1 {
+			break
+		}
+		end += start
+
+		paramName := resourceSegment[start+1 : end]
+		paramNames = append(paramNames, paramName)
+
+		// Add parameter capture group - match any character except slash
+		pattern += "([^/]*?)"
+
+		lastEnd = end + 1
+	}
+
+	if len(paramNames) == 0 {
+		// No parameters found, shouldn't happen but handle gracefully
+		return false, 0
+	}
+
+	// Create regex pattern from the segment
+	regex, err := regexp.Compile("^" + pattern + "$")
+	if err != nil {
+		return false, 0
+	}
+
+	// Match against the request segment
+	matches := regex.FindStringSubmatch(requestSegment)
+	if matches == nil {
+		return false, 0
+	}
+
+	// Validate extracted parameter values against path parameter conditions
+	score := 0
+	for i, paramName := range paramNames {
+		paramValue := matches[i+1] // Skip the full match at index 0
+		if condition, hasParam := pathParams[paramName]; hasParam {
+			if !condition.Matcher.Match(paramValue) {
+				return false, 0
+			}
+			score++
+		}
+	}
+
+	// Base score for the mixed segment match plus any parameter condition matches
+	// Mixed segments get higher score than pure parameters because they're more specific
+	return true, 2 + score
 }
 
 // GetRequestBody reads and resets the request body
