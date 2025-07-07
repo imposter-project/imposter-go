@@ -14,7 +14,7 @@ build-plugins:
 	mkdir -p bin
 	for p in $$( cd ./external/plugins && ls ); do \
 		echo "Building plugin $$p"; \
-		go build -tags lambda.norpc -ldflags "$(LDFLAGS)" -o ./bin/plugin-$$p ./external/plugins/$$p; \
+		go build -tags lambda.norpc -ldflags "-X main.Version=$(VERSION)" -o ./bin/plugin-$$p ./external/plugins/$$p; \
 	done
 
 .PHONY: fmt

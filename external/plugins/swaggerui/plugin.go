@@ -9,6 +9,8 @@ import (
 	"strings"
 )
 
+var Version = "dev"
+
 type SwaggerUI struct {
 	logger hclog.Logger
 }
@@ -27,17 +29,7 @@ func main() {
 		"swaggerui": &shared.ExternalPlugin{Impl: impl},
 	}
 
-	logger.Debug("swaggerui plugin initialising", "path", specPrefixPath)
-
-	if logger.IsTrace() {
-		entries, err := www.ReadDir("www")
-		if err != nil {
-			panic(fmt.Errorf("failed to read static files: %v", err))
-		}
-		for _, entry := range entries {
-			logger.Trace(entry.Name())
-		}
-	}
+	logger.Debug("swaggerui plugin initialising", "version", Version, "path", specPrefixPath)
 
 	// handshakeConfigs are used to just do a basic handshake between
 	// a plugin and host. If the handshake fails, a user-friendly error is shown.

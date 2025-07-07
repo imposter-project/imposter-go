@@ -5,6 +5,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	goplugin "github.com/hashicorp/go-plugin"
 	"github.com/imposter-project/imposter-go/external/shared"
+	"github.com/imposter-project/imposter-go/internal/version"
 	"github.com/imposter-project/imposter-go/pkg/logger"
 	"github.com/imposter-project/imposter-go/plugin"
 	"os"
@@ -40,7 +41,7 @@ func StartExternalPlugins(plugins []plugin.Plugin) error {
 	hclogger := hclog.New(&hclog.LoggerOptions{
 		Name:   "plugin",
 		Output: os.Stdout,
-		Level:  hclog.Debug,
+		Level:  getHcLogLevel(),
 	})
 
 	var lightweight []shared.LightweightConfig
@@ -62,6 +63,23 @@ func StartExternalPlugins(plugins []plugin.Plugin) error {
 
 	logger.Debugf("successfully loaded %d external plugins", len(loaded))
 	return nil
+}
+
+func getHcLogLevel() hclog.Level {
+	switch logger.GetCurrentLevel() {
+	case logger.TRACE:
+		return hclog.Trace
+	case logger.DEBUG:
+		return hclog.Debug
+	case logger.INFO:
+		return hclog.Info
+	case logger.WARN:
+		return hclog.Warn
+	case logger.ERROR:
+		return hclog.Error
+	default:
+		return hclog.NoLevel
+	}
 }
 
 // start initialises and starts a single external plugin by its name.
@@ -159,27 +177,51 @@ func discoverPlugins() error {
 		pluginDir = path.Join(homeDir, ".imposter", "plugins")
 	}
 
-	// find available plugins
-	entries, err := os.ReadDir(pluginDir)
+	discovered, err := listPluginsInDir(pluginDir, true)
 	if err != nil {
-		return fmt.Errorf("failed to read plugin directory %s: %v", pluginDir, err)
+		return err
 	}
-	pluginMap = make(map[string]goplugin.Plugin)
+	pluginMap = discovered
+	hasPlugins = len(pluginMap) > 0
+	return nil
+}
+
+func listPluginsInDir(dir string, checkVersionedSubDir bool) (map[string]goplugin.Plugin, error) {
+	logger.Tracef("listing plugins in dir: %s", dir)
+	discovered := make(map[string]goplugin.Plugin)
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read plugins in directory %s: %v", dir, err)
+	}
 	for _, entry := range entries {
 		if entry.IsDir() {
-			continue
+			if !checkVersionedSubDir {
+				continue
+			}
+			if entry.Name() != version.Version {
+				logger.Tracef("skipping subdirectory %s, not matching version %s", entry.Name(), version.Version)
+				continue
+			}
+			subdir := path.Join(dir, entry.Name())
+			subdirPlugins, err := listPluginsInDir(subdir, false)
+			if err != nil {
+				return nil, err
+			}
+			for name, p := range subdirPlugins {
+				discovered[name] = p
+			}
 		}
+
 		if !strings.HasPrefix(entry.Name(), "plugin-") {
 			continue
 		}
 
 		pluginName := strings.TrimPrefix(entry.Name(), "plugin-")
 		logger.Debugf("found plugin: %s", pluginName)
-		pluginMap[pluginName] = &shared.ExternalPlugin{}
+		discovered[pluginName] = &shared.ExternalPlugin{}
 	}
-
-	hasPlugins = len(pluginMap) > 0
-	return nil
+	return discovered, nil
 }
 
 // handshakeConfigs are used to just do a basic handshake between

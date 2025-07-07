@@ -40,7 +40,7 @@ for plugin in $plugins; do
         
         GOOS=$os GOARCH=$arch go build \
             -tags lambda.norpc \
-            -ldflags "-X github.com/imposter-project/imposter-go/internal/version.Version=$VERSION" \
+            -ldflags "-X main.Version=$VERSION" \
             -o "$OUTPUT_DIR/$binary_name" \
             "./external/plugins/$plugin"
         
