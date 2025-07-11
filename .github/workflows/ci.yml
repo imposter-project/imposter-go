@@ -15,7 +15,10 @@ permissions:
 jobs:
 
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
     steps:
     - uses: actions/checkout@v4
       with:
@@ -34,8 +37,21 @@ jobs:
     - name: Test
       run: go test -v ./...
 
-    - name: Run GoReleaser on Tag
-      if: startsWith(github.ref, 'refs/tags/v')
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.23'
+
+    - name: Run GoReleaser
       uses: goreleaser/goreleaser-action@v5
       with:
         distribution: goreleaser
@@ -44,8 +60,21 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Run GoReleaser Dry-Run on Main
-      if: github.ref == 'refs/heads/main'
+  dry-run:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.23'
+
+    - name: Run GoReleaser Snapshot
       uses: goreleaser/goreleaser-action@v5
       with:
         distribution: goreleaser
@@ -53,7 +82,7 @@ jobs:
         args: release --snapshot --clean
 
   publish-plugins:
-    needs: build
+    needs: release
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
     steps:
