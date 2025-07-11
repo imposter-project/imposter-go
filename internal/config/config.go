@@ -79,7 +79,9 @@ func LoadConfig(configDir string, imposterConfig *ImposterConfig) []Config {
 					return err
 				}
 				if relDir != "." {
-					fileConfig.BasePath = "/" + relDir
+					// Convert OS-specific path separators to forward slashes for URL paths
+					urlPath := strings.ReplaceAll(relDir, "\\", "/")
+					fileConfig.BasePath = "/" + urlPath
 				}
 			}
 
