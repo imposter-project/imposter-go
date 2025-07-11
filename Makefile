@@ -14,7 +14,11 @@ build-plugins:
 	mkdir -p bin
 	for p in $$( cd ./external/plugins && ls ); do \
 		echo "Building plugin $$p"; \
-		go build -tags lambda.norpc -ldflags "-X main.Version=$(VERSION)" -o ./bin/plugin-$$p ./external/plugins/$$p; \
+		if [ "$(shell go env GOOS)" = "windows" ]; then \
+			go build -tags lambda.norpc -ldflags "-X main.Version=$(VERSION)" -o ./bin/plugin-$$p.exe ./external/plugins/$$p; \
+		else \
+			go build -tags lambda.norpc -ldflags "-X main.Version=$(VERSION)" -o ./bin/plugin-$$p ./external/plugins/$$p; \
+		fi; \
 	done
 
 .PHONY: fmt
