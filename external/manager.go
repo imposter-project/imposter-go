@@ -11,8 +11,13 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"runtime"
 	"strings"
 )
+
+// represents the operating system on which the plugin is running;
+// can be overridden by tests.
+var pluginOs = runtime.GOOS
 
 var pluginMap map[string]goplugin.Plugin
 
@@ -85,7 +90,7 @@ func getHcLogLevel() hclog.Level {
 // start initialises and starts a single external plugin by its name.
 func start(pluginName string, hclogger hclog.Logger, configs []shared.LightweightConfig) error {
 	logger.Debugf("loading external plugin: %s", pluginName)
-	pluginPath := path.Join(pluginDir, "plugin-"+pluginName)
+	pluginPath := getPluginFilePath(pluginName)
 
 	// launch the plugin process
 	client := goplugin.NewClient(&goplugin.ClientConfig{
@@ -217,11 +222,23 @@ func listPluginsInDir(dir string, checkVersionedSubDir bool) (map[string]goplugi
 			continue
 		}
 
-		pluginName := strings.TrimPrefix(entry.Name(), "plugin-")
+		pluginName := getPluginNameFromFileName(entry.Name())
 		logger.Debugf("found plugin: %s", pluginName)
 		discovered[pluginName] = &shared.ExternalPlugin{}
 	}
 	return discovered, nil
+}
+
+func getPluginFilePath(pluginName string) string {
+	pluginPath := path.Join(pluginDir, "plugin-"+pluginName)
+	if pluginOs == "windows" {
+		pluginPath += ".exe"
+	}
+	return pluginPath
+}
+
+func getPluginNameFromFileName(fileName string) string {
+	return strings.TrimSuffix(strings.TrimPrefix(fileName, "plugin-"), ".exe")
 }
 
 // handshakeConfigs are used to just do a basic handshake between
