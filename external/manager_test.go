@@ -11,6 +11,106 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestGetPluginFilePath(t *testing.T) {
+	originalPluginOs := pluginOs
+	defer func() {
+		pluginOs = originalPluginOs
+	}()
+
+	originalPluginDir := pluginDir
+	defer func() {
+		pluginDir = originalPluginDir
+	}()
+
+	pluginDir = "/test/plugins"
+
+	tests := []struct {
+		name       string
+		pluginName string
+		os         string
+		expected   string
+	}{
+		{
+			name:       "Linux plugin path",
+			pluginName: "swagger",
+			os:         "linux",
+			expected:   "/test/plugins/plugin-swagger",
+		},
+		{
+			name:       "Windows plugin path",
+			pluginName: "swagger",
+			os:         "windows",
+			expected:   "/test/plugins/plugin-swagger.exe",
+		},
+		{
+			name:       "Darwin plugin path",
+			pluginName: "openapi",
+			os:         "darwin",
+			expected:   "/test/plugins/plugin-openapi",
+		},
+		{
+			name:       "Windows plugin path with complex name",
+			pluginName: "my-complex-plugin",
+			os:         "windows",
+			expected:   "/test/plugins/plugin-my-complex-plugin.exe",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pluginOs = tt.os
+			result := getPluginFilePath(tt.pluginName)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestGetPluginNameFromFileName(t *testing.T) {
+	tests := []struct {
+		name     string
+		fileName string
+		expected string
+	}{
+		{
+			name:     "Linux plugin file",
+			fileName: "plugin-swagger",
+			expected: "swagger",
+		},
+		{
+			name:     "Windows plugin file",
+			fileName: "plugin-swagger.exe",
+			expected: "swagger",
+		},
+		{
+			name:     "Complex plugin name Linux",
+			fileName: "plugin-my-complex-plugin",
+			expected: "my-complex-plugin",
+		},
+		{
+			name:     "Complex plugin name Windows",
+			fileName: "plugin-my-complex-plugin.exe",
+			expected: "my-complex-plugin",
+		},
+		{
+			name:     "Plugin with dashes",
+			fileName: "plugin-some-long-name",
+			expected: "some-long-name",
+		},
+		{
+			name:     "Plugin with dashes Windows",
+			fileName: "plugin-some-long-name.exe",
+			expected: "some-long-name",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := getPluginNameFromFileName(tt.fileName)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
 func TestIntegration_ExternalPluginLifecycle(t *testing.T) {
 	pluginDir, _ := filepath.Abs("../bin")
 
