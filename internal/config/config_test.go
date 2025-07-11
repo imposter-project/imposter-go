@@ -288,14 +288,19 @@ system:
 	require.Len(t, rootCfg.Resources, 1)
 	require.Equal(t, "/test", rootCfg.Resources[0].Path)
 
-	// Check sub-directory config paths
+	// Check subdirectory config paths
 	require.Len(t, subCfg.Resources, 2)
 	require.Equal(t, "/api/v1/users", subCfg.Resources[0].Path)
-	require.Equal(t, "api/v1/users-response.json", subCfg.Resources[0].Response.File)
-	require.Equal(t, "api/v1/static-content", subCfg.Resources[1].Response.Dir)
+	require.Equal(t, normalisePathToCurrentOs("api/v1/users-response.json"), subCfg.Resources[0].Response.File)
+	require.Equal(t, normalisePathToCurrentOs("api/v1/static-content"), subCfg.Resources[1].Response.Dir)
 
 	// Check system store preload file path
-	require.Equal(t, "api/v1/user-db.json", subCfg.System.Stores["users"].PreloadFile)
+	require.Equal(t, normalisePathToCurrentOs("api/v1/user-db.json"), subCfg.System.Stores["users"].PreloadFile)
+}
+
+// normalisePathToCurrentOs normalises the file path to use the current OS's path separator.
+func normalisePathToCurrentOs(path string) string {
+	return filepath.FromSlash(path)
 }
 
 func TestLoadConfig_WithInterceptors(t *testing.T) {
