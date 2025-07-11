@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	urlpath "path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -102,7 +103,7 @@ func LoadConfig(configDir string, imposterConfig *ImposterConfig) []Config {
 				}
 				// Prefix paths with basePath
 				if fileConfig.BasePath != "" {
-					fileConfig.Resources[i].Path = filepath.Join(fileConfig.BasePath, fileConfig.Resources[i].Path)
+					fileConfig.Resources[i].Path = urlpath.Join(fileConfig.BasePath, fileConfig.Resources[i].Path)
 				}
 
 				// Prefix step script files with relative directory
