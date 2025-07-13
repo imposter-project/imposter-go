@@ -97,7 +97,7 @@ jobs:
 
     - name: Extract version
       id: version
-      run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+      run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
     - name: Create draft release in imposter-go-plugins repo
       id: create_release
