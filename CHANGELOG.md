@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.3] - 2025-07-14
+### Changed
+- ci: bumps runner sizes for release and dry run jobs.
+- ci: push docker images to registry on release.
+- ci: sets job timeouts.
+- ci: strip v prefix when determining plugin version.
+
 ## [1.3.2] - 2025-07-13
 ### Changed
 - refactor: retain discovered plugin path instead of calculating it.
