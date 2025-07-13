@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2025-07-13
+### Changed
+- ci: adds windows runner to job matrix.
+- ci: broadens branch trigger pattern.
+- test: normalise file paths to use the current OS's path separator.
+
+### Fixed
+- fix: add conditional for building Windows plugin executables.
+- fix: correctly determine plugin name and path on windows.
+- fix: normalise auto base path separators to URL format.
+- fix: use urlpath for joining basePath in resource paths.
+
 ## [1.3.0] - 2025-07-07
 ### Added
 - feat: search versioned subdirectory for plugins.
