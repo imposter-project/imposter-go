@@ -60,6 +60,9 @@ func (s *ExtPluginRPCServer) Handle(args HandlerRequest, resp *HandlerResponse) 
 // 2. Client must return an implementation of our interface that communicates
 // over an RPC client. We return ExtPluginRPC for this.
 type ExternalPlugin struct {
+	// FilePath is the path to the plugin file.
+	FilePath string
+
 	// Impl Injection
 	Impl ExternalHandler
 }

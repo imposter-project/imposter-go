@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"runtime"
 	"strings"
 )
@@ -59,8 +60,9 @@ func StartExternalPlugins(plugins []plugin.Plugin) error {
 		})
 	}
 
-	for pluginName := range pluginMap {
-		err := start(pluginName, hclogger, lightweight)
+	for pluginName, p := range pluginMap {
+		plg := p.(*shared.ExternalPlugin)
+		err := start(pluginName, plg, hclogger, lightweight)
 		if err != nil {
 			return fmt.Errorf("failed to start plugin %s: %v", pluginName, err)
 		}
@@ -88,15 +90,23 @@ func getHcLogLevel() hclog.Level {
 }
 
 // start initialises and starts a single external plugin by its name.
-func start(pluginName string, hclogger hclog.Logger, configs []shared.LightweightConfig) error {
+func start(
+	pluginName string,
+	plg *shared.ExternalPlugin,
+	hclogger hclog.Logger,
+	configs []shared.LightweightConfig,
+) error {
 	logger.Debugf("loading external plugin: %s", pluginName)
-	pluginPath := getPluginFilePath(pluginName)
+
+	singlePlugin := map[string]goplugin.Plugin{
+		pluginName: plg,
+	}
 
 	// launch the plugin process
 	client := goplugin.NewClient(&goplugin.ClientConfig{
 		HandshakeConfig: handshakeConfig,
-		Plugins:         pluginMap,
-		Cmd:             exec.Command(pluginPath),
+		Plugins:         singlePlugin,
+		Cmd:             exec.Command(plg.FilePath),
 		Logger:          hclogger,
 	})
 
@@ -179,7 +189,7 @@ func discoverPlugins() error {
 		if err != nil {
 			return fmt.Errorf("failed to get user home directory: %v", err)
 		}
-		pluginDir = path.Join(homeDir, ".imposter", "plugins")
+		pluginDir = filepath.Join(homeDir, ".imposter", "plugins")
 	}
 
 	discovered, err := listPluginsInDir(pluginDir, true)
@@ -208,7 +218,7 @@ func listPluginsInDir(dir string, checkVersionedSubDir bool) (map[string]goplugi
 				logger.Tracef("skipping subdirectory %s, not matching version %s", entry.Name(), version.Version)
 				continue
 			}
-			subdir := path.Join(dir, entry.Name())
+			subdir := filepath.Join(dir, entry.Name())
 			subdirPlugins, err := listPluginsInDir(subdir, false)
 			if err != nil {
 				return nil, err
@@ -224,17 +234,9 @@ func listPluginsInDir(dir string, checkVersionedSubDir bool) (map[string]goplugi
 
 		pluginName := getPluginNameFromFileName(entry.Name())
 		logger.Debugf("found plugin: %s", pluginName)
-		discovered[pluginName] = &shared.ExternalPlugin{}
+		discovered[pluginName] = &shared.ExternalPlugin{FilePath: filepath.Join(dir, entry.Name())}
 	}
 	return discovered, nil
-}
-
-func getPluginFilePath(pluginName string) string {
-	pluginPath := path.Join(pluginDir, "plugin-"+pluginName)
-	if pluginOs == "windows" {
-		pluginPath += ".exe"
-	}
-	return pluginPath
 }
 
 func getPluginNameFromFileName(fileName string) string {

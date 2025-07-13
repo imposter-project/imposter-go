@@ -11,60 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGetPluginFilePath(t *testing.T) {
-	originalPluginOs := pluginOs
-	defer func() {
-		pluginOs = originalPluginOs
-	}()
-
-	originalPluginDir := pluginDir
-	defer func() {
-		pluginDir = originalPluginDir
-	}()
-
-	pluginDir = "/test/plugins"
-
-	tests := []struct {
-		name       string
-		pluginName string
-		os         string
-		expected   string
-	}{
-		{
-			name:       "Linux plugin path",
-			pluginName: "swagger",
-			os:         "linux",
-			expected:   "/test/plugins/plugin-swagger",
-		},
-		{
-			name:       "Windows plugin path",
-			pluginName: "swagger",
-			os:         "windows",
-			expected:   "/test/plugins/plugin-swagger.exe",
-		},
-		{
-			name:       "Darwin plugin path",
-			pluginName: "openapi",
-			os:         "darwin",
-			expected:   "/test/plugins/plugin-openapi",
-		},
-		{
-			name:       "Windows plugin path with complex name",
-			pluginName: "my-complex-plugin",
-			os:         "windows",
-			expected:   "/test/plugins/plugin-my-complex-plugin.exe",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			pluginOs = tt.os
-			result := getPluginFilePath(tt.pluginName)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
-
 func TestGetPluginNameFromFileName(t *testing.T) {
 	tests := []struct {
 		name     string
