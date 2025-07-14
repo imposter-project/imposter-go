@@ -87,13 +87,25 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
-    - name: Build Docker image (dry run)
+    - name: Build Docker image - core (dry run)
       uses: docker/build-push-action@v5
       with:
         context: .
+        file: ./distro/core/Dockerfile
         platforms: linux/amd64,linux/arm64
         push: false
         tags: outofcoffee/imposter:5-beta
+        build-args: |
+          VERSION=dev
+
+    - name: Build Docker image - all (dry run)
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./distro/all/Dockerfile
+        platforms: linux/amd64,linux/arm64
+        push: false
+        tags: outofcoffee/imposter-all:5-beta
         build-args: |
           VERSION=dev
 
@@ -173,12 +185,24 @@ jobs:
       id: version
       run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
-    - name: Build and push Docker image
+    - name: Build and push Docker image - core
       uses: docker/build-push-action@v5
       with:
         context: .
+        file: ./distro/core/Dockerfile
         platforms: linux/amd64,linux/arm64
         push: true
         tags: outofcoffee/imposter:5-beta
+        build-args: |
+          VERSION=${{ steps.version.outputs.VERSION }}
+
+    - name: Build and push Docker image - all
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./distro/all/Dockerfile
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: outofcoffee/imposter-all:5-beta
         build-args: |
           VERSION=${{ steps.version.outputs.VERSION }}
