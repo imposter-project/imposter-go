@@ -131,10 +131,10 @@ jobs:
     - name: Create draft release in imposter-go-plugins repo
       id: create_release
       run: |
-        gh release create ${{ steps.version.outputs.VERSION }} \
+        gh release create "v${{ steps.version.outputs.VERSION }}" \
           --repo imposter-project/imposter-go-plugins \
-          --title "Plugins ${{ steps.version.outputs.VERSION }}" \
-          --notes "External plugins for Imposter ${{ steps.version.outputs.VERSION }}" \
+          --title "Plugins v${{ steps.version.outputs.VERSION }}" \
+          --notes "External plugins for imposter-go ${{ steps.version.outputs.VERSION }}" \
           --draft
       env:
         GITHUB_TOKEN: ${{ secrets.PLUGIN_REPO_TOKEN }}
@@ -147,7 +147,7 @@ jobs:
         for file in dist/*; do
           if [ -f "$file" ]; then
             echo "Uploading $(basename "$file")"
-            gh release upload ${{ steps.version.outputs.VERSION }} "$file" \
+            gh release upload "v${{ steps.version.outputs.VERSION }}" "$file" \
               --repo imposter-project/imposter-go-plugins
           fi
         done
@@ -156,7 +156,7 @@ jobs:
 
     - name: Publish release
       run: |
-        gh release edit ${{ steps.version.outputs.VERSION }} \
+        gh release edit "v${{ steps.version.outputs.VERSION }}" \
           --repo imposter-project/imposter-go-plugins \
           --draft=false
       env:
