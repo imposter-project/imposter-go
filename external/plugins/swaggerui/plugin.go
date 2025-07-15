@@ -29,7 +29,7 @@ func main() {
 		"swaggerui": &shared.ExternalPlugin{Impl: impl},
 	}
 
-	logger.Debug("swaggerui plugin initialising", "version", Version, "path", specPrefixPath)
+	logger.Trace("swaggerui plugin initialising", "version", Version, "prefixPath", specPrefixPath)
 
 	// handshakeConfigs are used to just do a basic handshake between
 	// a plugin and host. If the handshake fails, a user-friendly error is shown.
@@ -41,6 +41,7 @@ func main() {
 		MagicCookieValue: "imposter",
 	}
 
+	logger.Info("swaggerui spec hosted at", "path", specPrefixPath+"/")
 	goplugin.Serve(&goplugin.ServeConfig{
 		HandshakeConfig: handshakeConfig,
 		Plugins:         pluginMap,

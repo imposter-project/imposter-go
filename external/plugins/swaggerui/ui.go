@@ -32,7 +32,9 @@ func init() {
 func serveStaticContent(path string) shared.HandlerResponse {
 	path = strings.TrimPrefix(path, specPrefixPath)
 	if len(path) == 0 {
-		return shared.HandlerResponse{StatusCode: 404, Body: []byte("File Not Found")}
+		return shared.HandlerResponse{StatusCode: 302, Headers: map[string]string{
+			"Location": specPrefixPath + "/",
+		}}
 	}
 
 	// index is a special case
