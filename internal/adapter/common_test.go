@@ -1,8 +1,10 @@
 package adapter
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/imposter-project/imposter-go/internal/config"
@@ -64,7 +66,7 @@ system:
 			name:          "invalid config dir",
 			configDirArg:  "/nonexistent/path",
 			wantPanic:     true,
-			panicContains: "Specified path is not a valid directory",
+			panicContains: "specified config dir '/nonexistent/path' is not a valid directory",
 		},
 		{
 			name:         "default port",
@@ -87,7 +89,7 @@ system:
 			}
 
 			if tt.wantPanic {
-				assert.PanicsWithValue(t, tt.panicContains, func() {
+				assertPanicContains(t, tt.panicContains, func() {
 					InitialiseImposter(tt.configDirArg)
 				})
 				return
@@ -207,4 +209,31 @@ resources:
 	if len(configs) > 0 {
 		assert.Equal(t, "rest", configs[0].Plugin)
 	}
+}
+
+// assertPanicContains checks that the function panics and the panic message contains the expected text
+func assertPanicContains(t *testing.T, expectedText string, f func()) {
+	t.Helper()
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Errorf("Expected panic, but function did not panic")
+			return
+		}
+
+		var actualMessage string
+		switch v := r.(type) {
+		case string:
+			actualMessage = v
+		case error:
+			actualMessage = v.Error()
+		default:
+			actualMessage = fmt.Sprintf("%v", v)
+		}
+
+		if !strings.Contains(actualMessage, expectedText) {
+			t.Errorf("Expected panic message to contain %q, but got %q", expectedText, actualMessage)
+		}
+	}()
+	f()
 }
