@@ -190,6 +190,9 @@ func SetContentTypeHeader(
 	defaultFileContentType string,
 	fallbackContentType string,
 ) {
+	if len(rs.Body) == 0 {
+		return
+	}
 	if _, exists := rs.Headers["Content-Type"]; !exists {
 		// If response is from file, try to determine content type from extension
 		if fileNameMIMEHint != "" {
