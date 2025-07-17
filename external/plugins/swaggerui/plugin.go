@@ -15,13 +15,13 @@ type SwaggerUI struct {
 	logger hclog.Logger
 }
 
-func main() {
-	logger := hclog.New(&hclog.LoggerOptions{
-		Level:      hclog.Trace,
-		Output:     os.Stderr,
-		JSONFormat: true,
-	})
+var logger = hclog.New(&hclog.LoggerOptions{
+	Level:      hclog.Trace,
+	Output:     os.Stderr,
+	JSONFormat: true,
+})
 
+func main() {
 	impl := &SwaggerUI{
 		logger: logger,
 	}
