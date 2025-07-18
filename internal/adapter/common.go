@@ -1,6 +1,7 @@
 package adapter
 
 import (
+	"fmt"
 	"github.com/imposter-project/imposter-go/external"
 	"github.com/imposter-project/imposter-go/internal/version"
 	"github.com/imposter-project/imposter-go/pkg/logger"
@@ -26,7 +27,7 @@ func InitialiseImposter(configDirArg string) (*config.ImposterConfig, []plugin.P
 
 	for _, configDir := range configDirs {
 		if info, err := os.Stat(configDir); os.IsNotExist(err) || !info.IsDir() {
-			panic("Specified path is not a valid directory")
+			panic(fmt.Errorf("specified config dir '%s' is not a valid directory", configDir))
 		}
 
 		cfgs := config.LoadConfig(configDir, imposterConfig)
