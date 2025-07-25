@@ -2,6 +2,7 @@ package external
 
 import (
 	"github.com/imposter-project/imposter-go/external/shared"
+	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/plugin"
 	"github.com/stretchr/testify/require"
 	"os"
@@ -70,7 +71,10 @@ func TestIntegration_ExternalPluginLifecycle(t *testing.T) {
 	var plugins []plugin.Plugin
 
 	// Start plugins
-	err := StartExternalPlugins(plugins)
+	imposterConfig := &config.ImposterConfig{
+		ServerUrl: "http://localhost:8080",
+	}
+	err := StartExternalPlugins(imposterConfig, plugins)
 	require.NoError(t, err)
 
 	// Call handlers

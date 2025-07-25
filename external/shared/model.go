@@ -19,6 +19,15 @@ type HandlerResponse struct {
 	FileName string
 }
 
+type ServerConfig struct {
+	URL string
+}
+
+type ExternalConfig struct {
+	Server  ServerConfig
+	Configs []LightweightConfig
+}
+
 type LightweightConfig struct {
 	ConfigDir string
 	Plugin    string
@@ -28,7 +37,7 @@ type LightweightConfig struct {
 // ExternalHandler defines the interface for external plugins to implement.
 type ExternalHandler interface {
 	// Configure is called to initialise the plugin with the loaded configuration.
-	Configure(configs []LightweightConfig) error
+	Configure(cfg ExternalConfig) error
 
 	// Handle processes the given request and returns a response.
 	// If the response code is 0 or 404, the plugin did not handle the request.
