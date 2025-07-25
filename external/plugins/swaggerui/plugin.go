@@ -21,6 +21,8 @@ var logger = hclog.New(&hclog.LoggerOptions{
 	JSONFormat: true,
 })
 
+var config shared.ExternalConfig
+
 func main() {
 	impl := &SwaggerUI{
 		logger: logger,
@@ -48,9 +50,11 @@ func main() {
 	})
 }
 
-func (s *SwaggerUI) Configure(configs []shared.LightweightConfig) error {
+func (s *SwaggerUI) Configure(cfg shared.ExternalConfig) error {
+	config = cfg
+
 	s.logger.Trace("generating spec config")
-	if err := generateSpecConfig(configs); err != nil {
+	if err := generateSpecConfig(config.Configs); err != nil {
 		return fmt.Errorf("could not generate swagger UI plugin config: %w", err)
 	}
 
@@ -70,7 +74,7 @@ func (s *SwaggerUI) Handle(args shared.HandlerRequest) shared.HandlerResponse {
 		return shared.HandlerResponse{StatusCode: 404, Body: []byte("File Not Found")}
 	}
 
-	if response := serveRawSpec(path); response != nil {
+	if response := serveRawSpec(config.Server, path); response != nil {
 		return *response
 	} else {
 		return serveStaticContent(path)

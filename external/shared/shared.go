@@ -9,9 +9,9 @@ import (
 // ExtPluginRPC is the RPC client
 type ExtPluginRPC struct{ client *rpc.Client }
 
-func (s *ExtPluginRPC) Configure(configs []LightweightConfig) error {
+func (s *ExtPluginRPC) Configure(cfg ExternalConfig) error {
 	var resp struct{} // No response needed
-	err := s.client.Call("Plugin.Configure", configs, &resp)
+	err := s.client.Call("Plugin.Configure", cfg, &resp)
 	if err != nil {
 		return fmt.Errorf("plugin.Configure: %w", err)
 	}
@@ -36,8 +36,8 @@ type ExtPluginRPCServer struct {
 	Impl ExternalHandler
 }
 
-func (s *ExtPluginRPCServer) Configure(configs []LightweightConfig, resp *struct{}) error {
-	err := s.Impl.Configure(configs)
+func (s *ExtPluginRPCServer) Configure(cfg ExternalConfig, resp *struct{}) error {
+	err := s.Impl.Configure(cfg)
 	if err != nil {
 		return fmt.Errorf("plugin.Configure: %w", err)
 	}

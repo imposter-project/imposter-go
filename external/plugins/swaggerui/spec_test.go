@@ -2,41 +2,11 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/imposter-project/imposter-go/external/shared"
 	"os"
 	"path/filepath"
 	"testing"
 )
-
-func TestGetServerURL(t *testing.T) {
-	// Test with IMPOSTER_SERVER_URL set
-	os.Setenv("IMPOSTER_SERVER_URL", "https://example.com:8080")
-	defer os.Unsetenv("IMPOSTER_SERVER_URL")
-
-	result := getServerURL()
-	expected := "https://example.com:8080"
-	if result != expected {
-		t.Errorf("Expected %s, got %s", expected, result)
-	}
-
-	// Test with custom port
-	os.Unsetenv("IMPOSTER_SERVER_URL")
-	os.Setenv("IMPOSTER_PORT", "3000")
-	defer os.Unsetenv("IMPOSTER_PORT")
-
-	result = getServerURL()
-	expected = "http://localhost:3000"
-	if result != expected {
-		t.Errorf("Expected %s, got %s", expected, result)
-	}
-
-	// Test with default port 80
-	os.Setenv("IMPOSTER_PORT", "80")
-	result = getServerURL()
-	expected = "http://localhost"
-	if result != expected {
-		t.Errorf("Expected %s, got %s", expected, result)
-	}
-}
 
 func TestServeRawSpec_OpenAPI3(t *testing.T) {
 	// Create a temporary directory for test files
@@ -68,10 +38,6 @@ func TestServeRawSpec_OpenAPI3(t *testing.T) {
 		t.Fatalf("Failed to write test spec file: %v", err)
 	}
 
-	// Set up test environment
-	os.Setenv("IMPOSTER_SERVER_URL", "https://test.example.com")
-	defer os.Unsetenv("IMPOSTER_SERVER_URL")
-
 	// Set up specConfigs
 	specConfigs = []SpecConfig{
 		{
@@ -83,7 +49,10 @@ func TestServeRawSpec_OpenAPI3(t *testing.T) {
 	}
 
 	// Test the function
-	result := serveRawSpec("/_spec/openapi/openapi.json")
+	server := shared.ServerConfig{
+		URL: "https://test.example.com",
+	}
+	result := serveRawSpec(server, "/_spec/openapi/openapi.json")
 
 	if result == nil {
 		t.Fatal("Expected non-nil result")
@@ -164,10 +133,6 @@ func TestServeRawSpec_Swagger2(t *testing.T) {
 		t.Fatalf("Failed to write test spec file: %v", err)
 	}
 
-	// Set up test environment
-	os.Setenv("IMPOSTER_SERVER_URL", "https://test.example.com/api/v1")
-	defer os.Unsetenv("IMPOSTER_SERVER_URL")
-
 	// Set up specConfigs
 	specConfigs = []SpecConfig{
 		{
@@ -179,7 +144,10 @@ func TestServeRawSpec_Swagger2(t *testing.T) {
 	}
 
 	// Test the function
-	result := serveRawSpec("/_spec/openapi/swagger.json")
+	server := shared.ServerConfig{
+		URL: "https://test.example.com/api/v1",
+	}
+	result := serveRawSpec(server, "/_spec/openapi/swagger.json")
 
 	if result == nil {
 		t.Fatal("Expected non-nil result")
@@ -253,10 +221,6 @@ paths:
 		t.Fatalf("Failed to write test spec file: %v", err)
 	}
 
-	// Set up test environment
-	os.Setenv("IMPOSTER_SERVER_URL", "http://localhost:8080")
-	defer os.Unsetenv("IMPOSTER_SERVER_URL")
-
 	// Set up specConfigs
 	specConfigs = []SpecConfig{
 		{
@@ -268,7 +232,10 @@ paths:
 	}
 
 	// Test the function
-	result := serveRawSpec("/_spec/openapi/openapi.yaml")
+	server := shared.ServerConfig{
+		URL: "http://localhost:8080",
+	}
+	result := serveRawSpec(server, "/_spec/openapi/openapi.yaml")
 
 	if result == nil {
 		t.Fatal("Expected non-nil result")
@@ -320,7 +287,8 @@ func TestServeRawSpec_NotFound(t *testing.T) {
 	specConfigs = []SpecConfig{}
 
 	// Test with non-existent spec
-	result := serveRawSpec("/_spec/openapi/nonexistent.json")
+	server := shared.ServerConfig{}
+	result := serveRawSpec(server, "/_spec/openapi/nonexistent.json")
 
 	if result != nil {
 		t.Error("Expected nil result for non-existent spec")

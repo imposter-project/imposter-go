@@ -39,37 +39,18 @@ func generateSpecConfig(configs []shared.LightweightConfig) error {
 	return nil
 }
 
-// getServerURL constructs the server URL from environment variables
-func getServerURL() string {
-	serverURL := os.Getenv("IMPOSTER_SERVER_URL")
-	if serverURL != "" {
-		return serverURL
-	}
-
-	port := os.Getenv("IMPOSTER_PORT")
-	if port == "" {
-		port = "8080"
-	}
-
-	var hostSuffix string
-	if port != "80" {
-		hostSuffix = fmt.Sprintf(":%s", port)
-	}
-	return fmt.Sprintf("http://localhost%s", hostSuffix)
-}
-
 // serveRawSpec serves the OpenAPI spec file with server URL modifications.
 // If no matching spec is found, it returns nil.
-func serveRawSpec(path string) *shared.HandlerResponse {
+func serveRawSpec(server shared.ServerConfig, path string) *shared.HandlerResponse {
 	for _, specConfig := range specConfigs {
 		if path == specConfig.URL {
-			return getSpec(specConfig)
+			return getSpec(server, specConfig)
 		}
 	}
 	return nil
 }
 
-func getSpec(specConfig SpecConfig) *shared.HandlerResponse {
+func getSpec(server shared.ServerConfig, specConfig SpecConfig) *shared.HandlerResponse {
 	specPath := filepath.Join(specConfig.ConfigDir, specConfig.OriginalPath)
 	jsonData := readSpecFromCache(specPath)
 
@@ -95,8 +76,7 @@ func getSpec(specConfig SpecConfig) *shared.HandlerResponse {
 			}
 		}
 
-		serverURL := getServerURL()
-		appendServerUrl(specMap, serverURL)
+		appendServerUrl(specMap, server.URL)
 
 		jsonData, err = json.MarshalIndent(specMap, "", "  ")
 		if err != nil {

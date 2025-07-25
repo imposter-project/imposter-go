@@ -52,7 +52,7 @@ func InitialiseImposter(configDirArg string) (*config.ImposterConfig, []plugin.P
 		config.PreCalculateResourceID(plg.GetConfig())
 	}
 
-	if err := external.StartExternalPlugins(plugins); err != nil {
+	if err := external.StartExternalPlugins(imposterConfig, plugins); err != nil {
 		panic(err)
 	}
 

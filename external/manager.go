@@ -5,6 +5,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	goplugin "github.com/hashicorp/go-plugin"
 	"github.com/imposter-project/imposter-go/external/shared"
+	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/version"
 	"github.com/imposter-project/imposter-go/pkg/logger"
 	"github.com/imposter-project/imposter-go/plugin"
@@ -12,13 +13,8 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
-	"runtime"
 	"strings"
 )
-
-// represents the operating system on which the plugin is running;
-// can be overridden by tests.
-var pluginOs = runtime.GOOS
 
 var pluginMap map[string]goplugin.Plugin
 
@@ -34,7 +30,7 @@ var loaded []LoadedPlugin
 
 // StartExternalPlugins initialises and starts all external plugins defined in the pluginMap,
 // passing the current configuration to each plugin.
-func StartExternalPlugins(plugins []plugin.Plugin) error {
+func StartExternalPlugins(imposterConfig *config.ImposterConfig, plugins []plugin.Plugin) error {
 	if err := discoverPlugins(); err != nil {
 		return fmt.Errorf("failed to discover plugins: %v", err)
 	}
@@ -50,6 +46,21 @@ func StartExternalPlugins(plugins []plugin.Plugin) error {
 		Level:  getHcLogLevel(),
 	})
 
+	cfg := buildConfig(imposterConfig, plugins)
+
+	for pluginName, p := range pluginMap {
+		plg := p.(*shared.ExternalPlugin)
+		err := start(cfg, pluginName, plg, hclogger)
+		if err != nil {
+			return fmt.Errorf("failed to start plugin %s: %v", pluginName, err)
+		}
+	}
+
+	logger.Debugf("successfully loaded %d external plugins", len(loaded))
+	return nil
+}
+
+func buildConfig(imposterConfig *config.ImposterConfig, plugins []plugin.Plugin) shared.ExternalConfig {
 	var lightweight []shared.LightweightConfig
 	for _, plg := range plugins {
 		cfg := plg.GetConfig()
@@ -60,16 +71,13 @@ func StartExternalPlugins(plugins []plugin.Plugin) error {
 		})
 	}
 
-	for pluginName, p := range pluginMap {
-		plg := p.(*shared.ExternalPlugin)
-		err := start(pluginName, plg, hclogger, lightweight)
-		if err != nil {
-			return fmt.Errorf("failed to start plugin %s: %v", pluginName, err)
-		}
+	cfg := shared.ExternalConfig{
+		Server: shared.ServerConfig{
+			URL: imposterConfig.ServerUrl,
+		},
+		Configs: lightweight,
 	}
-
-	logger.Debugf("successfully loaded %d external plugins", len(loaded))
-	return nil
+	return cfg
 }
 
 func getHcLogLevel() hclog.Level {
@@ -89,13 +97,8 @@ func getHcLogLevel() hclog.Level {
 	}
 }
 
-// start initialises and starts a single external plugin by its name.
-func start(
-	pluginName string,
-	plg *shared.ExternalPlugin,
-	hclogger hclog.Logger,
-	configs []shared.LightweightConfig,
-) error {
+// start starts and configures an external plugin
+func start(cfg shared.ExternalConfig, pluginName string, plg *shared.ExternalPlugin, hclogger hclog.Logger) error {
 	logger.Debugf("loading external plugin: %s", pluginName)
 
 	singlePlugin := map[string]goplugin.Plugin{
@@ -123,7 +126,7 @@ func start(
 	}
 	impl := raw.(shared.ExternalHandler)
 
-	err = impl.Configure(configs)
+	err = impl.Configure(cfg)
 	if err != nil {
 		return fmt.Errorf("failed to configure plugin %s: %v", pluginName, err)
 	}
