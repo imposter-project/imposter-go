@@ -1,7 +1,6 @@
 package httpserver
 
 import (
-	"github.com/imposter-project/imposter-go/external"
 	"github.com/imposter-project/imposter-go/pkg/logger"
 	"net/http"
 	"os"
@@ -30,9 +29,6 @@ func (a *HTTPAdapter) Start() {
 	}
 
 	imposterConfig, configs := adapter.InitialiseImposter(configDirArg)
-
-	// clean up resources on exit
-	defer external.StopExternalPlugins()
 
 	// Initialise and start the server with multiple configs
 	srv := newServer(imposterConfig, configs)

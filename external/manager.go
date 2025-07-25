@@ -171,6 +171,7 @@ func StopExternalPlugins() {
 		logger.Debugf("unloading external plugin: %s", l.name)
 		l.client.Kill()
 	}
+	loaded = nil
 }
 
 // discoverPlugins finds the directory from which plugins are loaded.
