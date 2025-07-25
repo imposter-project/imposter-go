@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2025-07-25
+### Added
+- feat: add server URL to served OpenAPI specs.
+- feat: inject server URL into OpenAPI specs.
+
+### Changed
+- refactor: pass server URL to plugin during init.
+- refactor: skip setting content type for empty body.
+- test: add time skew in example generation assertion.
+
+### Fixed
+- fix: graceful shutdown and cleanup for external plugins. (#24)
+
 ## [1.3.6] - 2025-07-15
 ### Changed
 - ci: prefix 'v' in plugin releases.
