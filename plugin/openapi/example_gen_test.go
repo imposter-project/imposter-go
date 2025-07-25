@@ -165,7 +165,12 @@ func TestGenerateExampleJSON(t *testing.T) {
 				require.NoError(t, err)
 				wantTime, err := time.Parse(time.RFC3339, tt.want[1:len(tt.want)-1]) // Remove quotes
 				require.NoError(t, err)
-				assert.True(t, gotTime.Equal(wantTime))
+				// Allow for small time differences due to test execution timing
+				timeDiff := gotTime.Sub(wantTime)
+				if timeDiff < 0 {
+					timeDiff = -timeDiff
+				}
+				assert.True(t, timeDiff < 10*time.Second, "time difference %v exceeds 10 second tolerance", timeDiff)
 				return
 			}
 
