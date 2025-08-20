@@ -247,7 +247,7 @@ Content-Type: image/jpeg
 			cfg := &configs[0]
 
 			// Create handler
-			handler, err := NewPluginHandler(cfg, tt.configDir, imposterConfig)
+			handler, err := NewPluginHandler(cfg, imposterConfig)
 			require.NoError(t, err, "Failed to create handler")
 
 			// Create response recorder

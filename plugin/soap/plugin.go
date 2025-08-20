@@ -10,17 +10,16 @@ import (
 // PluginHandler handles SOAP requests based on WSDL configuration
 type PluginHandler struct {
 	config         *config.Config
-	configDir      string
 	wsdlParser     WSDLParser
 	imposterConfig *config.ImposterConfig
 }
 
 // NewPluginHandler creates a new SOAP handler
-func NewPluginHandler(cfg *config.Config, configDir string, imposterConfig *config.ImposterConfig) (*PluginHandler, error) {
+func NewPluginHandler(cfg *config.Config, imposterConfig *config.ImposterConfig) (*PluginHandler, error) {
 	// If WSDLFile is not absolute, make it relative to configDir
 	wsdlPath := cfg.WSDLFile
 	if !filepath.IsAbs(wsdlPath) {
-		wsdlPath = filepath.Join(configDir, wsdlPath)
+		wsdlPath = filepath.Join(cfg.ConfigDir, wsdlPath)
 	}
 
 	parser, err := newWSDLParser(wsdlPath)
@@ -35,15 +34,9 @@ func NewPluginHandler(cfg *config.Config, configDir string, imposterConfig *conf
 
 	return &PluginHandler{
 		config:         cfg,
-		configDir:      configDir,
 		wsdlParser:     parser,
 		imposterConfig: imposterConfig,
 	}, nil
-}
-
-// GetConfigDir returns the original config directory
-func (h *PluginHandler) GetConfigDir() string {
-	return h.configDir
 }
 
 func (h *PluginHandler) GetConfig() *config.Config {

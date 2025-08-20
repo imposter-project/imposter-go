@@ -41,7 +41,7 @@ resources:
 		ServerUrl:  "http://localhost:8080",
 	}
 	configs := config.LoadConfig(tempDir, imposterConfig)
-	plugins := plugin.LoadPlugins(configs, tempDir, imposterConfig)
+	plugins := plugin.LoadPlugins(configs, imposterConfig)
 
 	// Capture log output
 	var logOutput bytes.Buffer
@@ -127,7 +127,7 @@ func TestInterceptorLog(t *testing.T) {
 	imposterConfig := &config.ImposterConfig{
 		ServerPort: "8080",
 	}
-	plugins := plugin.LoadPlugins(configs, "", imposterConfig)
+	plugins := plugin.LoadPlugins(configs, imposterConfig)
 
 	// Capture log output
 	var logOutput bytes.Buffer
@@ -180,7 +180,7 @@ func TestComplexLogTemplates(t *testing.T) {
 	imposterConfig := &config.ImposterConfig{
 		ServerPort: "8080",
 	}
-	plugins := plugin.LoadPlugins(configs, "", imposterConfig)
+	plugins := plugin.LoadPlugins(configs, imposterConfig)
 
 	// Capture log output
 	var logOutput bytes.Buffer

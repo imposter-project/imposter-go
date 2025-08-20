@@ -10,16 +10,15 @@ import (
 // PluginHandler handles OpenAPI mock requests
 type PluginHandler struct {
 	config            *config.Config
-	configDir         string
 	openApiParser     OpenAPIParser
 	imposterConfig    *config.ImposterConfig
 	restPluginHandler *rest.PluginHandler
 }
 
 // NewPluginHandler creates a new OpenAPI plugin handler
-func NewPluginHandler(cfg *config.Config, configDir string, imposterConfig *config.ImposterConfig) (*PluginHandler, error) {
+func NewPluginHandler(cfg *config.Config, imposterConfig *config.ImposterConfig) (*PluginHandler, error) {
 	// Resolve spec file path (handles URL downloads if needed)
-	specFile, err := resolveSpecFile(cfg.SpecFile, configDir)
+	specFile, err := resolveSpecFile(cfg.SpecFile, cfg.ConfigDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve OpenAPI spec file: %w", err)
 	}
@@ -38,23 +37,17 @@ func NewPluginHandler(cfg *config.Config, configDir string, imposterConfig *conf
 		return nil, fmt.Errorf("failed to augment config with OpenAPI spec: %w", err)
 	}
 
-	restPluginHandler, err := rest.NewPluginHandler(cfg, configDir, imposterConfig)
+	restPluginHandler, err := rest.NewPluginHandler(cfg, imposterConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create REST plugin handler: %w", err)
 	}
 
 	return &PluginHandler{
 		config:            cfg,
-		configDir:         configDir,
 		openApiParser:     parser,
 		imposterConfig:    imposterConfig,
 		restPluginHandler: restPluginHandler,
 	}, nil
-}
-
-// GetConfigDir returns the original config directory
-func (h *PluginHandler) GetConfigDir() string {
-	return h.configDir
 }
 
 // GetConfig returns the plugin configuration

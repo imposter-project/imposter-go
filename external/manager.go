@@ -8,7 +8,6 @@ import (
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/version"
 	"github.com/imposter-project/imposter-go/pkg/logger"
-	"github.com/imposter-project/imposter-go/plugin"
 	"os"
 	"os/exec"
 	"path"
@@ -30,7 +29,7 @@ var loaded []LoadedPlugin
 
 // StartExternalPlugins initialises and starts all external plugins defined in the pluginMap,
 // passing the current configuration to each plugin.
-func StartExternalPlugins(imposterConfig *config.ImposterConfig, plugins []plugin.Plugin) error {
+func StartExternalPlugins(imposterConfig *config.ImposterConfig, configs []config.Config) error {
 	if err := discoverPlugins(); err != nil {
 		return fmt.Errorf("failed to discover plugins: %v", err)
 	}
@@ -46,7 +45,7 @@ func StartExternalPlugins(imposterConfig *config.ImposterConfig, plugins []plugi
 		Level:  getHcLogLevel(),
 	})
 
-	cfg := buildConfig(imposterConfig, plugins)
+	cfg := buildConfig(imposterConfig, configs)
 
 	for pluginName, p := range pluginMap {
 		plg := p.(*shared.ExternalPlugin)
@@ -60,12 +59,11 @@ func StartExternalPlugins(imposterConfig *config.ImposterConfig, plugins []plugi
 	return nil
 }
 
-func buildConfig(imposterConfig *config.ImposterConfig, plugins []plugin.Plugin) shared.ExternalConfig {
+func buildConfig(imposterConfig *config.ImposterConfig, configs []config.Config) shared.ExternalConfig {
 	var lightweight []shared.LightweightConfig
-	for _, plg := range plugins {
-		cfg := plg.GetConfig()
+	for _, cfg := range configs {
 		lightweight = append(lightweight, shared.LightweightConfig{
-			ConfigDir: plg.GetConfigDir(),
+			ConfigDir: cfg.ConfigDir,
 			Plugin:    cfg.Plugin,
 			SpecFile:  cfg.SpecFile,
 		})

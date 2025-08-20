@@ -12,10 +12,6 @@ import (
 )
 
 type Plugin interface {
-	// GetConfigDir returns the original config directory, *which might be a parent*,
-	// from which the config file was discovered.
-	GetConfigDir() string
-
 	// GetConfig returns the plugin configuration
 	GetConfig() *config.Config
 
@@ -23,30 +19,35 @@ type Plugin interface {
 	HandleRequest(exch *exchange.Exchange, respProc response.Processor)
 }
 
-// LoadPlugins loads plugins from the provided configs
-func LoadPlugins(configs []config.Config, configDir string, imposterConfig *config.ImposterConfig) []Plugin {
+// LoadPlugin loads the plugin from the provided config
+func LoadPlugin(cfg *config.Config, imposterConfig *config.ImposterConfig) Plugin {
+	var err error
+	var plg Plugin
+
+	switch cfg.Plugin {
+	case "openapi":
+		plg, err = openapi.NewPluginHandler(cfg, imposterConfig)
+	case "rest":
+		plg, err = rest.NewPluginHandler(cfg, imposterConfig)
+	case "soap":
+		plg, err = soap.NewPluginHandler(cfg, imposterConfig)
+	default:
+		panic("Unsupported plugin type: " + cfg.Plugin)
+	}
+
+	if err != nil {
+		panic(fmt.Errorf("failed to initialise plugin: %w", err))
+	}
+
+	return plg
+}
+
+// LoadPlugins loads multiple plugins based on the provided configurations
+// and returns a slice of Plugin interfaces.
+func LoadPlugins(configs []config.Config, imposterConfig *config.ImposterConfig) []Plugin {
 	var plugins []Plugin
-
-	// Process each config
 	for _, cfg := range configs {
-		var err error
-		var plugin Plugin
-
-		switch cfg.Plugin {
-		case "openapi":
-			plugin, err = openapi.NewPluginHandler(&cfg, configDir, imposterConfig)
-		case "rest":
-			plugin, err = rest.NewPluginHandler(&cfg, configDir, imposterConfig)
-		case "soap":
-			plugin, err = soap.NewPluginHandler(&cfg, configDir, imposterConfig)
-		default:
-			panic("Unsupported plugin type: " + cfg.Plugin)
-		}
-
-		if err != nil {
-			panic(fmt.Errorf("failed to initialise plugin: %w", err))
-		}
-		plugins = append(plugins, plugin)
+		plugins = append(plugins, LoadPlugin(&cfg, imposterConfig))
 	}
 	return plugins
 }

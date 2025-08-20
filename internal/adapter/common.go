@@ -22,27 +22,34 @@ func InitialiseImposter(configDirArg string) (*config.ImposterConfig, []plugin.P
 
 	store.InitStoreProvider()
 
-	var plugins []plugin.Plugin
-	totalConfigs := 0
-
+	var configs []config.Config
 	for _, configDir := range configDirs {
 		if info, err := os.Stat(configDir); os.IsNotExist(err) || !info.IsDir() {
 			panic(fmt.Errorf("specified config dir '%s' is not a valid directory", configDir))
 		}
 
 		cfgs := config.LoadConfig(configDir, imposterConfig)
-		totalConfigs += len(cfgs)
-		plgs := plugin.LoadPlugins(cfgs, configDir, imposterConfig)
-
 		store.PreloadStores(configDir, cfgs)
 
-		plugins = append(plugins, plgs...)
+		configs = append(configs, cfgs...)
 	}
 
 	// Exit if no configuration files were found
-	if totalConfigs == 0 {
+	if len(configs) == 0 {
 		logger.Errorf("no configuration files found in specified directories: %v", configDirs)
 		os.Exit(1)
+	} else {
+		logger.Tracef("%d configs discovered", len(configs))
+	}
+
+	var plugins []plugin.Plugin
+	for _, cfg := range configs {
+		plg := plugin.LoadPlugin(&cfg, imposterConfig)
+		plugins = append(plugins, plg)
+	}
+
+	if err := external.StartExternalPlugins(imposterConfig, configs); err != nil {
+		panic(err)
 	}
 
 	// Pre-calculate resource IDs for all loaded configurations.
@@ -50,10 +57,6 @@ func InitialiseImposter(configDirArg string) (*config.ImposterConfig, []plugin.P
 	// any dynamic resources added by the plugin.
 	for _, plg := range plugins {
 		config.PreCalculateResourceID(plg.GetConfig())
-	}
-
-	if err := external.StartExternalPlugins(imposterConfig, plugins); err != nil {
-		panic(err)
 	}
 
 	return imposterConfig, plugins

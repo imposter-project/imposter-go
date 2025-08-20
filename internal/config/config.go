@@ -71,6 +71,9 @@ func LoadConfig(configDir string, imposterConfig *ImposterConfig) []Config {
 				return err
 			}
 
+			// Record the original config directory
+			fileConfig.ConfigDir = configDir
+
 			// Set basePath if autoBasePath is enabled
 			if autoBasePath && fileConfig.BasePath == "" {
 				baseDir := filepath.Dir(path)
@@ -147,16 +150,6 @@ func LoadConfig(configDir string, imposterConfig *ImposterConfig) []Config {
 	})
 	if err != nil {
 		panic(err)
-	}
-
-	// Validate plugin types
-	for _, cfg := range configs {
-		switch cfg.Plugin {
-		case "openapi", "rest", "soap":
-			// Valid plugins
-		default:
-			panic("Unsupported plugin type: " + cfg.Plugin)
-		}
 	}
 
 	return configs

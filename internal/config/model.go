@@ -405,6 +405,11 @@ type Config struct {
 	SpecFile        string            `yaml:"specFile,omitempty"`
 	StripServerPath bool              `yaml:"stripServerPath,omitempty"`
 	Validation      *ValidationConfig `yaml:"validation,omitempty"`
+
+	// ConfigDir returns the original config directory, *which might be a parent*,
+	// from which the config file was discovered.
+	// Note that it is set by the config loader at runtime and not part of the file contents.
+	ConfigDir string `yaml:"-"`
 }
 
 // ImposterConfig holds application-wide configuration

@@ -171,7 +171,7 @@ func TestSOAPHandler_HandleRequest(t *testing.T) {
 			}
 
 			// Create handler
-			handler, err := NewPluginHandler(cfg, tempDir, &config.ImposterConfig{})
+			handler, err := NewPluginHandler(cfg, &config.ImposterConfig{})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -278,7 +278,7 @@ func TestSOAPHandler_HandleRequest_InvalidMethod(t *testing.T) {
 			}
 
 			// Create handler
-			handler, err := NewPluginHandler(cfg, ".", &config.ImposterConfig{})
+			handler, err := NewPluginHandler(cfg, &config.ImposterConfig{})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -359,7 +359,7 @@ func TestSOAPHandler_HandleRequest_NoMatchingOperation(t *testing.T) {
 			}
 
 			// Create handler
-			handler, err := NewPluginHandler(cfg, ".", &config.ImposterConfig{})
+			handler, err := NewPluginHandler(cfg, &config.ImposterConfig{})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -434,7 +434,7 @@ func TestSOAPHandler_HandleRequest_WithInterceptor(t *testing.T) {
 	configDir := "."
 
 	// Create handler
-	handler, err := NewPluginHandler(cfg, configDir, &config.ImposterConfig{})
+	handler, err := NewPluginHandler(cfg, &config.ImposterConfig{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -541,7 +541,7 @@ func TestSOAPHandler_HandleRequest_WithPassthroughInterceptor(t *testing.T) {
 	configDir := "."
 
 	// Create handler
-	handler, err := NewPluginHandler(cfg, configDir, &config.ImposterConfig{})
+	handler, err := NewPluginHandler(cfg, &config.ImposterConfig{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -620,7 +620,7 @@ func TestSOAPHandler_HandleRequest_InvalidXML(t *testing.T) {
 			}
 
 			// Create handler
-			handler, err := NewPluginHandler(cfg, ".", &config.ImposterConfig{})
+			handler, err := NewPluginHandler(cfg, &config.ImposterConfig{})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -695,7 +695,7 @@ func TestSOAPHandler_HandleRequest_MissingBody(t *testing.T) {
 			}
 
 			// Create handler
-			handler, err := NewPluginHandler(cfg, ".", &config.ImposterConfig{})
+			handler, err := NewPluginHandler(cfg, &config.ImposterConfig{})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -877,7 +877,7 @@ func TestSOAPHandler_SOAPFault(t *testing.T) {
 			configDir := "."
 
 			// Create handler
-			handler, err := NewPluginHandler(cfg, configDir, &config.ImposterConfig{})
+			handler, err := NewPluginHandler(cfg, &config.ImposterConfig{})
 			if err != nil {
 				t.Fatal(err)
 			}

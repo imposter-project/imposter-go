@@ -43,7 +43,7 @@ func TestHandler_HandleRequest_NoMatchingResource(t *testing.T) {
 	}
 
 	// Create handler
-	handler, err := NewPluginHandler(cfg, tempDir, &config.ImposterConfig{})
+	handler, err := NewPluginHandler(cfg, &config.ImposterConfig{})
 	if err != nil {
 		t.Fatalf("Failed to create handler: %v", err)
 	}
@@ -92,7 +92,7 @@ func TestHandler_HandleRequest_MatchingResource(t *testing.T) {
 	}
 
 	// Create handler
-	handler, err := NewPluginHandler(cfg, tempDir, &config.ImposterConfig{})
+	handler, err := NewPluginHandler(cfg, &config.ImposterConfig{})
 	if err != nil {
 		t.Fatalf("Failed to create handler: %v", err)
 	}
@@ -164,7 +164,7 @@ func TestHandler_HandleRequest_WithInterceptor(t *testing.T) {
 	}
 
 	// Create handler
-	handler, err := NewPluginHandler(cfg, tempDir, &config.ImposterConfig{})
+	handler, err := NewPluginHandler(cfg, &config.ImposterConfig{})
 	if err != nil {
 		t.Fatalf("Failed to create handler: %v", err)
 	}
@@ -230,7 +230,7 @@ func TestHandler_HandleRequest_WithPathParams(t *testing.T) {
 	}
 
 	// Create handler
-	handler, err := NewPluginHandler(cfg, tempDir, &config.ImposterConfig{})
+	handler, err := NewPluginHandler(cfg, &config.ImposterConfig{})
 	if err != nil {
 		t.Fatalf("Failed to create handler: %v", err)
 	}
@@ -295,7 +295,7 @@ func TestHandler_HandleRequest_WithResponseFile(t *testing.T) {
 	}
 
 	// Create handler
-	handler, err := NewPluginHandler(cfg, tempDir, &config.ImposterConfig{})
+	handler, err := NewPluginHandler(cfg, &config.ImposterConfig{})
 	if err != nil {
 		t.Fatalf("Failed to create handler: %v", err)
 	}
@@ -361,7 +361,7 @@ func TestHandler_HandleRequest_WithRequestBody(t *testing.T) {
 	}
 
 	// Create handler
-	handler, err := NewPluginHandler(cfg, tempDir, &config.ImposterConfig{})
+	handler, err := NewPluginHandler(cfg, &config.ImposterConfig{})
 	if err != nil {
 		t.Fatalf("Failed to create handler: %v", err)
 	}
@@ -433,7 +433,7 @@ func TestHandler_HandleRequest_WithXMLNamespaces(t *testing.T) {
 	}
 
 	// Create handler
-	handler, err := NewPluginHandler(cfg, tempDir, &config.ImposterConfig{})
+	handler, err := NewPluginHandler(cfg, &config.ImposterConfig{})
 	if err != nil {
 		t.Fatalf("Failed to create handler: %v", err)
 	}

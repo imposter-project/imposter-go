@@ -54,7 +54,7 @@ func HandleRequest(imposterConfig *config.ImposterConfig, w http.ResponseWriter,
 	// Process each plugin
 	for _, plg := range plugins {
 		// Standard response processor
-		responseProc := response.NewProcessor(imposterConfig, plg.GetConfigDir())
+		responseProc := response.NewProcessor(imposterConfig, plg.GetConfig().ConfigDir)
 
 		// Process request with handler
 		plg.HandleRequest(exch, responseProc)

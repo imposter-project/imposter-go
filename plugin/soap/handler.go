@@ -263,7 +263,7 @@ func (h *PluginHandler) HandleRequest(exch *exchange.Exchange, respProc response
 
 			// Execute steps if present
 			if len(interceptorCfg.Steps) > 0 {
-				if err := steps.RunSteps(interceptorCfg.Steps, exch, h.imposterConfig, h.configDir, responseState, &interceptorCfg.RequestMatcher); err != nil {
+				if err := steps.RunSteps(interceptorCfg.Steps, exch, h.imposterConfig, h.config.ConfigDir, responseState, &interceptorCfg.RequestMatcher); err != nil {
 					logger.Errorf("failed to execute interceptor steps: %v", err)
 					soapVersion := bodyHolder.GetSOAPVersion()
 					h.failWithSOAPFault(soapVersion, bodyHolder.EnvNamespace, responseState, "Failed to execute steps", http.StatusInternalServerError)
@@ -330,7 +330,7 @@ func (h *PluginHandler) HandleRequest(exch *exchange.Exchange, respProc response
 
 	// Execute steps if present
 	if len(best.Resource.Steps) > 0 {
-		if err := steps.RunSteps(best.Resource.Steps, exch, h.imposterConfig, h.configDir, responseState, &best.Resource.RequestMatcher); err != nil {
+		if err := steps.RunSteps(best.Resource.Steps, exch, h.imposterConfig, h.config.ConfigDir, responseState, &best.Resource.RequestMatcher); err != nil {
 			logger.Errorf("failed to execute resource steps: %v", err)
 			soapVersion := bodyHolder.GetSOAPVersion()
 			h.failWithSOAPFault(soapVersion, bodyHolder.EnvNamespace, responseState, "Failed to execute steps", http.StatusInternalServerError)
