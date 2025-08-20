@@ -1,0 +1,14 @@
+# Example OIDC Server Configuration
+# This demonstrates how to use the oidc-server external plugin
+
+plugin: oidc-server
+resources: []
+
+# Note: The oidc-server plugin will automatically handle the following endpoints:
+# - /.well-known/openid-configuration (OIDC discovery)
+# - /oidc/authorize (authorization endpoint)
+# - /oidc/token (token endpoint)
+# - /oidc/userinfo (userinfo endpoint)
+# 
+# User credentials and client configurations are loaded from oidc-users.yaml
+# in the same directory as this configuration file.

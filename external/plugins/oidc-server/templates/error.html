@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error - OIDC Server</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .error-container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+        }
+        .error-icon {
+            font-size: 64px;
+            color: #e74c3c;
+            margin-bottom: 20px;
+        }
+        .error-title {
+            color: #333;
+            margin: 0 0 15px 0;
+            font-size: 28px;
+            font-weight: 600;
+        }
+        .error-description {
+            color: #666;
+            margin: 0 0 30px 0;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+        .error-code {
+            background: #f8f9fa;
+            color: #6c757d;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 16px;
+            transition: transform 0.2s;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="error-icon">⚠️</div>
+        <h1 class="error-title">{{.ErrorCode}}</h1>
+        <p class="error-description">{{.ErrorDescription}}</p>
+        <div class="error-code">Error Code: {{.ErrorCode}}</div>
+        <a href="javascript:history.back()" class="btn">Go Back</a>
+    </div>
+</body>
+</html>
