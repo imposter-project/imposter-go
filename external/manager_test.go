@@ -73,8 +73,12 @@ func TestIntegration_ExternalPluginLifecycle(t *testing.T) {
 	imposterConfig := &config.ImposterConfig{
 		ServerUrl: "http://localhost:8080",
 	}
-	err := StartExternalPlugins(imposterConfig, configs)
+	loaded, err := StartExternalPlugins(imposterConfig, configs)
 	require.NoError(t, err)
+	require.NotEmpty(t, loaded, "Expected external plugins to be loaded")
+
+	// Check if plugins are loaded
+	require.NotEmpty(t, loaded, "Expected plugins to be loaded")
 
 	// Call handlers
 	resp := InvokeExternalHandlers(shared.HandlerRequest{Method: "get", Path: "/_spec/"})

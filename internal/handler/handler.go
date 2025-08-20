@@ -2,7 +2,6 @@ package handler
 
 import (
 	"github.com/imposter-project/imposter-go/external"
-	exthandler "github.com/imposter-project/imposter-go/external/shared"
 	"github.com/imposter-project/imposter-go/internal/matcher"
 	"net/http"
 	"strings"
@@ -66,6 +65,7 @@ func HandleRequest(imposterConfig *config.ImposterConfig, w http.ResponseWriter,
 	}
 
 	if !responseState.Handled {
+		// TODO check if any plugins indicate they are 'wildcard' handlers
 		invokeExternalHandlers(req, exch, imposterConfig)
 	}
 
@@ -103,20 +103,10 @@ func invokeExternalHandlers(
 	exch *exchange.Exchange,
 	imposterConfig *config.ImposterConfig,
 ) {
-	handlerResp := external.InvokeExternalHandlers(exthandler.HandlerRequest{
-		Method:  req.Method,
-		Path:    req.URL.Path,
-		Headers: nil,
-	})
+	handlerReq := external.ConvertToExternalRequest(req)
+	handlerResp := external.InvokeExternalHandlers(handlerReq)
 	if handlerResp != nil {
-		rs := exch.ResponseState
-		rs.Handled = true
-		rs.StatusCode = handlerResp.StatusCode
-		rs.File = handlerResp.File
-		rs.Body = handlerResp.Body
-
-		response.CopyResponseHeaders(handlerResp.Headers, rs)
-		response.SetContentTypeHeader(rs, handlerResp.FileName, "", "")
+		external.ConvertFromExternalResponse(exch, handlerResp)
 
 		responseProc := response.NewProcessor(imposterConfig, handlerResp.FileBaseDir)
 		responseProc(exch, nil, &config.Response{})

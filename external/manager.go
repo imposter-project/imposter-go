@@ -18,7 +18,7 @@ import (
 var pluginMap map[string]goplugin.Plugin
 
 type LoadedPlugin struct {
-	name   string
+	Name   string
 	client *goplugin.Client
 	impl   *shared.ExternalHandler
 }
@@ -29,13 +29,13 @@ var loaded []LoadedPlugin
 
 // StartExternalPlugins initialises and starts all external plugins defined in the pluginMap,
 // passing the current configuration to each plugin.
-func StartExternalPlugins(imposterConfig *config.ImposterConfig, configs []config.Config) error {
+func StartExternalPlugins(imposterConfig *config.ImposterConfig, configs []config.Config) ([]LoadedPlugin, error) {
 	if err := discoverPlugins(); err != nil {
-		return fmt.Errorf("failed to discover plugins: %v", err)
+		return nil, fmt.Errorf("failed to discover plugins: %v", err)
 	}
 	if !hasPlugins {
 		logger.Tracef("no external plugins found to load")
-		return nil
+		return nil, nil
 	}
 	logger.Tracef("external plugins enabled")
 
@@ -51,12 +51,12 @@ func StartExternalPlugins(imposterConfig *config.ImposterConfig, configs []confi
 		plg := p.(*shared.ExternalPlugin)
 		err := start(cfg, pluginName, plg, hclogger)
 		if err != nil {
-			return fmt.Errorf("failed to start plugin %s: %v", pluginName, err)
+			return nil, fmt.Errorf("failed to start plugin %s: %v", pluginName, err)
 		}
 	}
 
 	logger.Debugf("successfully loaded %d external plugins", len(loaded))
-	return nil
+	return loaded, nil
 }
 
 func buildConfig(imposterConfig *config.ImposterConfig, configs []config.Config) shared.ExternalConfig {
@@ -130,7 +130,7 @@ func start(cfg shared.ExternalConfig, pluginName string, plg *shared.ExternalPlu
 	}
 
 	loaded = append(loaded, LoadedPlugin{
-		name:   pluginName,
+		Name:   pluginName,
 		client: client,
 		impl:   &impl,
 	})
@@ -149,14 +149,14 @@ func InvokeExternalHandlers(args shared.HandlerRequest) *shared.HandlerResponse 
 		impl := *l.impl
 		resp = impl.Handle(args)
 		if resp.StatusCode >= 100 && resp.StatusCode < 300 {
-			logger.Debugf("response from plugin %s: status=%d body=%d bytes", l.name, resp.StatusCode, len(resp.Body))
+			logger.Debugf("response from plugin %s: status=%d body=%d bytes", l.Name, resp.StatusCode, len(resp.Body))
 			break
 		} else if resp.StatusCode == 0 || resp.StatusCode == 404 {
 			// plugin did not handle the request, continue to the next plugin
-			logger.Tracef("plugin %s did not handle the request, continuing to next plugin", l.name)
+			logger.Tracef("plugin %s did not handle the request, continuing to next plugin", l.Name)
 			continue
 		} else {
-			logger.Errorf("error response from plugin %s: status=%d body=%d bytes", l.name, resp.StatusCode, len(resp.Body))
+			logger.Errorf("error response from plugin %s: status=%d body=%d bytes", l.Name, resp.StatusCode, len(resp.Body))
 			break
 		}
 	}
@@ -169,7 +169,7 @@ func StopExternalPlugins() {
 		return
 	}
 	for _, l := range loaded {
-		logger.Debugf("unloading external plugin: %s", l.name)
+		logger.Debugf("unloading external plugin: %s", l.Name)
 		l.client.Kill()
 	}
 	loaded = nil

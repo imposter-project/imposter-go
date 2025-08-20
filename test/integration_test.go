@@ -34,7 +34,8 @@ resources:
 
 	imposterConfig := config.LoadImposterConfig()
 	configs := config.LoadConfig(tempDir, imposterConfig)
-	plugins := plugin.LoadPlugins(configs, imposterConfig)
+	plugins, err := plugin.LoadPlugins(configs, imposterConfig, nil)
+	require.NoError(t, err)
 
 	// Start the server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -75,7 +76,8 @@ resources:
 
 	imposterConfig := config.LoadImposterConfig()
 	configs := config.LoadConfig(tempDir, imposterConfig)
-	plugins := plugin.LoadPlugins(configs, imposterConfig)
+	plugins, err := plugin.LoadPlugins(configs, imposterConfig, nil)
+	require.NoError(t, err)
 
 	// Start the server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -134,7 +136,8 @@ func TestInterceptors_ShortCircuit(t *testing.T) {
 	imposterConfig := &config.ImposterConfig{
 		ServerPort: "8080",
 	}
-	plugins := plugin.LoadPlugins(configs, imposterConfig)
+	plugins, err := plugin.LoadPlugins(configs, imposterConfig, nil)
+	require.NoError(t, err)
 
 	// Test with invalid user agent
 	req, err := http.NewRequest("GET", "/example", new(strings.Reader))
@@ -199,7 +202,8 @@ func TestInterceptors_Passthrough(t *testing.T) {
 	imposterConfig := &config.ImposterConfig{
 		ServerPort: "8080",
 	}
-	plugins := plugin.LoadPlugins(configs, imposterConfig)
+	plugins, err := plugin.LoadPlugins(configs, imposterConfig, nil)
+	require.NoError(t, err)
 
 	req, err := http.NewRequest("GET", "/example", new(strings.Reader))
 	if err != nil {

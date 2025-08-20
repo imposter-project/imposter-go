@@ -35,7 +35,8 @@ func TestSystemStatus(t *testing.T) {
 	imposterConfig := &config.ImposterConfig{
 		ServerPort: "8080",
 	}
-	plugins := plugin.LoadPlugins(configs, imposterConfig)
+	plugins, err := plugin.LoadPlugins(configs, imposterConfig, nil)
+	require.NoError(t, err)
 
 	// Start test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -42,14 +42,14 @@ func InitialiseImposter(configDirArg string) (*config.ImposterConfig, []plugin.P
 		logger.Tracef("%d configs discovered", len(configs))
 	}
 
-	var plugins []plugin.Plugin
-	for _, cfg := range configs {
-		plg := plugin.LoadPlugin(&cfg, imposterConfig)
-		plugins = append(plugins, plg)
+	externalPlugins, err := external.StartExternalPlugins(imposterConfig, configs)
+	if err != nil {
+		panic(fmt.Errorf("error starting external plugins: %w", err))
 	}
 
-	if err := external.StartExternalPlugins(imposterConfig, configs); err != nil {
-		panic(err)
+	plugins, err := plugin.LoadPlugins(configs, imposterConfig, externalPlugins)
+	if err != nil {
+		panic(fmt.Errorf("error loading plugins: %w", err))
 	}
 
 	// Pre-calculate resource IDs for all loaded configurations.
