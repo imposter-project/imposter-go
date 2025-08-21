@@ -13,6 +13,12 @@
                 "basePath": {
                     "type": "string"
                 },
+                "externalBaseURL": {
+                    "type": "string"
+                },
+                "specFile": {
+                    "type": "string"
+                },
                 "wsdlFile": {
                     "type": "string"
                 },
@@ -72,6 +78,14 @@
                     },
                     "additionalProperties": false
                 }
+            },
+            "if": {
+                "plugin": {
+                    "type": { "const": "openapi" }
+                }
+            },
+            "then": {
+                "required": ["specFile"]
             },
             "additionalProperties": false
         }
