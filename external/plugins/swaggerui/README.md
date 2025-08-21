@@ -55,18 +55,25 @@ The SwaggerUI plugin will automatically:
 
 ### Multiple Specifications
 
+#### petstore-config.yaml
+
 ```yaml
-# petstore-config.yaml
 plugin: openapi
 specFile: specs/petstore.yaml
 resources: []
 ---
-# users-config.yaml  
+# enable Swagger UI
+plugin: swaggerui
+```
+
+#### users-config.yaml
+
+```yaml
 plugin: openapi
 specFile: specs/users.yaml
 resources: []
 ---
-# swaggerui-config.yaml
+# enable Swagger UI
 plugin: swaggerui
 ```
 
@@ -357,23 +364,36 @@ paths:
 
 ### Multiple API Documentation
 
+#### users-config.yaml
+
 ```yaml
-# users-config.yaml
 plugin: openapi
 specFile: specs/users-api.yaml
 resources: []
 ---
-# products-config.yaml
+# enable Swagger UI
+plugin: swaggerui
+```
+
+#### products-config.yaml
+
+```yaml
 plugin: openapi  
 specFile: specs/products-api.yaml
 resources: []
 ---
-# orders-config.yaml
+# enable Swagger UI
+plugin: swaggerui
+```
+
+#### orders-config.yaml
+
+```yaml
 plugin: openapi
 specFile: specs/orders-api.yaml  
 resources: []
 ---
-# swaggerui-config.yaml
+# enable Swagger UI
 plugin: swaggerui
 ```
 

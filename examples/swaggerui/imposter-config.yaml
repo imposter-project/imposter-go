@@ -1,2 +1,4 @@
 plugin: openapi
 specFile: petstore30.yaml
+---
+plugin: swaggerui

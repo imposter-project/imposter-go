@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"io"
 	"os"
 	urlpath "path"
 	"path/filepath"
@@ -66,85 +67,88 @@ func LoadConfig(configDir string, imposterConfig *ImposterConfig) []Config {
 
 		if !info.IsDir() && (strings.HasSuffix(info.Name(), "-config.json") || strings.HasSuffix(info.Name(), "-config.yaml") || strings.HasSuffix(info.Name(), "-config.yml")) {
 			logger.Infof("loading config file: %s", path)
-			fileConfig, err := parseConfig(path, imposterConfig)
+			fileConfigs, err := parseConfig(path, imposterConfig)
 			if err != nil {
 				return err
 			}
 
-			// Record the original config directory
-			fileConfig.ConfigDir = configDir
+			// Process each config from the file (support for multiple YAML documents)
+			for _, fileConfig := range fileConfigs {
+				// Record the original config directory
+				fileConfig.ConfigDir = configDir
 
-			// Set basePath if autoBasePath is enabled
-			if autoBasePath && fileConfig.BasePath == "" {
+				// Set basePath if autoBasePath is enabled
+				if autoBasePath && fileConfig.BasePath == "" {
+					baseDir := filepath.Dir(path)
+					relDir, err := filepath.Rel(configDir, baseDir)
+					if err != nil {
+						return err
+					}
+					if relDir != "." {
+						// Convert OS-specific path separators to forward slashes for URL paths
+						urlPath := strings.ReplaceAll(relDir, "\\", "/")
+						fileConfig.BasePath = "/" + urlPath
+					}
+				}
+
+				// Prefix referenced files with relative directory if in a subdirectory
 				baseDir := filepath.Dir(path)
 				relDir, err := filepath.Rel(configDir, baseDir)
 				if err != nil {
 					return err
 				}
-				if relDir != "." {
-					// Convert OS-specific path separators to forward slashes for URL paths
-					urlPath := strings.ReplaceAll(relDir, "\\", "/")
-					fileConfig.BasePath = "/" + urlPath
-				}
-			}
 
-			// Prefix referenced files with relative directory if in a subdirectory
-			baseDir := filepath.Dir(path)
-			relDir, err := filepath.Rel(configDir, baseDir)
-			if err != nil {
-				return err
-			}
-
-			for i := range fileConfig.Resources {
-				if fileConfig.Resources[i].Response != nil {
-					// Resolve response file path relative to config file
-					if fileConfig.Resources[i].Response.File != "" && relDir != "." {
-						fileConfig.Resources[i].Response.File = filepath.Join(relDir, fileConfig.Resources[i].Response.File)
+				for i := range fileConfig.Resources {
+					if fileConfig.Resources[i].Response != nil {
+						// Resolve response file path relative to config file
+						if fileConfig.Resources[i].Response.File != "" && relDir != "." {
+							fileConfig.Resources[i].Response.File = filepath.Join(relDir, fileConfig.Resources[i].Response.File)
+						}
+						// Resolve response dir path relative to config file
+						if fileConfig.Resources[i].Response.Dir != "" && relDir != "." {
+							fileConfig.Resources[i].Response.Dir = filepath.Join(relDir, fileConfig.Resources[i].Response.Dir)
+						}
 					}
-					// Resolve response dir path relative to config file
-					if fileConfig.Resources[i].Response.Dir != "" && relDir != "." {
-						fileConfig.Resources[i].Response.Dir = filepath.Join(relDir, fileConfig.Resources[i].Response.Dir)
+					// Prefix paths with basePath
+					if fileConfig.BasePath != "" {
+						fileConfig.Resources[i].Path = urlpath.Join(fileConfig.BasePath, fileConfig.Resources[i].Path)
 					}
-				}
-				// Prefix paths with basePath
-				if fileConfig.BasePath != "" {
-					fileConfig.Resources[i].Path = urlpath.Join(fileConfig.BasePath, fileConfig.Resources[i].Path)
-				}
 
-				// Prefix step script files with relative directory
-				if fileConfig.Resources[i].Steps != nil {
-					for j := range fileConfig.Resources[i].Steps {
-						if fileConfig.Resources[i].Steps[j].File != "" {
-							fileConfig.Resources[i].Steps[j].File = filepath.Join(relDir, fileConfig.Resources[i].Steps[j].File)
+					// Prefix step script files with relative directory
+					if fileConfig.Resources[i].Steps != nil {
+						for j := range fileConfig.Resources[i].Steps {
+							if fileConfig.Resources[i].Steps[j].File != "" {
+								fileConfig.Resources[i].Steps[j].File = filepath.Join(relDir, fileConfig.Resources[i].Steps[j].File)
+							}
 						}
 					}
 				}
-			}
 
-			if fileConfig.Plugin == "openapi" {
-				// Resolve OpenAPI spec path relative to config file
-				if fileConfig.SpecFile != "" && !filepath.IsAbs(fileConfig.SpecFile) {
-					fileConfig.SpecFile = filepath.Join(relDir, fileConfig.SpecFile)
-				}
-			} else if fileConfig.Plugin == "soap" {
-				// Resolve WSDL file path relative to config file
-				if fileConfig.WSDLFile != "" && !filepath.IsAbs(fileConfig.WSDLFile) {
-					fileConfig.WSDLFile = filepath.Join(relDir, fileConfig.WSDLFile)
-				}
-			}
-
-			if fileConfig.System != nil {
-				// Resolve preload file paths relative to config file
-				for storeName := range fileConfig.System.Stores {
-					store := fileConfig.System.Stores[storeName]
-					if store.PreloadFile != "" && !filepath.IsAbs(store.PreloadFile) {
-						store.PreloadFile = filepath.Join(relDir, store.PreloadFile)
+				if fileConfig.Plugin == "openapi" {
+					// Resolve OpenAPI spec path relative to config file
+					if fileConfig.SpecFile != "" && !filepath.IsAbs(fileConfig.SpecFile) {
+						fileConfig.SpecFile = filepath.Join(relDir, fileConfig.SpecFile)
 					}
-					fileConfig.System.Stores[storeName] = store
+				} else if fileConfig.Plugin == "soap" {
+					// Resolve WSDL file path relative to config file
+					if fileConfig.WSDLFile != "" && !filepath.IsAbs(fileConfig.WSDLFile) {
+						fileConfig.WSDLFile = filepath.Join(relDir, fileConfig.WSDLFile)
+					}
 				}
-			}
 
-			configs = append(configs, *fileConfig)
+				if fileConfig.System != nil {
+					// Resolve preload file paths relative to config file
+					for storeName := range fileConfig.System.Stores {
+						store := fileConfig.System.Stores[storeName]
+						if store.PreloadFile != "" && !filepath.IsAbs(store.PreloadFile) {
+							store.PreloadFile = filepath.Join(relDir, store.PreloadFile)
+						}
+						fileConfig.System.Stores[storeName] = store
+					}
+				}
+
+				configs = append(configs, fileConfig)
+			}
 		}
 		return nil
 	})
@@ -192,8 +196,8 @@ func shouldIgnorePath(path string, ignorePaths []string) bool {
 	return false
 }
 
-// parseConfig loads and parses a YAML configuration file
-func parseConfig(path string, imposterConfig *ImposterConfig) (*Config, error) {
+// parseConfig loads and parses a YAML configuration file, supporting multiple YAML documents
+func parseConfig(path string, imposterConfig *ImposterConfig) ([]Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file: %w", err)
@@ -202,27 +206,56 @@ func parseConfig(path string, imposterConfig *ImposterConfig) (*Config, error) {
 	// Substitute environment variables
 	data = []byte(substituteEnvVars(string(data)))
 
-	var cfg *Config
+	var configs []Config
 
 	// Transform legacy config if legacy support is enabled
 	if imposterConfig.LegacyConfigSupported {
 		logger.Debugf("legacy config support enabled for %s, attempting transformation...", path)
-		cfg, err = transformLegacyConfig(data)
+		cfg, err := transformLegacyConfig(data)
 		if err != nil {
 			return nil, fmt.Errorf("failed to transform legacy config: %w", err)
 		}
+		configs = append(configs, *cfg)
 	} else {
-		// Parse as current format
-		cfg = &Config{}
-		if err := yaml.Unmarshal(data, cfg); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal YAML: %w", err)
+		// Parse as current format - support multiple YAML documents
+		configs, err = parseMultipleYAMLDocuments(data)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse YAML documents: %w", err)
 		}
 	}
 
-	// Transform security config into interceptors if present
-	transformSecurityConfig(cfg)
+	// Transform security config into interceptors for all configs
+	for i := range configs {
+		transformSecurityConfig(&configs[i])
+	}
 
-	return cfg, nil
+	return configs, nil
+}
+
+// parseMultipleYAMLDocuments parses multiple YAML documents from a single file
+func parseMultipleYAMLDocuments(data []byte) ([]Config, error) {
+	var configs []Config
+
+	// Use yaml.NewDecoder to parse multiple documents
+	decoder := yaml.NewDecoder(strings.NewReader(string(data)))
+
+	for {
+		var cfg Config
+		if err := decoder.Decode(&cfg); err != nil {
+			if err == io.EOF {
+				break // End of file reached
+			}
+			return nil, fmt.Errorf("failed to decode YAML document: %w", err)
+		}
+		configs = append(configs, cfg)
+	}
+
+	// If no documents were found, return empty slice
+	if len(configs) == 0 {
+		return nil, fmt.Errorf("no valid YAML documents found")
+	}
+
+	return configs, nil
 }
 
 // substituteEnvVars replaces ${env.VAR} and ${env.VAR:-default} with environment variable values
