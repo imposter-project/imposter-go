@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"github.com/imposter-project/imposter-go/external"
 	"github.com/imposter-project/imposter-go/internal/matcher"
 	"net/http"
 	"strings"
@@ -58,23 +57,14 @@ func HandleRequest(imposterConfig *config.ImposterConfig, w http.ResponseWriter,
 
 	exch := exchange.NewExchange(req, body, requestStore, responseState)
 
-	// Process each plugin
 	for _, plg := range plugins {
-		// Standard response processor
 		responseProc := response.NewProcessor(imposterConfig, plg.GetConfig().ConfigDir)
-
-		// Process request with handler
 		plg.HandleRequest(exch, responseProc)
 
 		// If the response has been handled by the handler, break the loop
 		if responseState.Handled {
 			break
 		}
-	}
-
-	if !responseState.Handled {
-		// TODO check if any plugins indicate they are 'wildcard' handlers
-		invokeExternalHandlers(exch, imposterConfig)
 	}
 
 	// If no handler handled the response, return 404
@@ -103,18 +93,6 @@ func HandleRequest(imposterConfig *config.ImposterConfig, w http.ResponseWriter,
 
 	// Write response to client
 	responseState.WriteToResponseWriter(w)
-}
-
-// invokeExternalHandlers attempts to handle the request using external plugins
-func invokeExternalHandlers(exch *exchange.Exchange, imposterConfig *config.ImposterConfig) {
-	handlerReq := external.ConvertToExternalRequest(exch)
-	handlerResp := external.InvokeExternalHandlers(handlerReq)
-	if handlerResp != nil {
-		external.ConvertFromExternalResponse(exch, handlerResp)
-
-		responseProc := response.NewProcessor(imposterConfig, handlerResp.FileBaseDir)
-		responseProc(exch, nil, &config.Response{})
-	}
 }
 
 // handleSystemEndpoint handles system-level endpoints like /system/store and /system/status

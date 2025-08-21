@@ -137,32 +137,6 @@ func start(cfg shared.ExternalConfig, pluginName string, plg *shared.ExternalPlu
 	return nil
 }
 
-// InvokeExternalHandlers calls the external plugins with the provided handler request
-// and returns the first successful response, or none if no plugin handled the request.
-func InvokeExternalHandlers(args shared.HandlerRequest) *shared.HandlerResponse {
-	if !hasPlugins {
-		return nil
-	}
-
-	var resp shared.HandlerResponse
-	for _, l := range loaded {
-		impl := *l.impl
-		resp = impl.Handle(args)
-		if resp.StatusCode >= 100 && resp.StatusCode < 300 {
-			logger.Debugf("response from plugin %s: status=%d body=%d bytes", l.Name, resp.StatusCode, len(resp.Body))
-			break
-		} else if resp.StatusCode == 0 || resp.StatusCode == 404 {
-			// plugin did not handle the request, continue to the next plugin
-			logger.Tracef("plugin %s did not handle the request, continuing to next plugin", l.Name)
-			continue
-		} else {
-			logger.Errorf("error response from plugin %s: status=%d body=%d bytes", l.Name, resp.StatusCode, len(resp.Body))
-			break
-		}
-	}
-	return &resp
-}
-
 // StopExternalPlugins stops all loaded external plugins by killing their processes.
 func StopExternalPlugins() {
 	if !hasPlugins {
