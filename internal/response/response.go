@@ -163,7 +163,7 @@ func processResponse(
 	}
 
 	if logger.IsTraceEnabled() {
-		logger.Tracef("response headers: %v", rs.Headers)
+		logger.Tracef("response: HTTP %v, headers: %v", rs.StatusCode, rs.Headers)
 		logger.Tracef("response body: %s", rs.Body)
 	}
 	SetContentTypeHeader(rs, respFile, defaultBinaryContentType, "application/json")

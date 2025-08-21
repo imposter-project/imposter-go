@@ -18,6 +18,10 @@ import (
 
 // HandleRequest processes incoming HTTP requests and routes them to the appropriate handler
 func HandleRequest(imposterConfig *config.ImposterConfig, w http.ResponseWriter, req *http.Request, plugins []plugin.Plugin) {
+	if logger.IsTraceEnabled() {
+		logger.Tracef("request: %s %v, headers: %v", req.Method, req.URL, req.Header)
+	}
+
 	// Check for CORS configuration in any of the plugins
 	for _, plg := range plugins {
 		if plg.GetConfig().Cors != nil {
@@ -46,6 +50,10 @@ func HandleRequest(imposterConfig *config.ImposterConfig, w http.ResponseWriter,
 		responseState.Body = []byte("Failed to read request body")
 		responseState.Handled = true // Error case, no resource to attach
 		return
+	}
+
+	if logger.IsTraceEnabled() {
+		logger.Tracef("request body: %s", body)
 	}
 
 	exch := exchange.NewExchange(req, body, requestStore, responseState)
