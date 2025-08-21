@@ -281,17 +281,17 @@ func TestClient_IsValidRedirectURI(t *testing.T) {
 	}
 }
 
-func TestLoadOIDCConfigFromMap(t *testing.T) {
+func TestLoadOIDCConfigFromBytes(t *testing.T) {
 	tests := []struct {
-		name         string
-		pluginConfig map[string]interface{}
-		expectError  bool
-		validate     func(*testing.T, *OIDCConfig)
+		name        string
+		configYAML  string
+		expectError bool
+		validate    func(*testing.T, *OIDCConfig)
 	}{
 		{
-			name:         "nil config returns default",
-			pluginConfig: nil,
-			expectError:  false,
+			name:        "empty config returns default",
+			configYAML:  "",
+			expectError: false,
 			validate: func(t *testing.T, config *OIDCConfig) {
 				if len(config.Users) < 2 {
 					t.Error("Expected default config with multiple users")
@@ -303,27 +303,19 @@ func TestLoadOIDCConfigFromMap(t *testing.T) {
 		},
 		{
 			name: "valid plugin config",
-			pluginConfig: map[string]interface{}{
-				"users": []interface{}{
-					map[string]interface{}{
-						"username": "testuser",
-						"password": "testpass",
-						"claims": map[string]interface{}{
-							"sub":   "testuser",
-							"email": "test@example.com",
-						},
-					},
-				},
-				"clients": []interface{}{
-					map[string]interface{}{
-						"client_id":     "testclient",
-						"client_secret": "testsecret",
-						"redirect_uris": []interface{}{
-							"http://localhost:8080/callback",
-						},
-					},
-				},
-			},
+			configYAML: `
+users:
+  - username: "testuser"
+    password: "testpass"
+    claims:
+      sub: "testuser"
+      email: "test@example.com"
+clients:
+  - client_id: "testclient"
+    client_secret: "testsecret"
+    redirect_uris:
+      - "http://localhost:8080/callback"
+`,
 			expectError: false,
 			validate: func(t *testing.T, config *OIDCConfig) {
 				if len(config.Users) != 1 {
@@ -345,40 +337,39 @@ func TestLoadOIDCConfigFromMap(t *testing.T) {
 		},
 		{
 			name: "invalid config - no users",
-			pluginConfig: map[string]interface{}{
-				"users": []interface{}{},
-				"clients": []interface{}{
-					map[string]interface{}{
-						"client_id":     "testclient",
-						"redirect_uris": []interface{}{"http://localhost:8080/callback"},
-					},
-				},
-			},
+			configYAML: `
+users: []
+clients:
+  - client_id: "testclient"
+    redirect_uris:
+      - "http://localhost:8080/callback"
+`,
 			expectError: true,
 		},
 		{
 			name: "invalid config - no clients",
-			pluginConfig: map[string]interface{}{
-				"users": []interface{}{
-					map[string]interface{}{
-						"username": "testuser",
-						"password": "testpass",
-					},
-				},
-				"clients": []interface{}{},
-			},
+			configYAML: `
+users:
+  - username: "testuser"
+    password: "testpass"
+clients: []
+`,
 			expectError: true,
 		},
 		{
-			name:         "empty plugin config",
-			pluginConfig: map[string]interface{}{},
-			expectError:  true,
+			name: "invalid YAML",
+			configYAML: `
+users:
+  - username: testuser"
+    password: "testpass
+`,
+			expectError: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			config, err := loadOIDCConfigFromMap(tt.pluginConfig)
+			config, err := loadOIDCConfig([]byte(tt.configYAML))
 
 			if tt.expectError && err == nil {
 				t.Error("Expected error but got none")

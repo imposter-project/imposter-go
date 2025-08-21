@@ -1,17 +1,6 @@
 package shared
 
-import (
-	"encoding/gob"
-	"net/url"
-)
-
-func init() {
-	// Register types for gob encoding across plugin boundaries
-	gob.Register(map[string]interface{}{})
-	gob.Register([]interface{}{})
-	gob.Register([]string{})
-	gob.Register(map[string]string{})
-}
+import "net/url"
 
 type HandlerRequest struct {
 	Method  string
@@ -47,7 +36,7 @@ type LightweightConfig struct {
 	ConfigDir    string
 	Plugin       string
 	SpecFile     string
-	PluginConfig map[string]interface{}
+	PluginConfig []byte
 }
 
 // ExternalHandler defines the interface for external plugins to implement.

@@ -66,27 +66,19 @@ func TestOIDCServer_Configure(t *testing.T) {
 				Configs: []shared.LightweightConfig{
 					{
 						ConfigDir: "/tmp",
-						PluginConfig: map[string]interface{}{
-							"users": []interface{}{
-								map[string]interface{}{
-									"username": "pluginuser",
-									"password": "pluginpass",
-									"claims": map[string]interface{}{
-										"sub":   "pluginuser",
-										"email": "plugin@test.com",
-									},
-								},
-							},
-							"clients": []interface{}{
-								map[string]interface{}{
-									"client_id":     "pluginclient",
-									"client_secret": "pluginsecret",
-									"redirect_uris": []interface{}{
-										"https://plugin-test.com/callback",
-									},
-								},
-							},
-						},
+						PluginConfig: []byte(`
+users:
+  - username: "pluginuser"
+    password: "pluginpass"
+    claims:
+      sub: "pluginuser"
+      email: "plugin@test.com"
+clients:
+  - client_id: "pluginclient"
+    client_secret: "pluginsecret"
+    redirect_uris:
+      - "https://plugin-test.com/callback"
+`),
 					},
 				},
 			},

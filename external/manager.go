@@ -8,6 +8,7 @@ import (
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/version"
 	"github.com/imposter-project/imposter-go/pkg/logger"
+	"gopkg.in/yaml.v3"
 	"os"
 	"os/exec"
 	"path"
@@ -62,10 +63,21 @@ func StartExternalPlugins(imposterConfig *config.ImposterConfig, configs []confi
 func buildConfig(imposterConfig *config.ImposterConfig, configs []config.Config) shared.ExternalConfig {
 	var lightweight []shared.LightweightConfig
 	for _, cfg := range configs {
+		// Convert yaml.Node to bytes for plugin config
+		var pluginConfigBytes []byte
+		if cfg.PluginConfig.Kind != 0 { // Check if yaml.Node has content
+			var err error
+			pluginConfigBytes, err = yaml.Marshal(&cfg.PluginConfig)
+			if err != nil {
+				logger.Warnf("failed to marshal plugin config to bytes: %v", err)
+				pluginConfigBytes = nil
+			}
+		}
+
 		lightweight = append(lightweight, shared.LightweightConfig{
 			ConfigDir:    cfg.ConfigDir,
 			Plugin:       cfg.Plugin,
-			PluginConfig: cfg.PluginConfig,
+			PluginConfig: pluginConfigBytes,
 			SpecFile:     cfg.SpecFile,
 		})
 	}

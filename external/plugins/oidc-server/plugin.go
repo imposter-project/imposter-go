@@ -85,9 +85,9 @@ func (o *OIDCServer) Configure(cfg shared.ExternalConfig) error {
 		firstConfig := cfg.Configs[0]
 
 		// Try to load from plugin config block first
-		if firstConfig.PluginConfig != nil {
+		if len(firstConfig.PluginConfig) > 0 {
 			o.logger.Debug("loading OIDC config from plugin config block")
-			config, err := loadOIDCConfigFromMap(firstConfig.PluginConfig)
+			config, err := loadOIDCConfig(firstConfig.PluginConfig)
 			if err != nil {
 				return fmt.Errorf("failed to load OIDC config from plugin config block: %w", err)
 			}

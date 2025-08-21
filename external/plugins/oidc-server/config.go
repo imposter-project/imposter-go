@@ -22,21 +22,16 @@ type Client struct {
 	RedirectURIs []string `yaml:"redirect_uris"`
 }
 
-// loadOIDCConfigFromMap loads OIDC configuration from a map[string]interface{}
+// loadOIDCConfig loads OIDC configuration from raw YAML bytes
 // as provided by the main config system's plugin config block
-func loadOIDCConfigFromMap(pluginConfig map[string]interface{}) (*OIDCConfig, error) {
-	if pluginConfig == nil {
+func loadOIDCConfig(pluginConfigBytes []byte) (*OIDCConfig, error) {
+	if len(pluginConfigBytes) == 0 {
 		return getDefaultConfig(), nil
 	}
 
-	// Convert map to YAML and back to strongly-typed struct
-	yamlData, err := yaml.Marshal(pluginConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal plugin config to YAML: %w", err)
-	}
-
+	// Unmarshal directly from YAML bytes to strongly-typed struct
 	var config OIDCConfig
-	if err := yaml.Unmarshal(yamlData, &config); err != nil {
+	if err := yaml.Unmarshal(pluginConfigBytes, &config); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal plugin config: %w", err)
 	}
 

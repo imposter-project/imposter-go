@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/dlclark/regexp2"
+	"gopkg.in/yaml.v3"
 )
 
 // Response represents an HTTP response
@@ -406,8 +407,8 @@ type Config struct {
 	StripServerPath bool              `yaml:"stripServerPath,omitempty"`
 	Validation      *ValidationConfig `yaml:"validation,omitempty"`
 
-	// Plugin-specific configuration block
-	PluginConfig map[string]interface{} `yaml:"config,omitempty"`
+	// Plugin-specific configuration block (deferred unmarshaling)
+	PluginConfig yaml.Node `yaml:"config,omitempty"`
 
 	// ConfigDir returns the original config directory, *which might be a parent*,
 	// from which the config file was discovered.
