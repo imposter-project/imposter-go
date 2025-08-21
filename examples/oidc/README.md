@@ -17,7 +17,7 @@ This example demonstrates the `oidc-server` external plugin that provides OpenID
 
 ## Configuration
 
-### User and Client Configuration (`oidc-users.yaml`)
+### User and Client Configuration (`oidc.yaml`)
 
 ```yaml
 users:

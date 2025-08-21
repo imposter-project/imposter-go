@@ -10,5 +10,5 @@ resources: []
 # - /oidc/token (token endpoint)
 # - /oidc/userinfo (userinfo endpoint)
 # 
-# User credentials and client configurations are loaded from oidc-users.yaml
+# User credentials and client configurations are loaded from oidc.yaml
 # in the same directory as this configuration file.

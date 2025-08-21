@@ -26,12 +26,12 @@ type Client struct {
 }
 
 func loadOIDCConfig(configDir string) (*OIDCConfig, error) {
-	configFile := filepath.Join(configDir, "oidc-users.yaml")
+	configFile := filepath.Join(configDir, "oidc.yaml")
 
 	// Check if config file exists
 	if _, err := os.Stat(configFile); os.IsNotExist(err) {
 		// Try alternative naming
-		configFile = filepath.Join(configDir, "oidc-config.yaml")
+		configFile = filepath.Join(configDir, "oidc-users.yaml")
 		if _, err := os.Stat(configFile); os.IsNotExist(err) {
 			return getDefaultConfig(), nil
 		}

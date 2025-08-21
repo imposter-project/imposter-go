@@ -38,7 +38,7 @@ external/plugins/oidc-server/
 
 ## Configuration
 
-The plugin automatically uses the server URL configured in Imposter for OIDC discovery metadata and JWT issuer claims. It loads user and client configuration from `oidc-users.yaml` (or `oidc-config.yaml`) in the configuration directory:
+The plugin automatically uses the server URL configured in Imposter for OIDC discovery metadata and JWT issuer claims. It loads user and client configuration from `oidc.yaml` (or `oidc-users.yaml`) in the configuration directory:
 
 ```yaml
 users:
