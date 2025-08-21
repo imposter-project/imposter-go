@@ -2,6 +2,7 @@ package openapi
 
 import (
 	"fmt"
+
 	"github.com/imposter-project/imposter-go/plugin/rest"
 
 	"github.com/imposter-project/imposter-go/internal/config"
@@ -24,8 +25,10 @@ func NewPluginHandler(cfg *config.Config, imposterConfig *config.ImposterConfig)
 	}
 
 	opts := parserOptions{
-		stripServerPath: cfg.StripServerPath,
+		stripServerPath:          cfg.StripServerPath,
+		externalReferenceBaseURL: cfg.ExternalBaseURL,
 	}
+
 	validate := cfg.Validation != nil && (cfg.Validation.IsRequestValidationEnabled() || cfg.Validation.IsResponseValidationEnabled())
 	parser, err := newOpenAPIParser(specFile, validate, opts)
 	if err != nil {
