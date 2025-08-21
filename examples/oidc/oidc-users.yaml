@@ -16,16 +16,14 @@ users:
       given_name: "Bob"
       family_name: "Jones"
       name: "Bob Jones"
-      preferred_username: "bob"
 
 clients:
-  - client_id: "demo-app"
-    client_secret: "demo-secret"
+  - client_id: "webapp"
+    client_secret: "webapp-secret"
     redirect_uris:
       - "http://localhost:3000/callback"
       - "http://localhost:8080/callback"
-      - "https://jwt.io"
-  - client_id: "public-app"
+  - client_id: "mobile-app"
     redirect_uris:
-      - "http://localhost:3000/auth/callback"
-      - "http://localhost:8080/auth/callback"
+      - "com.example.app://oauth/callback"
+      - "http://localhost:8080/mobile-callback"

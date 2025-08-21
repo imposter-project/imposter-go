@@ -23,27 +23,19 @@ func (o *OIDCServer) handleAuthorize(args shared.HandlerRequest) shared.HandlerR
 
 func (o *OIDCServer) handleAuthorizeGet(args shared.HandlerRequest) shared.HandlerResponse {
 	// Parse query parameters
-	queryString := ""
-	if strings.Contains(args.Path, "?") {
-		queryString = strings.Split(args.Path, "?")[1]
-	} else {
+	if len(args.Query) == 0 {
 		return o.renderError("invalid_request", "Missing query parameters")
 	}
 
-	params, err := url.ParseQuery(queryString)
-	if err != nil {
-		return o.renderError("invalid_request", "Invalid query parameters")
-	}
-
 	// Validate required parameters
-	clientID := params.Get("client_id")
-	redirectURI := params.Get("redirect_uri")
-	responseType := params.Get("response_type")
-	scope := params.Get("scope")
-	state := params.Get("state")
-	nonce := params.Get("nonce")
-	codeChallenge := params.Get("code_challenge")
-	codeChallengeMethod := params.Get("code_challenge_method")
+	clientID := args.Query.Get("client_id")
+	redirectURI := args.Query.Get("redirect_uri")
+	responseType := args.Query.Get("response_type")
+	scope := args.Query.Get("scope")
+	state := args.Query.Get("state")
+	nonce := args.Query.Get("nonce")
+	codeChallenge := args.Query.Get("code_challenge")
+	codeChallengeMethod := args.Query.Get("code_challenge_method")
 
 	if clientID == "" {
 		return o.renderError("invalid_request", "client_id is required")
@@ -167,21 +159,6 @@ func (o *OIDCServer) handleAuthorizePost(args shared.HandlerRequest) shared.Hand
 		StatusCode: 302,
 		Headers: map[string]string{
 			"Location": redirectURL.String(),
-		},
-	}
-}
-
-func (o *OIDCServer) handleLogin(args shared.HandlerRequest) shared.HandlerResponse {
-	if strings.ToUpper(args.Method) != "GET" {
-		return shared.HandlerResponse{StatusCode: 405, Body: []byte("Method Not Allowed")}
-	}
-
-	// This endpoint can be used to render the login form directly
-	// For now, redirect to authorize endpoint
-	return shared.HandlerResponse{
-		StatusCode: 302,
-		Headers: map[string]string{
-			"Location": "/oidc/authorize",
 		},
 	}
 }

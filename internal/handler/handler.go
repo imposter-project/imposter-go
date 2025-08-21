@@ -74,7 +74,7 @@ func HandleRequest(imposterConfig *config.ImposterConfig, w http.ResponseWriter,
 
 	if !responseState.Handled {
 		// TODO check if any plugins indicate they are 'wildcard' handlers
-		invokeExternalHandlers(req, exch, imposterConfig)
+		invokeExternalHandlers(exch, imposterConfig)
 	}
 
 	// If no handler handled the response, return 404
@@ -106,12 +106,8 @@ func HandleRequest(imposterConfig *config.ImposterConfig, w http.ResponseWriter,
 }
 
 // invokeExternalHandlers attempts to handle the request using external plugins
-func invokeExternalHandlers(
-	req *http.Request,
-	exch *exchange.Exchange,
-	imposterConfig *config.ImposterConfig,
-) {
-	handlerReq := external.ConvertToExternalRequest(req)
+func invokeExternalHandlers(exch *exchange.Exchange, imposterConfig *config.ImposterConfig) {
+	handlerReq := external.ConvertToExternalRequest(exch)
 	handlerResp := external.InvokeExternalHandlers(handlerReq)
 	if handlerResp != nil {
 		external.ConvertFromExternalResponse(exch, handlerResp)

@@ -106,16 +106,14 @@ func (o *OIDCServer) Handle(args shared.HandlerRequest) shared.HandlerResponse {
 	o.logger.Debug("handling request", "method", args.Method, "path", args.Path)
 
 	// Parse the path to determine the endpoint
-	switch {
-	case strings.HasPrefix(args.Path, "/oidc/authorize") || strings.HasPrefix(args.Path, "/.well-known/oauth2/authorize"):
+	switch args.Path {
+	case "/oidc/authorize":
 		return o.handleAuthorize(args)
-	case strings.HasPrefix(args.Path, "/oidc/token") || strings.HasPrefix(args.Path, "/.well-known/oauth2/token"):
+	case "/oidc/token":
 		return o.handleToken(args)
-	case strings.HasPrefix(args.Path, "/oidc/userinfo") || strings.HasPrefix(args.Path, "/.well-known/oauth2/userinfo"):
+	case "/oidc/userinfo":
 		return o.handleUserInfo(args)
-	case strings.HasPrefix(args.Path, "/oidc/login"):
-		return o.handleLogin(args)
-	case strings.HasPrefix(args.Path, "/.well-known/openid-configuration"):
+	case "/.well-known/openid-configuration":
 		return o.handleDiscovery(args)
 	default:
 		return shared.HandlerResponse{StatusCode: 404, Body: []byte("Not Found")}

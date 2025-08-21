@@ -66,7 +66,6 @@ clients:
     redirect_uris:
       - "http://localhost:3000/callback"
       - "http://localhost:8080/callback"
-      - "https://jwt.io"
   - client_id: "mobile-app"
     redirect_uris:
       - "com.example.app://oauth/callback"
@@ -345,6 +344,12 @@ If no configuration file is found, the plugin uses these defaults:
 - client_id: test-client
 - client_secret: test-secret
 - redirect_uris: http://localhost:8080/callback, http://localhost:3000/callback
+
+## Implementation Notes
+
+- **Query Parameter Handling**: The plugin uses the `args.Query` field from `HandlerRequest` to access query parameters, providing clean access to parsed URL query values
+- **Server URL Integration**: Automatically uses the server URL from Imposter's configuration for OIDC discovery metadata and JWT issuer claims
+- **Thread Safety**: Uses mutex locks for concurrent access to sessions, authorization codes, and access tokens
 
 ## Building
 
