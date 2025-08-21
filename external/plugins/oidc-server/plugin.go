@@ -81,22 +81,26 @@ func (o *OIDCServer) Configure(cfg shared.ExternalConfig) error {
 	}
 	o.jwtSecret = key
 
-	// Load OIDC configuration from the first config directory
 	if len(cfg.Configs) > 0 {
-		configDir := cfg.Configs[0].ConfigDir
-		o.logger.Debug("loading OIDC config from directory", "configDir", configDir)
+		firstConfig := cfg.Configs[0]
 
-		config, err := loadOIDCConfig(configDir)
-		if err != nil {
-			return fmt.Errorf("failed to load OIDC config: %w", err)
+		// Try to load from plugin config block first
+		if firstConfig.PluginConfig != nil {
+			o.logger.Debug("loading OIDC config from plugin config block")
+			config, err := loadOIDCConfigFromMap(firstConfig.PluginConfig)
+			if err != nil {
+				return fmt.Errorf("failed to load OIDC config from plugin config block: %w", err)
+			}
+			o.config = config
+			o.logger.Info("OIDC server configured from plugin config block", "users", len(config.Users), "clients", len(config.Clients))
+		} else {
+			o.logger.Warn("no OIDC config found in plugin config block")
 		}
-		o.config = config
+	}
 
-		o.logger.Info("OIDC server configured", "users", len(config.Users), "clients", len(config.Clients))
-	} else {
-		// Use default configuration if none provided
+	if o.config == nil {
+		o.logger.Warn("no OIDC configuration provided, using default configuration")
 		o.config = getDefaultConfig()
-		o.logger.Warn("using default OIDC configuration")
 	}
 
 	return nil

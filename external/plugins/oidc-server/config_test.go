@@ -1,151 +1,9 @@
 package main
 
 import (
-	"os"
-	"path/filepath"
 	"reflect"
 	"testing"
 )
-
-func TestLoadOIDCConfig(t *testing.T) {
-	// Create temporary directory for test files
-	tmpDir, err := os.MkdirTemp("", "oidc-config-test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
-
-	tests := []struct {
-		name        string
-		setupFiles  func() error
-		expectError bool
-		validate    func(*OIDCConfig) error
-	}{
-		{
-			name: "valid config file (oidc-users.yaml)",
-			setupFiles: func() error {
-				content := `
-users:
-  - username: "testuser"
-    password: "testpass"
-    claims:
-      sub: "testuser"
-      email: "test@example.com"
-clients:
-  - client_id: "testclient"
-    client_secret: "testsecret"
-    redirect_uris:
-      - "http://localhost:8080/callback"
-`
-				return os.WriteFile(filepath.Join(tmpDir, "oidc-users.yaml"), []byte(content), 0644)
-			},
-			expectError: false,
-			validate: func(config *OIDCConfig) error {
-				if len(config.Users) != 1 || config.Users[0].Username != "testuser" {
-					t.Errorf("Expected 1 user with username 'testuser', got %+v", config.Users)
-				}
-				if len(config.Clients) != 1 || config.Clients[0].ClientID != "testclient" {
-					t.Errorf("Expected 1 client with ID 'testclient', got %+v", config.Clients)
-				}
-				return nil
-			},
-		},
-		{
-			name: "alternative config file (oidc.yaml)",
-			setupFiles: func() error {
-				content := `
-users:
-  - username: "altuser"
-    password: "altpass"
-    claims:
-      sub: "altuser"
-clients:
-  - client_id: "altclient"
-    redirect_uris:
-      - "http://localhost:3000/callback"
-`
-				return os.WriteFile(filepath.Join(tmpDir, "oidc.yaml"), []byte(content), 0644)
-			},
-			expectError: false,
-			validate: func(config *OIDCConfig) error {
-				if len(config.Users) != 1 || config.Users[0].Username != "altuser" {
-					t.Errorf("Expected 1 user with username 'altuser', got %+v", config.Users)
-				}
-				return nil
-			},
-		},
-		{
-			name: "no config file - uses default",
-			setupFiles: func() error {
-				return nil // No files created
-			},
-			expectError: false,
-			validate: func(config *OIDCConfig) error {
-				if len(config.Users) < 2 {
-					t.Errorf("Expected default config with multiple users, got %d users", len(config.Users))
-				}
-				if config.Users[0].Username != "alice" && config.Users[1].Username != "alice" {
-					t.Errorf("Expected default config to contain 'alice' user")
-				}
-				return nil
-			},
-		},
-		{
-			name: "invalid YAML format",
-			setupFiles: func() error {
-				content := `invalid: yaml: content: [}`
-				return os.WriteFile(filepath.Join(tmpDir, "oidc-users.yaml"), []byte(content), 0644)
-			},
-			expectError: true,
-		},
-		{
-			name: "missing required fields",
-			setupFiles: func() error {
-				content := `
-users:
-  - username: ""  # Invalid empty username
-    password: "test"
-clients:
-  - client_id: "test"
-    redirect_uris: []  # Invalid empty redirect_uris
-`
-				return os.WriteFile(filepath.Join(tmpDir, "oidc-users.yaml"), []byte(content), 0644)
-			},
-			expectError: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Clean directory
-			files, _ := os.ReadDir(tmpDir)
-			for _, file := range files {
-				os.Remove(filepath.Join(tmpDir, file.Name()))
-			}
-
-			// Setup test files
-			if err := tt.setupFiles(); err != nil {
-				t.Fatal(err)
-			}
-
-			// Test the function
-			config, err := loadOIDCConfig(tmpDir)
-
-			if tt.expectError && err == nil {
-				t.Error("Expected error but got none")
-			}
-			if !tt.expectError && err != nil {
-				t.Errorf("Expected no error but got: %v", err)
-			}
-
-			if !tt.expectError && config != nil && tt.validate != nil {
-				if err := tt.validate(config); err != nil {
-					t.Error(err)
-				}
-			}
-		})
-	}
-}
 
 func TestValidateConfig(t *testing.T) {
 	tests := []struct {
@@ -418,6 +276,119 @@ func TestClient_IsValidRedirectURI(t *testing.T) {
 			got := client.IsValidRedirectURI(tt.uri)
 			if got != tt.want {
 				t.Errorf("IsValidRedirectURI() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestLoadOIDCConfigFromMap(t *testing.T) {
+	tests := []struct {
+		name         string
+		pluginConfig map[string]interface{}
+		expectError  bool
+		validate     func(*testing.T, *OIDCConfig)
+	}{
+		{
+			name:         "nil config returns default",
+			pluginConfig: nil,
+			expectError:  false,
+			validate: func(t *testing.T, config *OIDCConfig) {
+				if len(config.Users) < 2 {
+					t.Error("Expected default config with multiple users")
+				}
+				if config.Users[0].Username != "alice" {
+					t.Error("Expected default config to contain alice user")
+				}
+			},
+		},
+		{
+			name: "valid plugin config",
+			pluginConfig: map[string]interface{}{
+				"users": []interface{}{
+					map[string]interface{}{
+						"username": "testuser",
+						"password": "testpass",
+						"claims": map[string]interface{}{
+							"sub":   "testuser",
+							"email": "test@example.com",
+						},
+					},
+				},
+				"clients": []interface{}{
+					map[string]interface{}{
+						"client_id":     "testclient",
+						"client_secret": "testsecret",
+						"redirect_uris": []interface{}{
+							"http://localhost:8080/callback",
+						},
+					},
+				},
+			},
+			expectError: false,
+			validate: func(t *testing.T, config *OIDCConfig) {
+				if len(config.Users) != 1 {
+					t.Errorf("Expected 1 user, got %d", len(config.Users))
+				}
+				if config.Users[0].Username != "testuser" {
+					t.Errorf("Expected username 'testuser', got '%s'", config.Users[0].Username)
+				}
+				if config.Users[0].Claims["sub"] != "testuser" {
+					t.Errorf("Expected sub claim 'testuser', got '%s'", config.Users[0].Claims["sub"])
+				}
+				if len(config.Clients) != 1 {
+					t.Errorf("Expected 1 client, got %d", len(config.Clients))
+				}
+				if config.Clients[0].ClientID != "testclient" {
+					t.Errorf("Expected client_id 'testclient', got '%s'", config.Clients[0].ClientID)
+				}
+			},
+		},
+		{
+			name: "invalid config - no users",
+			pluginConfig: map[string]interface{}{
+				"users": []interface{}{},
+				"clients": []interface{}{
+					map[string]interface{}{
+						"client_id":     "testclient",
+						"redirect_uris": []interface{}{"http://localhost:8080/callback"},
+					},
+				},
+			},
+			expectError: true,
+		},
+		{
+			name: "invalid config - no clients",
+			pluginConfig: map[string]interface{}{
+				"users": []interface{}{
+					map[string]interface{}{
+						"username": "testuser",
+						"password": "testpass",
+					},
+				},
+				"clients": []interface{}{},
+			},
+			expectError: true,
+		},
+		{
+			name:         "empty plugin config",
+			pluginConfig: map[string]interface{}{},
+			expectError:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config, err := loadOIDCConfigFromMap(tt.pluginConfig)
+
+			if tt.expectError && err == nil {
+				t.Error("Expected error but got none")
+			}
+			if !tt.expectError && err != nil {
+				t.Errorf("Expected no error but got: %v", err)
+			}
+
+			if !tt.expectError && config != nil && tt.validate != nil {
+				tt.validate(t, config)
 			}
 		})
 	}

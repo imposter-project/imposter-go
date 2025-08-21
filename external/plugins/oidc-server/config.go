@@ -2,9 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
-
 	"gopkg.in/yaml.v3"
 )
 
@@ -25,31 +22,27 @@ type Client struct {
 	RedirectURIs []string `yaml:"redirect_uris"`
 }
 
-func loadOIDCConfig(configDir string) (*OIDCConfig, error) {
-	configFile := filepath.Join(configDir, "oidc.yaml")
-
-	// Check if config file exists
-	if _, err := os.Stat(configFile); os.IsNotExist(err) {
-		// Try alternative naming
-		configFile = filepath.Join(configDir, "oidc-users.yaml")
-		if _, err := os.Stat(configFile); os.IsNotExist(err) {
-			return getDefaultConfig(), nil
-		}
+// loadOIDCConfigFromMap loads OIDC configuration from a map[string]interface{}
+// as provided by the main config system's plugin config block
+func loadOIDCConfigFromMap(pluginConfig map[string]interface{}) (*OIDCConfig, error) {
+	if pluginConfig == nil {
+		return getDefaultConfig(), nil
 	}
 
-	data, err := os.ReadFile(configFile)
+	// Convert map to YAML and back to strongly-typed struct
+	yamlData, err := yaml.Marshal(pluginConfig)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read config file %s: %w", configFile, err)
+		return nil, fmt.Errorf("failed to marshal plugin config to YAML: %w", err)
 	}
 
 	var config OIDCConfig
-	if err := yaml.Unmarshal(data, &config); err != nil {
-		return nil, fmt.Errorf("failed to parse YAML config: %w", err)
+	if err := yaml.Unmarshal(yamlData, &config); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal plugin config: %w", err)
 	}
 
 	// Validate configuration
 	if err := validateConfig(&config); err != nil {
-		return nil, fmt.Errorf("invalid configuration: %w", err)
+		return nil, fmt.Errorf("invalid plugin configuration: %w", err)
 	}
 
 	return &config, nil

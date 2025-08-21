@@ -63,9 +63,10 @@ func buildConfig(imposterConfig *config.ImposterConfig, configs []config.Config)
 	var lightweight []shared.LightweightConfig
 	for _, cfg := range configs {
 		lightweight = append(lightweight, shared.LightweightConfig{
-			ConfigDir: cfg.ConfigDir,
-			Plugin:    cfg.Plugin,
-			SpecFile:  cfg.SpecFile,
+			ConfigDir:    cfg.ConfigDir,
+			Plugin:       cfg.Plugin,
+			PluginConfig: cfg.PluginConfig,
+			SpecFile:     cfg.SpecFile,
 		})
 	}
 

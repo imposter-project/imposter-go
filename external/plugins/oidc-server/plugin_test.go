@@ -59,6 +59,39 @@ func TestOIDCServer_Configure(t *testing.T) {
 			},
 			expectError: false,
 		},
+		{
+			name: "config with plugin config block",
+			config: shared.ExternalConfig{
+				Server: shared.ServerConfig{URL: "https://plugin-test.com"},
+				Configs: []shared.LightweightConfig{
+					{
+						ConfigDir: "/tmp",
+						PluginConfig: map[string]interface{}{
+							"users": []interface{}{
+								map[string]interface{}{
+									"username": "pluginuser",
+									"password": "pluginpass",
+									"claims": map[string]interface{}{
+										"sub":   "pluginuser",
+										"email": "plugin@test.com",
+									},
+								},
+							},
+							"clients": []interface{}{
+								map[string]interface{}{
+									"client_id":     "pluginclient",
+									"client_secret": "pluginsecret",
+									"redirect_uris": []interface{}{
+										"https://plugin-test.com/callback",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectError: false,
+		},
 	}
 
 	for _, tt := range tests {

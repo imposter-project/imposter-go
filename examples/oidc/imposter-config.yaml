@@ -2,13 +2,42 @@
 # This demonstrates how to use the oidc-server external plugin
 
 plugin: oidc-server
-resources: []
 
 # Note: The oidc-server plugin will automatically handle the following endpoints:
 # - /.well-known/openid-configuration (OIDC discovery)
 # - /oidc/authorize (authorization endpoint)
 # - /oidc/token (token endpoint)
 # - /oidc/userinfo (userinfo endpoint)
-# 
-# User credentials and client configurations are loaded from oidc.yaml
-# in the same directory as this configuration file.
+resources: []
+
+# Plugin configuration for OIDC server
+config:
+  users:
+    - username: "alice"
+      password: "password123"
+      claims:
+        sub: "alice"
+        email: "alice@example.com"
+        given_name: "Alice"
+        family_name: "Smith"
+        name: "Alice Smith"
+        preferred_username: "alice"
+    - username: "bob"
+      password: "password456"
+      claims:
+        sub: "bob"
+        email: "bob@example.com"
+        given_name: "Bob"
+        family_name: "Jones"
+        name: "Bob Jones"
+
+  clients:
+    - client_id: "webapp"
+      client_secret: "webapp-secret"
+      redirect_uris:
+        - "http://localhost:3000/callback"
+        - "http://localhost:8080/callback"
+    - client_id: "mobile-app"
+      redirect_uris:
+        - "com.example.app://oauth/callback"
+        - "http://localhost:8080/mobile-callback"

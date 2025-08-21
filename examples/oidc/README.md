@@ -17,31 +17,44 @@ This example demonstrates the `oidc-server` external plugin that provides OpenID
 
 ## Configuration
 
-### User and Client Configuration (`oidc.yaml`)
+The OIDC server plugin is configured using the `config` block within your main Imposter configuration file:
 
-```yaml
-users:
-  - username: "alice"
-    password: "password123"
-    claims:
-      sub: "alice"
-      email: "alice@example.com"
-      given_name: "Alice"
-      family_name: "Smith"
-      name: "Alice Smith"
-
-clients:
-  - client_id: "demo-app"
-    client_secret: "demo-secret"
-    redirect_uris:
-      - "http://localhost:8080/callback"
-```
-
-### Imposter Configuration (`imposter-config.yaml`)
+### Complete Configuration (`imposter-config.yaml`)
 
 ```yaml
 plugin: oidc-server
 resources: []
+
+config:
+  users:
+    - username: "alice"
+      password: "password123"
+      claims:
+        sub: "alice"
+        email: "alice@example.com"
+        given_name: "Alice"
+        family_name: "Smith"
+        name: "Alice Smith"
+        preferred_username: "alice"
+    - username: "bob"
+      password: "password456"
+      claims:
+        sub: "bob"
+        email: "bob@example.com"
+        given_name: "Bob"
+        family_name: "Jones"
+        name: "Bob Jones"
+
+  clients:
+    - client_id: "webapp"
+      client_secret: "webapp-secret"
+      redirect_uris:
+        - "http://localhost:3000/callback"
+        - "http://localhost:8080/callback"
+    - client_id: "mobile-app"
+      redirect_uris:
+        - "com.example.app://oauth/callback"
+        - "http://localhost:8080/mobile-callback"
 ```
 
 ## Usage
@@ -59,7 +72,7 @@ resources: []
 3. **Test Authorization Flow**:
    Navigate to:
    ```
-   http://localhost:8080/oidc/authorize?client_id=demo-app&redirect_uri=http://localhost:8080/callback&response_type=code&scope=openid+profile+email&state=test123
+   http://localhost:8080/oidc/authorize?client_id=webapp&redirect_uri=http://localhost:8080/callback&response_type=code&scope=openid+profile+email&state=test123
    ```
 
 4. **Login Credentials**:
@@ -70,7 +83,7 @@ resources: []
 
 ### 1. Authorization Request
 ```
-GET /oidc/authorize?client_id=demo-app&redirect_uri=http://localhost:8080/callback&response_type=code&scope=openid+profile+email&state=test123
+GET /oidc/authorize?client_id=webapp&redirect_uri=http://localhost:8080/callback&response_type=code&scope=openid+profile+email&state=test123
 ```
 
 ### 2. User Login
@@ -86,7 +99,7 @@ Location: http://localhost:8080/callback?code=abc123&state=test123
 ```bash
 curl -X POST http://localhost:8080/oidc/token \
   -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "grant_type=authorization_code&client_id=demo-app&client_secret=demo-secret&code=abc123&redirect_uri=http://localhost:8080/callback"
+  -d "grant_type=authorization_code&client_id=webapp&client_secret=webapp-secret&code=abc123&redirect_uri=http://localhost:8080/callback"
 ```
 
 ### 5. Token Response
@@ -129,13 +142,13 @@ The plugin supports PKCE (RFC 7636) for enhanced security:
 
 2. **Authorization Request with PKCE**:
    ```
-   GET /oidc/authorize?client_id=demo-app&redirect_uri=http://localhost:8080/callback&response_type=code&scope=openid&code_challenge=<challenge>&code_challenge_method=S256
+   GET /oidc/authorize?client_id=webapp&redirect_uri=http://localhost:8080/callback&response_type=code&scope=openid&code_challenge=<challenge>&code_challenge_method=S256
    ```
 
 3. **Token Request with PKCE**:
    ```bash
    curl -X POST http://localhost:8080/oidc/token \
-     -d "grant_type=authorization_code&client_id=demo-app&code=abc123&redirect_uri=http://localhost:8080/callback&code_verifier=<verifier>"
+     -d "grant_type=authorization_code&client_id=webapp&code=abc123&redirect_uri=http://localhost:8080/callback&code_verifier=<verifier>"
    ```
 
 ## Discovery Document

@@ -38,38 +38,42 @@ external/plugins/oidc-server/
 
 ## Configuration
 
-The plugin automatically uses the server URL configured in Imposter for OIDC discovery metadata and JWT issuer claims. It loads user and client configuration from `oidc.yaml` (or `oidc-users.yaml`) in the configuration directory:
+The plugin automatically uses the server URL configured in Imposter for OIDC discovery metadata and JWT issuer claims. Users and clients are configured using the `config` block within your main Imposter configuration file:
 
 ```yaml
-users:
-  - username: "alice"
-    password: "password123"
-    claims:
-      sub: "alice"
-      email: "alice@example.com"
-      given_name: "Alice"
-      family_name: "Smith"
-      name: "Alice Smith"
-      preferred_username: "alice"
-  - username: "bob"
-    password: "secret456"
-    claims:
-      sub: "bob"
-      email: "bob@company.com"
-      given_name: "Bob"
-      family_name: "Jones"
-      name: "Bob Jones"
+plugin: oidc-server
+resources: []
 
-clients:
-  - client_id: "webapp"
-    client_secret: "webapp-secret"
-    redirect_uris:
-      - "http://localhost:3000/callback"
-      - "http://localhost:8080/callback"
-  - client_id: "mobile-app"
-    redirect_uris:
-      - "com.example.app://oauth/callback"
-      - "http://localhost:8080/mobile-callback"
+config:
+  users:
+    - username: "alice"
+      password: "password123"
+      claims:
+        sub: "alice"
+        email: "alice@example.com"
+        given_name: "Alice"
+        family_name: "Smith"
+        name: "Alice Smith"
+        preferred_username: "alice"
+    - username: "bob"
+      password: "secret456"
+      claims:
+        sub: "bob"
+        email: "bob@company.com"
+        given_name: "Bob"
+        family_name: "Jones"
+        name: "Bob Jones"
+
+  clients:
+    - client_id: "webapp"
+      client_secret: "webapp-secret"
+      redirect_uris:
+        - "http://localhost:3000/callback"
+        - "http://localhost:8080/callback"
+    - client_id: "mobile-app"
+      redirect_uris:
+        - "com.example.app://oauth/callback"
+        - "http://localhost:8080/mobile-callback"
 ```
 
 ## Usage
@@ -82,14 +86,7 @@ export IMPOSTER_EXTERNAL_PLUGINS=true
 
 ### 2. Create Configuration
 
-Create an `imposter-config.yaml`:
-
-```yaml
-plugin: oidc-server
-resources: []
-```
-
-And an `oidc-users.yaml` with your users and clients (see example above).
+Create an `imposter-config.yaml` with the plugin configuration block (see complete example above):
 
 ### 3. Run Imposter
 

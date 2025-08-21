@@ -406,6 +406,9 @@ type Config struct {
 	StripServerPath bool              `yaml:"stripServerPath,omitempty"`
 	Validation      *ValidationConfig `yaml:"validation,omitempty"`
 
+	// Plugin-specific configuration block
+	PluginConfig map[string]interface{} `yaml:"config,omitempty"`
+
 	// ConfigDir returns the original config directory, *which might be a parent*,
 	// from which the config file was discovered.
 	// Note that it is set by the config loader at runtime and not part of the file contents.
