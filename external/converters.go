@@ -11,6 +11,7 @@ func ConvertToExternalRequest(req *http.Request) shared.HandlerRequest {
 	return shared.HandlerRequest{
 		Method:  req.Method,
 		Path:    req.URL.Path,
+		Query:   req.URL.Query(),
 		Headers: nil,
 	}
 }

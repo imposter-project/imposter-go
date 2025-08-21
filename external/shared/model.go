@@ -1,8 +1,11 @@
 package shared
 
+import "net/url"
+
 type HandlerRequest struct {
 	Method  string
 	Path    string
+	Query   url.Values
 	Headers map[string]string
 	Body    []byte
 }
