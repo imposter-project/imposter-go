@@ -6,8 +6,16 @@ import (
 )
 
 type OIDCConfig struct {
-	Users   []User   `yaml:"users"`
-	Clients []Client `yaml:"clients"`
+	Users     []User     `yaml:"users"`
+	Clients   []Client   `yaml:"clients"`
+	JWTConfig *JWTConfig `yaml:"jwt,omitempty"`
+}
+
+type JWTConfig struct {
+	Algorithm     string `yaml:"algorithm"`   // "HS256" or "RS256"
+	PrivateKeyPEM string `yaml:"private_key"` // PEM encoded private key for RS256
+	PublicKeyPEM  string `yaml:"public_key"`  // PEM encoded public key for RS256
+	KeyID         string `yaml:"key_id"`      // Key ID for RS256
 }
 
 type User struct {
@@ -79,6 +87,43 @@ func validateConfig(config *OIDCConfig) error {
 		}
 	}
 
+	// Set default JWT config if not provided
+	if config.JWTConfig == nil {
+		config.JWTConfig = &JWTConfig{
+			Algorithm: "HS256",
+		}
+	}
+
+	// Validate JWT config
+	if err := validateJWTConfig(config.JWTConfig); err != nil {
+		return fmt.Errorf("invalid JWT configuration: %w", err)
+	}
+
+	return nil
+}
+
+func validateJWTConfig(jwtConfig *JWTConfig) error {
+	if jwtConfig.Algorithm == "" {
+		jwtConfig.Algorithm = "HS256" // Default
+	}
+
+	switch jwtConfig.Algorithm {
+	case "HS256":
+		// No additional validation needed for HS256
+	case "RS256":
+		if jwtConfig.PrivateKeyPEM == "" {
+			return fmt.Errorf("private_key is required for RS256 algorithm")
+		}
+		if jwtConfig.PublicKeyPEM == "" {
+			return fmt.Errorf("public_key is required for RS256 algorithm")
+		}
+		if jwtConfig.KeyID == "" {
+			return fmt.Errorf("key_id is required for RS256 algorithm")
+		}
+	default:
+		return fmt.Errorf("unsupported algorithm: %s (supported: HS256, RS256)", jwtConfig.Algorithm)
+	}
+
 	return nil
 }
 
@@ -117,6 +162,9 @@ func getDefaultConfig() *OIDCConfig {
 					"http://localhost:3000/callback",
 				},
 			},
+		},
+		JWTConfig: &JWTConfig{
+			Algorithm: "HS256", // Default to HS256 for backward compatibility
 		},
 	}
 }

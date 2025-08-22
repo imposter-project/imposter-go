@@ -11,8 +11,9 @@ An OpenID Connect authorization server implementation as an external plugin for 
   - `/oidc/authorize` - Authorization endpoint
   - `/oidc/token` - Token endpoint
   - `/oidc/userinfo` - Userinfo endpoint
+  - `/oidc/jwks` - JSON Web Key Set (for RS256)
 - **Web-based User Authentication** with responsive HTML login form
-- **JWT Token Generation** with HS256 signing
+- **JWT Token Generation** with HS256 or RS256 signing algorithms  
 - **Configurable Users and Clients** via YAML configuration files
 - **Standard OIDC Scopes**: `openid`, `profile`, `email`, `address`, `phone`
 - **Client Authentication** with client secrets
@@ -74,6 +75,72 @@ config:
       redirect_uris:
         - "com.example.app://oauth/callback"
         - "http://localhost:8080/mobile-callback"
+
+  # Optional: JWT signing configuration (defaults to HS256 if not specified)
+  jwt:
+    algorithm: "HS256"  # Use "RS256" for RSA signing
+    # The following are required only for RS256:
+    # private_key: |
+    #   -----BEGIN PRIVATE KEY-----
+    #   MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC...
+    #   -----END PRIVATE KEY-----
+    # public_key: |
+    #   -----BEGIN PUBLIC KEY-----
+    #   MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvQD...
+    #   -----END PUBLIC KEY-----
+    # key_id: "rsa-key-1"  # Unique identifier for the RSA key
+```
+
+### RS256 Configuration Example
+
+For production environments, RS256 with RSA keys is recommended:
+
+```yaml
+plugin: oidc-server
+resources: []
+
+config:
+  users:
+    - username: "alice"
+      password: "$2a$12$R9h/cIPz0gi.URNNX3kh2OPIW2KJxqjZOXXKx9uhqm0iQx3ZpHBEe"  # bcrypt hashed
+      claims:
+        sub: "alice"
+        email: "alice@example.com"
+        name: "Alice Smith"
+
+  clients:
+    - client_id: "webapp"
+      client_secret: "secure-client-secret"
+      redirect_uris:
+        - "https://myapp.example.com/callback"
+
+  jwt:
+    algorithm: "RS256"
+    key_id: "main-signing-key"
+    private_key: |
+      -----BEGIN PRIVATE KEY-----
+      MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDG8jf7VWmz7+K8
+      ... (your RSA private key)
+      -----END PRIVATE KEY-----
+    public_key: |
+      -----BEGIN PUBLIC KEY-----
+      MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxvI3+1Vps+/ivFbGz8Ej
+      ... (your RSA public key)
+      -----END PUBLIC KEY-----
+```
+
+**Generating RSA Key Pairs:**
+
+```bash
+# Generate private key
+openssl genrsa -out private_key.pem 2048
+
+# Extract public key
+openssl rsa -in private_key.pem -pubout -out public_key.pem
+
+# View keys (for copying into YAML config)
+cat private_key.pem
+cat public_key.pem
 ```
 
 ## Usage
@@ -322,7 +389,10 @@ The plugin provides detailed error responses following OIDC specifications:
 
 ## Security Considerations
 
-- **JWT Signing**: Tokens are signed with HS256 using a randomly generated secret
+- **JWT Signing**: 
+  - **HS256** (default): Tokens are signed with HS256 using a randomly generated secret
+  - **RS256**: Tokens are signed with RSA private key, verified using RSA public key distributed via JWKS endpoint
+  - RS256 is recommended for production environments where tokens are verified by multiple services
 - **Code Expiration**: Authorization codes expire after 10 minutes
 - **Token Expiration**: Access tokens expire after 1 hour
 - **Session Management**: Login sessions expire after 10 minutes

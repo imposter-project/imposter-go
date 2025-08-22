@@ -11,7 +11,7 @@ import (
 )
 
 func createTestOIDCServerForPlugin() *OIDCServer {
-	return &OIDCServer{
+	server := &OIDCServer{
 		logger: hclog.New(&hclog.LoggerOptions{
 			Level:  hclog.Off, // Disable logging during tests
 			Output: nil,
@@ -23,6 +23,8 @@ func createTestOIDCServerForPlugin() *OIDCServer {
 		tokens:    make(map[string]*AccessToken),
 		jwtSecret: []byte("test-secret-key-32-bytes-long!"),
 	}
+
+	return server
 }
 
 func TestOIDCServer_Configure(t *testing.T) {
@@ -136,6 +138,7 @@ clients:
 
 func TestOIDCServer_Handle(t *testing.T) {
 	server := createTestOIDCServerForPlugin()
+	server.CacheDiscoveryDocument() // Cache discovery document for Handle tests
 
 	tests := []struct {
 		name           string
@@ -205,6 +208,7 @@ func TestOIDCServer_Handle(t *testing.T) {
 func TestOIDCServer_handleDiscovery(t *testing.T) {
 	server := createTestOIDCServerForPlugin()
 	server.serverURL = "https://example.com"
+	server.CacheDiscoveryDocument() // Cache after setting server URL
 
 	tests := []struct {
 		name           string
@@ -477,6 +481,7 @@ func TestOIDCServer_HandleIntegration(t *testing.T) {
 
 	t.Run("discovery endpoint provides correct server URL", func(t *testing.T) {
 		server.serverURL = "https://custom-server.com"
+		server.CacheDiscoveryDocument() // Cache after setting custom server URL
 
 		req := shared.HandlerRequest{
 			Method: "GET",

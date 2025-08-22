@@ -187,11 +187,23 @@ func (o *OIDCServer) generateIDToken(user *User, clientID, nonce string, scopes 
 		}
 	}
 
-	// Create token
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	// Create token with appropriate signing method
+	var token *jwt.Token
+	var signedToken string
+	var err error
 
-	// Sign token with secret
-	signedToken, err := token.SignedString(o.jwtSecret)
+	if o.config.JWTConfig != nil && o.config.JWTConfig.Algorithm == "RS256" {
+		// Use RS256 with RSA private key
+		token = jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+		// Add key ID to header for RS256
+		token.Header["kid"] = o.config.JWTConfig.KeyID
+		signedToken, err = token.SignedString(o.privateKey)
+	} else {
+		// Default to HS256 with HMAC secret
+		token = jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+		signedToken, err = token.SignedString(o.jwtSecret)
+	}
+
 	if err != nil {
 		return "", fmt.Errorf("failed to sign JWT token: %w", err)
 	}
