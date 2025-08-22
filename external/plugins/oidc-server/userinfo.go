@@ -78,6 +78,8 @@ func (o *OIDCServer) handleUserInfo(args shared.HandlerRequest) shared.HandlerRe
 }
 
 func (o *OIDCServer) userinfoError(errorCode, errorDescription string, statusCode int) shared.HandlerResponse {
+	o.logger.Error("userinfo error", "error", errorCode, "description", errorDescription)
+
 	errorResponse := UserinfoErrorResponse{
 		Error:            errorCode,
 		ErrorDescription: errorDescription,

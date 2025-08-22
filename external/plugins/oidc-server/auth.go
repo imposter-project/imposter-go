@@ -331,6 +331,8 @@ func (o *OIDCServer) renderLoginForm(sessionID, clientID string, errorMsg ...str
 }
 
 func (o *OIDCServer) renderError(errorCode, errorDescription string) shared.HandlerResponse {
+	o.logger.Error("OIDC error", "code", errorCode, "description", errorDescription)
+
 	body := fmt.Sprintf(`<!DOCTYPE html>
 <html>
 <head>
@@ -360,6 +362,8 @@ func (o *OIDCServer) renderError(errorCode, errorDescription string) shared.Hand
 }
 
 func (o *OIDCServer) redirectError(redirectURI, errorCode, errorDescription, state string) shared.HandlerResponse {
+	o.logger.Error("OIDC error", "code", errorCode, "description", errorDescription)
+
 	redirectURL, err := url.Parse(redirectURI)
 	if err != nil {
 		return o.renderError("server_error", "Invalid redirect URI")

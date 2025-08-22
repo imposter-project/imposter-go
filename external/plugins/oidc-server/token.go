@@ -253,6 +253,8 @@ func (o *OIDCServer) validateAccessToken(tokenString string) (*AccessToken, erro
 }
 
 func (o *OIDCServer) tokenError(errorCode, errorDescription string) shared.HandlerResponse {
+	o.logger.Error("token error", "error", errorCode, "description", errorDescription)
+
 	errorResponse := TokenErrorResponse{
 		Error:            errorCode,
 		ErrorDescription: errorDescription,
