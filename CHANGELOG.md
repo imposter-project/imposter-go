@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2025-08-22
+### Added
+- feat: add support for loading OIDC configuration from plugin config block.
+- feat: adds OIDC server plugin.
+- feat: allows RS256 secret to be set in oidc-server plugin config.
+- feat: allows external plugins to be referenced by config files.
+- feat: support HS256 in oidc-server plugin.
+- feat: supports multiple documents in YAML config files.
+
+### Changed
+- refactor: OIDC config should load from raw YAML bytes.
+- refactor: aligns JWKS endpoint to common value for RFC 7517 documents.
+- refactor: enable swagger-ui plugin via config file.
+- refactor: improves request trace logging.
+- refactor: pass query to plugins.
+- test: improves coverage of OIDC server plugin.
+
+### Fixed
+- fix: correctly parse form body in oidc-server plugin.
+
 ## [1.4.1] - 2025-08-20
 ### Changed
 - refactor: moves configdir to config model.
