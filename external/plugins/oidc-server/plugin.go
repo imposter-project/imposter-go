@@ -84,13 +84,6 @@ func (o *OIDCServer) Configure(cfg shared.ExternalConfig) error {
 	o.codes = make(map[string]*AuthCode)
 	o.tokens = make(map[string]*AccessToken)
 
-	// Generate JWT signing key for HS256 (will be used if config defaults to HS256)
-	key := make([]byte, 32)
-	if _, err := rand.Read(key); err != nil {
-		return fmt.Errorf("failed to generate JWT signing key: %w", err)
-	}
-	o.jwtSecret = key
-
 	if len(cfg.Configs) > 0 {
 		firstConfig := cfg.Configs[0]
 
@@ -134,8 +127,18 @@ func (o *OIDCServer) setupJWTKeys() error {
 
 	switch jwtConfig.Algorithm {
 	case "HS256":
-		// jwtSecret is already generated, nothing more to do
-		o.logger.Debug("using HS256 algorithm for JWT signing")
+		// Use configured secret or warn about using random one
+		if jwtConfig.Secret != "" {
+			o.jwtSecret = []byte(jwtConfig.Secret)
+			o.logger.Debug("using configured HS256 secret for JWT signing")
+		} else {
+			o.logger.Warn("no HS256 secret configured, using randomly generated secret - this is not suitable for production use across multiple server instances")
+			key := make([]byte, 32)
+			if _, err := rand.Read(key); err != nil {
+				return fmt.Errorf("failed to generate JWT signing key: %w", err)
+			}
+			o.jwtSecret = key
+		}
 	case "RS256":
 		o.logger.Debug("using RS256 algorithm for JWT signing")
 

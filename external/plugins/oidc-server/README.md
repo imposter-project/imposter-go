@@ -79,6 +79,7 @@ config:
   # Optional: JWT signing configuration (defaults to HS256 if not specified)
   jwt:
     algorithm: "HS256"  # Use "RS256" for RSA signing
+    secret: "your-secure-32-char-or-longer-secret"  # Required for HS256 in production
     # The following are required only for RS256:
     # private_key: |
     #   -----BEGIN PRIVATE KEY-----
@@ -89,6 +90,44 @@ config:
     #   MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvQD...
     #   -----END PUBLIC KEY-----
     # key_id: "rsa-key-1"  # Unique identifier for the RSA key
+```
+
+### HS256 Configuration Example (Production)
+
+For production environments using HS256, always configure a secure secret:
+
+```yaml
+plugin: oidc-server
+resources: []
+
+config:
+  users:
+    - username: "alice"
+      password: "$2a$12$R9h/cIPz0gi.URNNX3kh2OPIW2KJxqjZOXXKx9uhqm0iQx3ZpHBEe"  # bcrypt hashed
+      claims:
+        sub: "alice"
+        email: "alice@example.com"
+        name: "Alice Smith"
+
+  clients:
+    - client_id: "webapp"
+      client_secret: "secure-client-secret"
+      redirect_uris:
+        - "https://myapp.example.com/callback"
+
+  jwt:
+    algorithm: "HS256"
+    secret: "your-super-secure-secret-key-must-be-at-least-32-characters-long!"
+```
+
+**Generating Secure Secrets:**
+
+```bash
+# Generate a secure random secret (32+ characters)
+openssl rand -base64 48
+
+# Or use a strong passphrase
+# Example: "My$ecure2024JWT!SigningSecret#ForProduction"
 ```
 
 ### RS256 Configuration Example
@@ -390,7 +429,7 @@ The plugin provides detailed error responses following OIDC specifications:
 ## Security Considerations
 
 - **JWT Signing**: 
-  - **HS256** (default): Tokens are signed with HS256 using a randomly generated secret
+  - **HS256** (default): Tokens are signed with HS256 using a configurable secret. If no secret is provided, a random one is generated with a warning (not suitable for multi-instance deployments)
   - **RS256**: Tokens are signed with RSA private key, verified using RSA public key distributed via JWKS endpoint
   - RS256 is recommended for production environments where tokens are verified by multiple services
 - **Code Expiration**: Authorization codes expire after 10 minutes

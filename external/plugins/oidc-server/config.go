@@ -13,6 +13,7 @@ type OIDCConfig struct {
 
 type JWTConfig struct {
 	Algorithm     string `yaml:"algorithm"`   // "HS256" or "RS256"
+	Secret        string `yaml:"secret"`      // HMAC secret for HS256
 	PrivateKeyPEM string `yaml:"private_key"` // PEM encoded private key for RS256
 	PublicKeyPEM  string `yaml:"public_key"`  // PEM encoded public key for RS256
 	KeyID         string `yaml:"key_id"`      // Key ID for RS256
@@ -109,7 +110,10 @@ func validateJWTConfig(jwtConfig *JWTConfig) error {
 
 	switch jwtConfig.Algorithm {
 	case "HS256":
-		// No additional validation needed for HS256
+		// Validate secret length if provided
+		if jwtConfig.Secret != "" && len(jwtConfig.Secret) < 32 {
+			return fmt.Errorf("HS256 secret must be at least 32 characters long for security")
+		}
 	case "RS256":
 		if jwtConfig.PrivateKeyPEM == "" {
 			return fmt.Errorf("private_key is required for RS256 algorithm")

@@ -5,6 +5,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -270,5 +271,125 @@ func TestOIDCServer_HS256Fallback(t *testing.T) {
 	jwksBody := string(jwksResp.Body)
 	if jwksBody != `{"keys": []}` {
 		t.Errorf("JWKS should return empty keys for HS256, got: %s", jwksBody)
+	}
+}
+
+func TestOIDCServer_HS256WithSecret(t *testing.T) {
+	// Test HS256 with configured secret
+	configuredSecret := "my-secure-test-secret-that-is-long-enough-for-testing"
+
+	config := &OIDCConfig{
+		Users:   []User{{Username: "test", Password: "test", Claims: map[string]string{"sub": "test"}}},
+		Clients: []Client{{ClientID: "test", RedirectURIs: []string{"http://localhost:8080/callback"}}},
+		JWTConfig: &JWTConfig{
+			Algorithm: "HS256",
+			Secret:    configuredSecret,
+		},
+	}
+
+	server := &OIDCServer{
+		logger:    hclog.NewNullLogger(),
+		config:    config,
+		serverURL: "http://localhost:8080",
+	}
+
+	// Setup JWT keys
+	err := server.setupJWTKeys()
+	if err != nil {
+		t.Fatalf("Failed to setup JWT keys: %v", err)
+	}
+
+	// Verify the secret was used
+	if string(server.jwtSecret) != configuredSecret {
+		t.Errorf("Expected JWT secret to be configured secret, got: %s", string(server.jwtSecret))
+	}
+
+	// Test JWT generation with configured secret
+	tokenString, err := server.generateIDToken(
+		&config.Users[0],
+		"test-client",
+		"test-nonce",
+		[]string{"openid", "profile"},
+		time.Now(),
+		3600,
+	)
+	if err != nil {
+		t.Fatalf("Failed to generate ID token: %v", err)
+	}
+
+	// Verify the token can be parsed with the configured secret
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return []byte(configuredSecret), nil
+	})
+
+	if err != nil {
+		t.Fatalf("Failed to parse token: %v", err)
+	}
+
+	if !token.Valid {
+		t.Error("Token should be valid")
+	}
+}
+
+func TestValidateJWTConfig_SecretValidation(t *testing.T) {
+	tests := []struct {
+		name        string
+		config      *JWTConfig
+		expectError bool
+		errorMsg    string
+	}{
+		{
+			name: "valid HS256 with long secret",
+			config: &JWTConfig{
+				Algorithm: "HS256",
+				Secret:    "this-is-a-very-secure-secret-that-is-definitely-long-enough",
+			},
+			expectError: false,
+		},
+		{
+			name: "HS256 with short secret",
+			config: &JWTConfig{
+				Algorithm: "HS256",
+				Secret:    "short",
+			},
+			expectError: true,
+			errorMsg:    "HS256 secret must be at least 32 characters long",
+		},
+		{
+			name: "HS256 without secret",
+			config: &JWTConfig{
+				Algorithm: "HS256",
+			},
+			expectError: false, // Should not error, will generate random secret with warning
+		},
+		{
+			name: "HS256 with exactly 32 character secret",
+			config: &JWTConfig{
+				Algorithm: "HS256",
+				Secret:    "exactly-32-characters-long-key!!",
+			},
+			expectError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateJWTConfig(tt.config)
+
+			if tt.expectError {
+				if err == nil {
+					t.Error("Expected error but got none")
+				} else if !strings.Contains(err.Error(), tt.errorMsg) {
+					t.Errorf("Expected error containing '%s', got: %s", tt.errorMsg, err.Error())
+				}
+			} else {
+				if err != nil {
+					t.Errorf("Unexpected error: %v", err)
+				}
+			}
+		})
 	}
 }
