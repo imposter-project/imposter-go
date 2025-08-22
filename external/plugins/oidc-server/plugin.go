@@ -84,21 +84,22 @@ func (o *OIDCServer) Configure(cfg shared.ExternalConfig) error {
 	o.codes = make(map[string]*AuthCode)
 	o.tokens = make(map[string]*AccessToken)
 
-	if len(cfg.Configs) > 0 {
-		firstConfig := cfg.Configs[0]
-
-		// Try to load from plugin config block first
-		if len(firstConfig.PluginConfig) > 0 {
-			o.logger.Debug("loading OIDC config from plugin config block")
-			config, err := loadOIDCConfig(firstConfig.PluginConfig)
-			if err != nil {
-				return fmt.Errorf("failed to load OIDC config from plugin config block: %w", err)
-			}
-			o.config = config
-			o.logger.Info("OIDC server configured from plugin config block", "users", len(config.Users), "clients", len(config.Clients))
-		} else {
-			o.logger.Warn("no OIDC config found in plugin config block")
+	for _, lwConfig := range cfg.Configs {
+		if len(lwConfig.PluginConfig) == 0 {
+			continue
 		}
+		if o.config != nil {
+			o.logger.Warn("multiple OIDC config blocks found, using the first one")
+			break
+		}
+		o.logger.Debug("loading OIDC config from plugin config block")
+		config, err := loadOIDCConfig(lwConfig.PluginConfig)
+		if err != nil {
+			return fmt.Errorf("failed to load OIDC config from plugin config block: %w", err)
+		}
+		o.config = config
+		o.logger.Info("OIDC server configured from plugin config block", "users", len(config.Users), "clients", len(config.Clients))
+		o.logger.Trace("using OIDC configuration", "config", lwConfig.PluginConfig)
 	}
 
 	if o.config == nil {
@@ -115,6 +116,9 @@ func (o *OIDCServer) Configure(cfg shared.ExternalConfig) error {
 	if err := o.CacheDiscoveryDocument(); err != nil {
 		return fmt.Errorf("failed to cache discovery document: %w", err)
 	}
+
+	endpoints := fmt.Sprintf("discovery: %[1]s/.well-known/openid-configuration\njwks: %[1]s/.well-known/jwks.json\nauthorize: %[1]s/oidc/authorize\ntoken: %[1]s/oidc/token\nuserinfo: %[1]s/oidc/userinfo", o.serverURL)
+	o.logger.Info("OIDC server plugin configured successfully", "endpoints", endpoints)
 
 	return nil
 }

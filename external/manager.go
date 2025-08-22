@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
@@ -48,7 +49,12 @@ func StartExternalPlugins(imposterConfig *config.ImposterConfig, configs []confi
 
 	cfg := buildConfig(imposterConfig, configs)
 
+	requestedPlugins := listRequestedPlugins(configs)
 	for pluginName, p := range pluginMap {
+		if !slices.Contains(requestedPlugins, pluginName) {
+			logger.Tracef("skipping external plugin %s, not requested in config", pluginName)
+			continue
+		}
 		plg := p.(*shared.ExternalPlugin)
 		err := start(cfg, pluginName, plg, hclogger)
 		if err != nil {
@@ -60,6 +66,7 @@ func StartExternalPlugins(imposterConfig *config.ImposterConfig, configs []confi
 	return loaded, nil
 }
 
+// buildConfig constructs the ExternalConfig to be passed to each plugin.
 func buildConfig(imposterConfig *config.ImposterConfig, configs []config.Config) shared.ExternalConfig {
 	var lightweight []shared.LightweightConfig
 	for _, cfg := range configs {
@@ -89,6 +96,20 @@ func buildConfig(imposterConfig *config.ImposterConfig, configs []config.Config)
 		Configs: lightweight,
 	}
 	return cfg
+}
+
+// listRequestedPlugins returns a list of unique plugin names requested in the configuration.
+func listRequestedPlugins(configs []config.Config) []string {
+	var requestedPlugins []string
+	for _, cfg := range configs {
+		for _, rp := range requestedPlugins {
+			if cfg.Plugin == rp {
+				continue
+			}
+			requestedPlugins = append(requestedPlugins, cfg.Plugin)
+		}
+	}
+	return requestedPlugins
 }
 
 func getHcLogLevel() hclog.Level {
