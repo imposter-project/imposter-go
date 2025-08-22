@@ -102,12 +102,10 @@ func buildConfig(imposterConfig *config.ImposterConfig, configs []config.Config)
 func listRequestedPlugins(configs []config.Config) []string {
 	var requestedPlugins []string
 	for _, cfg := range configs {
-		for _, rp := range requestedPlugins {
-			if cfg.Plugin == rp {
-				continue
-			}
-			requestedPlugins = append(requestedPlugins, cfg.Plugin)
+		if slices.Contains(requestedPlugins, cfg.Plugin) {
+			continue
 		}
+		requestedPlugins = append(requestedPlugins, cfg.Plugin)
 	}
 	return requestedPlugins
 }
