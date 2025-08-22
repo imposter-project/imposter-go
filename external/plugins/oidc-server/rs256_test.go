@@ -114,7 +114,7 @@ func TestOIDCServer_RS256Support(t *testing.T) {
 	// Test JWKS endpoint
 	jwksResp := server.handleJWKS(shared.HandlerRequest{
 		Method: "GET",
-		Path:   "/oidc/jwks",
+		Path:   "/.well-known/jwks.json",
 	})
 
 	if jwksResp.StatusCode != 200 {
@@ -209,8 +209,8 @@ func TestOIDCServer_JWKSCaching(t *testing.T) {
 	}
 
 	// Call JWKS endpoint multiple times and verify we get the same cached response
-	resp1 := server.handleJWKS(shared.HandlerRequest{Method: "GET", Path: "/oidc/jwks"})
-	resp2 := server.handleJWKS(shared.HandlerRequest{Method: "GET", Path: "/oidc/jwks"})
+	resp1 := server.handleJWKS(shared.HandlerRequest{Method: "GET", Path: "/.well-known/jwks.json"})
+	resp2 := server.handleJWKS(shared.HandlerRequest{Method: "GET", Path: "/.well-known/jwks.json"})
 
 	if resp1.StatusCode != 200 || resp2.StatusCode != 200 {
 		t.Error("JWKS endpoint should return 200")
@@ -265,7 +265,7 @@ func TestOIDCServer_HS256Fallback(t *testing.T) {
 	// Test JWKS endpoint returns empty keys for HS256
 	jwksResp := server.handleJWKS(shared.HandlerRequest{
 		Method: "GET",
-		Path:   "/oidc/jwks",
+		Path:   "/.well-known/jwks.json",
 	})
 
 	jwksBody := string(jwksResp.Body)

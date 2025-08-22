@@ -11,7 +11,7 @@ An OpenID Connect authorization server implementation as an external plugin for 
   - `/oidc/authorize` - Authorization endpoint
   - `/oidc/token` - Token endpoint
   - `/oidc/userinfo` - Userinfo endpoint
-  - `/oidc/jwks` - JSON Web Key Set (for RS256)
+  - `/.well-known/jwks.json` - JSON Web Key Set (for RS256)
 - **Web-based User Authentication** with responsive HTML login form
 - **JWT Token Generation** with HS256 or RS256 signing algorithms  
 - **Configurable Users and Clients** via YAML configuration files

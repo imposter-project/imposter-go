@@ -212,7 +212,7 @@ func (o *OIDCServer) CacheDiscoveryDocument() error {
 		"authorization_endpoint":           o.serverURL + "/oidc/authorize",
 		"token_endpoint":                   o.serverURL + "/oidc/token",
 		"userinfo_endpoint":                o.serverURL + "/oidc/userinfo",
-		"jwks_uri":                         o.serverURL + "/oidc/jwks",
+		"jwks_uri":                         o.serverURL + "/.well-known/jwks.json",
 		"response_types_supported":         []string{"code"},
 		"subject_types_supported":          []string{"public"},
 		"scopes_supported":                 []string{"openid", "profile", "email"},
@@ -249,7 +249,7 @@ func (o *OIDCServer) Handle(args shared.HandlerRequest) shared.HandlerResponse {
 		return o.handleToken(args)
 	case "/oidc/userinfo":
 		return o.handleUserInfo(args)
-	case "/oidc/jwks":
+	case "/.well-known/jwks.json":
 		return o.handleJWKS(args)
 	case "/.well-known/openid-configuration":
 		return o.handleDiscovery(args)
