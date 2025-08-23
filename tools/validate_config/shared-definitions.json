@@ -161,6 +161,41 @@
                 }
             },
             "additionalProperties": true
+        },
+        "validation": {
+            "type": "object",
+            "description": "OpenAPI request/response validation configuration",
+            "properties": {
+                "request": {
+                    "oneOf": [
+                        { "type": "boolean" },
+                        { 
+                            "type": "string", 
+                            "enum": ["fail", "log", "ignore", "true", "false"] 
+                        }
+                    ],
+                    "description": "Enable/disable request validation against OpenAPI spec"
+                },
+                "response": {
+                    "oneOf": [
+                        { "type": "boolean" },
+                        { 
+                            "type": "string", 
+                            "enum": ["fail", "log", "ignore", "true", "false"] 
+                        }
+                    ],
+                    "description": "Enable/disable response validation against OpenAPI spec"
+                },
+                "levels": {
+                    "type": "object",
+                    "description": "Map of validation keys to log levels",
+                    "additionalProperties": {
+                        "type": "string",
+                        "enum": ["ERROR", "WARN"]
+                    }
+                }
+            },
+            "additionalProperties": false
         }
     }
 } 

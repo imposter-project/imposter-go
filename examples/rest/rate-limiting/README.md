@@ -90,9 +90,8 @@ resources:
           "processingTime": "normal"
         }
       delay:
-        range:
-          min: 100
-          max: 500
+        min: 100
+        max: 500
       headers:
         Content-Type: application/json
 

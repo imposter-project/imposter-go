@@ -114,9 +114,8 @@ resources:
           "status": "success"
         }
       delay:
-        range:
-          min: 100
-          max: 500
+        min: 100
+        max: 500
       headers:
         Content-Type: application/json
 
@@ -211,9 +210,8 @@ resources:
           "status": "success"
         }
       delay:
-        range:
-          min: 50
-          max: 200
+        min: 50
+        max: 200
       headers:
         Content-Type: application/json
 
@@ -250,9 +248,8 @@ resources:
           "estimatedTime": "5-10 seconds"
         }
       delay:
-        range:
-          min: 5000
-          max: 10000
+        min: 5000
+        max: 10000
       headers:
         Content-Type: application/json
 

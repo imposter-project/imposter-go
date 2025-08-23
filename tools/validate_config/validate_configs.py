@@ -37,7 +37,8 @@ def validate_config_file(file_path, schema):
     """Validate a single config file against the schema."""
     try:
         with open(file_path, 'r') as f:
-            config = yaml.safe_load(f)
+            # Handle multi-document YAML files
+            documents = list(yaml.safe_load_all(f))
             
             # Create a resolver that can handle references to other schema files
             schema_dir = Path(__file__).parent.resolve()
@@ -64,9 +65,30 @@ def validate_config_file(file_path, schema):
                 handlers={'': custom_uri_handler}
             )
             
-            Draft7Validator(schema, resolver=resolver).validate(config)
-            print(f"✓ {file_path} - Valid")
-            return True
+            validator = Draft7Validator(schema, resolver=resolver)
+            
+            # Validate each document
+            all_valid = True
+            for i, config in enumerate(documents):
+                if config is None:  # Skip empty documents
+                    continue
+                try:
+                    validator.validate(config)
+                except ValidationError as e:
+                    print(f"✗ {file_path} - Document {i+1} Invalid:")
+                    print(f"  Error: {e.message}")
+                    print(f"  Path: {' -> '.join(str(p) for p in e.path)}")
+                    all_valid = False
+            
+            if all_valid:
+                doc_count = len([d for d in documents if d is not None])
+                if doc_count > 1:
+                    print(f"✓ {file_path} - Valid ({doc_count} documents)")
+                else:
+                    print(f"✓ {file_path} - Valid")
+                return True
+            return False
+            
     except ValidationError as e:
         print(f"✗ {file_path} - Invalid:")
         print(f"  Error: {e.message}")

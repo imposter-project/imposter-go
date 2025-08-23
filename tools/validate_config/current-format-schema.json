@@ -4,13 +4,17 @@
     "definitions": {
         "currentFormat": {
             "type": "object",
-            "required": ["plugin", "resources"],
+            "required": ["plugin"],
             "properties": {
                 "plugin": {
                     "type": "string",
-                    "enum": ["rest", "soap", "hbase", "openapi"]
+                    "enum": ["rest", "soap", "hbase", "openapi", "oidc-server", "swaggerui"]
                 },
                 "basePath": {
+                    "type": "string"
+                },
+                "specFile": {
+                    "description": "OpenAPI specification file (YAML or JSON)",
                     "type": "string"
                 },
                 "wsdlFile": {
@@ -71,7 +75,13 @@
                         }
                     },
                     "additionalProperties": false
-                }
+                },
+                "config": {
+                    "type": "object",
+                    "description": "Plugin-specific configuration block for external plugins",
+                    "additionalProperties": true
+                },
+                "validation": { "$ref": "shared-definitions.json#/definitions/validation" }
             },
             "additionalProperties": false
         }

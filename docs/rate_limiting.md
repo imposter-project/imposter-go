@@ -157,10 +157,9 @@ concurrency:
 
   - threshold: 5
     response:
-      delay:
-        range:
-          min: 500
-          max: 2000  # Random delay between 0.5-2 seconds
+      delay: # Random delay between 0.5-2 seconds
+        min: 500
+        max: 2000
       statusCode: 200
       content: "Heavily throttled"
 ```

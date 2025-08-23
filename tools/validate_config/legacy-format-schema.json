@@ -9,7 +9,7 @@
                 {
                     "required": ["resources"],
                     "not": {
-                        "required": ["response", "path", "method", "contentType"]
+                        "required": ["response", "path", "method", "contentType", "specFile", "wsdlFile"]
                     }
                 },
                 {
@@ -17,7 +17,9 @@
                         { "required": ["response"] },
                         { "required": ["path"] },
                         { "required": ["method"] },
-                        { "required": ["contentType"] }
+                        { "required": ["contentType"] },
+                        { "required": ["specFile"] },
+                        { "required": ["wsdlFile"] }
                     ],
                     "not": {
                         "required": ["resources"]
@@ -30,6 +32,10 @@
                     "enum": ["rest", "soap", "hbase", "openapi"]
                 },
                 "basePath": {
+                    "type": "string"
+                },
+                "specFile": {
+                    "description": "OpenAPI specification file (YAML or JSON)",
                     "type": "string"
                 },
                 "wsdlFile": {
@@ -99,6 +105,12 @@
                 "contentType": { 
                     "type": "string",
                     "description": "[DEPRECATED] Please use response.headers['Content-Type'] instead. This property will be removed in a future version."
+                },
+                "validation": { "$ref": "shared-definitions.json#/definitions/validation" },
+                "config": {
+                    "type": "object",
+                    "description": "Plugin-specific configuration block for external plugins",
+                    "additionalProperties": true
                 }
             }
         }

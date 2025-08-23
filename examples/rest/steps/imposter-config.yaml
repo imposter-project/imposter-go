@@ -63,6 +63,6 @@ resources:
             expression: "${remote.response.body.id}"
     
     response:
-      content: User created with ID: ${stores.request.userId}
+      content: "User created with ID: ${stores.request.userId}"
       statusCode: 201
-      template: true 
+      template: true
