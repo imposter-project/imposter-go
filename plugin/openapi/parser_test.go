@@ -1,6 +1,8 @@
 package openapi
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -62,4 +64,51 @@ func TestNewOpenAPIParser(t *testing.T) {
 			assert.Len(t, parser.GetOperations(), tt.wantOpCount)
 		})
 	}
+}
+
+func TestOpenAPIParser_ExternalURLRefsAreParsed(t *testing.T) {
+	schemaJSON := `{
+	  "User": {
+		"properties": {
+		  "id": {
+			"type": "integer",
+			"format": "int64",
+			"example": 10
+		  },
+		  "username": {
+			"type": "string",
+			"example": "theUser"
+		  },
+		  "firstName": {
+			"type": "string",
+			"example": "John"
+		  },
+		  "lastName": {
+			"type": "string",
+			"example": "James"
+		  }
+		}
+	  }
+	}`
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/schemas/user.json" {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(schemaJSON))
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer ts.Close()
+
+	workingDir, _ := os.Getwd()
+	specFile := filepath.Join(workingDir, "testdata/externalRef/users.yaml")
+
+	parser, err := newOpenAPIParser(specFile, false, parserOptions{
+		externalReferenceBaseURL: ts.URL + "/",
+	})
+
+	assert.NoError(t, err)
+	assert.NotNil(t, parser)
+	assert.Equal(t, OpenAPI30, parser.GetVersion())
+	assert.Len(t, parser.GetOperations(), 2)
 }
