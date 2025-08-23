@@ -212,16 +212,18 @@ func (o *OIDCServer) cacheJWKS() error {
 func (o *OIDCServer) CacheDiscoveryDocument() error {
 	// Build discovery document as a map
 	discovery := map[string]interface{}{
-		"issuer":                           o.serverURL,
-		"authorization_endpoint":           o.serverURL + "/oidc/authorize",
-		"token_endpoint":                   o.serverURL + "/oidc/token",
-		"userinfo_endpoint":                o.serverURL + "/oidc/userinfo",
-		"jwks_uri":                         o.serverURL + "/.well-known/jwks.json",
-		"response_types_supported":         []string{"code"},
-		"subject_types_supported":          []string{"public"},
-		"scopes_supported":                 []string{"openid", "profile", "email"},
-		"claims_supported":                 []string{"sub", "name", "given_name", "family_name", "email"},
-		"code_challenge_methods_supported": []string{"S256", "plain"},
+		"issuer":                                o.serverURL,
+		"authorization_endpoint":                o.serverURL + "/oidc/authorize",
+		"token_endpoint":                        o.serverURL + "/oidc/token",
+		"userinfo_endpoint":                     o.serverURL + "/oidc/userinfo",
+		"jwks_uri":                              o.serverURL + "/.well-known/jwks.json",
+		"response_types_supported":              []string{"code"},
+		"subject_types_supported":               []string{"public"},
+		"scopes_supported":                      []string{"openid", "profile", "email"},
+		"claims_supported":                      []string{"sub", "name", "given_name", "family_name", "email"},
+		"code_challenge_methods_supported":      []string{"S256", "plain"},
+		"token_endpoint_auth_methods_supported": []string{"client_secret_basic", "client_secret_post"},
+		"grant_types_supported":                 []string{"authorization_code"},
 	}
 
 	// Set signing algorithms based on configuration

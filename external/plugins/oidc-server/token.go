@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -41,10 +42,31 @@ func (o *OIDCServer) handleToken(args shared.HandlerRequest) shared.HandlerRespo
 	}
 
 	code := formData.Get("code")
-	clientID := formData.Get("client_id")
-	clientSecret := formData.Get("client_secret")
 	redirectURI := formData.Get("redirect_uri")
 	codeVerifier := formData.Get("code_verifier")
+
+	// Client authentication: support both client_secret_post and client_secret_basic
+	var clientID, clientSecret string
+
+	// Try client_secret_post first (credentials in form data)
+	clientID = formData.Get("client_id")
+	clientSecret = formData.Get("client_secret")
+
+	// If no client_id in form data, try client_secret_basic (Authorization header)
+	if clientID == "" {
+		authHeader := args.Headers["authorization"]
+		if authHeader == "" {
+			authHeader = args.Headers["Authorization"]
+		}
+
+		if authHeader != "" {
+			basicClientID, basicClientSecret, ok := parseBasicAuth(authHeader)
+			if ok {
+				clientID = basicClientID
+				clientSecret = basicClientSecret
+			}
+		}
+	}
 
 	// Validate required parameters
 	if code == "" {
@@ -52,7 +74,7 @@ func (o *OIDCServer) handleToken(args shared.HandlerRequest) shared.HandlerRespo
 	}
 
 	if clientID == "" {
-		return o.tokenError("invalid_request", "client_id is required")
+		return o.tokenError("invalid_client", "client_id is required (either in form data or Authorization header)")
 	}
 
 	if redirectURI == "" {
@@ -264,7 +286,24 @@ func parseBasicAuth(header string) (username, password string, ok bool) {
 		return "", "", false
 	}
 
-	// This is a simplified version - in production you'd decode base64
-	// For now, we'll get credentials from form data
-	return "", "", false
+	// Extract the base64 encoded credentials
+	encoded := header[len(prefix):]
+	if encoded == "" {
+		return "", "", false
+	}
+
+	// Decode from base64
+	decoded, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		return "", "", false
+	}
+
+	// Split on first colon to separate username and password
+	credentials := string(decoded)
+	colonIndex := strings.IndexByte(credentials, ':')
+	if colonIndex == -1 {
+		return "", "", false
+	}
+
+	return credentials[:colonIndex], credentials[colonIndex+1:], true
 }

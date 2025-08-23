@@ -112,7 +112,7 @@ func TestOIDCServer_handleToken(t *testing.T) {
 			checkResponse: func(t *testing.T, resp shared.HandlerResponse) {
 				var errorResp TokenErrorResponse
 				json.Unmarshal(resp.Body, &errorResp)
-				if errorResp.Error != "invalid_request" || !strings.Contains(errorResp.ErrorDescription, "client_id is required") {
+				if errorResp.Error != "invalid_client" || !strings.Contains(errorResp.ErrorDescription, "client_id is required") {
 					t.Errorf("Expected client_id required error, got '%s: %s'", errorResp.Error, errorResp.ErrorDescription)
 				}
 			},
@@ -686,11 +686,39 @@ func TestParseBasicAuth(t *testing.T) {
 			expectOk:       false,
 		},
 		{
-			name:           "basic auth (simplified implementation)",
-			header:         "Basic dGVzdDpzZWNyZXQ=",
+			name:           "valid basic auth",
+			header:         "Basic dGVzdDpzZWNyZXQ=", // test:secret in base64
+			expectUsername: "test",
+			expectPassword: "secret",
+			expectOk:       true,
+		},
+		{
+			name:           "basic auth with empty password",
+			header:         "Basic dGVzdDo=", // test: in base64
+			expectUsername: "test",
+			expectPassword: "",
+			expectOk:       true,
+		},
+		{
+			name:           "basic auth with colon in password",
+			header:         "Basic Y2xpZW50MTpzZWNyZXQ6d2l0aDpjb2xvbnM=", // client1:secret:with:colons in base64
+			expectUsername: "client1",
+			expectPassword: "secret:with:colons",
+			expectOk:       true,
+		},
+		{
+			name:           "invalid base64",
+			header:         "Basic invalid_base64!",
 			expectUsername: "",
 			expectPassword: "",
-			expectOk:       false, // Current implementation always returns false
+			expectOk:       false,
+		},
+		{
+			name:           "missing colon separator",
+			header:         "Basic dGVzdA==", // test in base64 (no colon)
+			expectUsername: "",
+			expectPassword: "",
+			expectOk:       false,
 		},
 	}
 
@@ -792,4 +820,133 @@ func TestOIDCServer_TokenFlow_Integration(t *testing.T) {
 			t.Error("Authorization code should be consumed")
 		}
 	})
+}
+
+func TestOIDCServer_handleToken_ClientSecretBasic(t *testing.T) {
+	server := createTestOIDCServerForToken()
+
+	// Create a valid authorization code for testing
+	validCode := "valid-auth-code-basic"
+	authCode := &AuthCode{
+		Code:        validCode,
+		ClientID:    "test-client",
+		RedirectURI: "http://localhost:8080/callback",
+		UserID:      "alice",
+		Scope:       "openid profile",
+		Nonce:       "test-nonce",
+		ExpiresAt:   time.Now().Add(10 * time.Minute),
+	}
+	server.codes[validCode] = authCode
+
+	tests := []struct {
+		name                string
+		authorizationHeader string
+		body                string
+		expectedStatus      int
+		checkResponse       func(*testing.T, shared.HandlerResponse)
+	}{
+		{
+			name:                "valid client_secret_basic authentication",
+			authorizationHeader: "Basic dGVzdC1jbGllbnQ6dGVzdC1zZWNyZXQ=", // test-client:test-secret in base64
+			body:                "grant_type=authorization_code&code=" + validCode + "&redirect_uri=http://localhost:8080/callback",
+			expectedStatus:      200,
+			checkResponse: func(t *testing.T, resp shared.HandlerResponse) {
+				var tokenResp TokenResponse
+				if err := json.Unmarshal(resp.Body, &tokenResp); err != nil {
+					t.Fatalf("Failed to parse token response: %v", err)
+				}
+				if tokenResp.AccessToken == "" {
+					t.Error("Expected access token to be present")
+				}
+				if tokenResp.TokenType != "Bearer" {
+					t.Errorf("Expected token type 'Bearer', got '%s'", tokenResp.TokenType)
+				}
+			},
+		},
+		{
+			name:                "invalid client credentials in Authorization header",
+			authorizationHeader: "Basic dGVzdC1jbGllbnQ6d3Jvbmctc2VjcmV0", // test-client:wrong-secret in base64
+			body:                "grant_type=authorization_code&code=" + validCode + "&redirect_uri=http://localhost:8080/callback",
+			expectedStatus:      400,
+			checkResponse: func(t *testing.T, resp shared.HandlerResponse) {
+				var errorResp TokenErrorResponse
+				json.Unmarshal(resp.Body, &errorResp)
+				if errorResp.Error != "invalid_client" {
+					t.Errorf("Expected error 'invalid_client', got '%s'", errorResp.Error)
+				}
+			},
+		},
+		{
+			name:                "unknown client in Authorization header",
+			authorizationHeader: "Basic dW5rbm93bi1jbGllbnQ6c2VjcmV0", // unknown-client:secret in base64
+			body:                "grant_type=authorization_code&code=" + validCode + "&redirect_uri=http://localhost:8080/callback",
+			expectedStatus:      400,
+			checkResponse: func(t *testing.T, resp shared.HandlerResponse) {
+				var errorResp TokenErrorResponse
+				json.Unmarshal(resp.Body, &errorResp)
+				if errorResp.Error != "invalid_client" {
+					t.Errorf("Expected error 'invalid_client', got '%s'", errorResp.Error)
+				}
+			},
+		},
+		{
+			name:                "malformed Authorization header",
+			authorizationHeader: "Basic invalid_base64!@#",
+			body:                "grant_type=authorization_code&code=" + validCode + "&redirect_uri=http://localhost:8080/callback",
+			expectedStatus:      400,
+			checkResponse: func(t *testing.T, resp shared.HandlerResponse) {
+				var errorResp TokenErrorResponse
+				json.Unmarshal(resp.Body, &errorResp)
+				if errorResp.Error != "invalid_client" {
+					t.Errorf("Expected error 'invalid_client', got '%s'", errorResp.Error)
+				}
+			},
+		},
+		{
+			name:                "client_secret_post takes precedence when both methods present",
+			authorizationHeader: "Basic dGVzdC1jbGllbnQ6d3Jvbmctc2VjcmV0", // wrong credentials in header
+			body:                "grant_type=authorization_code&code=" + validCode + "&redirect_uri=http://localhost:8080/callback&client_id=test-client&client_secret=test-secret",
+			expectedStatus:      200, // Should succeed using form data credentials
+			checkResponse: func(t *testing.T, resp shared.HandlerResponse) {
+				var tokenResp TokenResponse
+				if err := json.Unmarshal(resp.Body, &tokenResp); err != nil {
+					t.Fatalf("Failed to parse token response: %v", err)
+				}
+				if tokenResp.AccessToken == "" {
+					t.Error("Expected access token to be present")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Reset state for each test
+			server.codes = make(map[string]*AuthCode)
+			server.tokens = make(map[string]*AccessToken)
+			server.codes[validCode] = authCode
+
+			headers := map[string]string{
+				"Content-Type": "application/x-www-form-urlencoded",
+			}
+			if tt.authorizationHeader != "" {
+				headers["Authorization"] = tt.authorizationHeader
+			}
+
+			req := shared.HandlerRequest{
+				Method:  "POST",
+				Path:    "/oidc/token",
+				Headers: headers,
+				Body:    []byte(tt.body),
+			}
+
+			resp := server.handleToken(req)
+
+			if resp.StatusCode != tt.expectedStatus {
+				t.Errorf("Expected status code %d, got %d", tt.expectedStatus, resp.StatusCode)
+			}
+
+			tt.checkResponse(t, resp)
+		})
+	}
 }
