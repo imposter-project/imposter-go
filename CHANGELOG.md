@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2025-08-23
+### Added
+- feat: support both client_secret_post and client_secret_basic on OIDC server plugin token endpoint.
+
 ## [1.5.2] - 2025-08-22
 ### Fixed
 - fix: requested plugins should check for uniqueness.
