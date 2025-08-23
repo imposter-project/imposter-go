@@ -1,0 +1,44 @@
+name: Validate Configuration Files
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'examples/**/*.yaml'
+      - 'examples/**/*.yml'
+      - 'tools/validate_config/**'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'examples/**/*.yaml'
+      - 'examples/**/*.yml'
+      - 'tools/validate_config/**'
+
+jobs:
+  validate-configs:
+    runs-on: ubuntu-latest
+    name: Validate Imposter Configuration Files
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        cd tools/validate_config
+        python -m venv venv
+        source venv/bin/activate
+        pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Validate configuration files (Current Schema)
+      run: |
+        cd tools/validate_config
+        source venv/bin/activate
+        echo "🔍 Validating configuration files against current schema..."
+        python validate_configs.py ../../examples/

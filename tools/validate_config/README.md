@@ -17,6 +17,15 @@ source venv/bin/activate  # On Unix/macOS
 pip install -r requirements.txt
 ```
 
+## Continuous Integration
+
+The configuration validation is automated via GitHub Actions. The workflow `.github/workflows/validate-configs.yml` runs on every push and pull request that modifies:
+
+- Configuration files in `examples/` directory (`*.yaml`, `*.yml`)
+- Validation schema files in `tools/validate_config/`
+
+The CI validates configurations against both current and legacy schemas to ensure backward compatibility.
+
 ## Usage
 
 Run the validator by providing a directory containing config files to validate:
