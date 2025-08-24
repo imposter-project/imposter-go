@@ -1,7 +1,13 @@
 package main
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/hex"
+	"encoding/pem"
 	"fmt"
+	"github.com/google/uuid"
 	"gopkg.in/yaml.v3"
 )
 
@@ -49,6 +55,18 @@ func loadOIDCConfig(pluginConfigBytes []byte) (*OIDCConfig, error) {
 		return nil, fmt.Errorf("invalid plugin configuration: %w", err)
 	}
 
+	// Set default JWT config if not provided
+	if config.JWTConfig == nil {
+		config.JWTConfig = &JWTConfig{
+			Algorithm: "RS256",
+		}
+	}
+
+	// Validate JWT config
+	if err := validateJWTConfig(config.JWTConfig); err != nil {
+		return nil, fmt.Errorf("invalid JWT configuration: %w", err)
+	}
+
 	return &config, nil
 }
 
@@ -91,7 +109,7 @@ func validateConfig(config *OIDCConfig) error {
 	// Set default JWT config if not provided
 	if config.JWTConfig == nil {
 		config.JWTConfig = &JWTConfig{
-			Algorithm: "HS256",
+			Algorithm: "RS256",
 		}
 	}
 
@@ -105,30 +123,74 @@ func validateConfig(config *OIDCConfig) error {
 
 func validateJWTConfig(jwtConfig *JWTConfig) error {
 	if jwtConfig.Algorithm == "" {
-		jwtConfig.Algorithm = "HS256" // Default
+		jwtConfig.Algorithm = "RS256" // Default to RS256 (spec-compliant)
 	}
 
 	switch jwtConfig.Algorithm {
 	case "HS256":
-		// Validate secret length if provided
+		// Just validate secret length if provided
 		if jwtConfig.Secret != "" && len(jwtConfig.Secret) < 32 {
 			return fmt.Errorf("HS256 secret must be at least 32 characters long for security")
 		}
 	case "RS256":
-		if jwtConfig.PrivateKeyPEM == "" {
-			return fmt.Errorf("private_key is required for RS256 algorithm")
-		}
-		if jwtConfig.PublicKeyPEM == "" {
-			return fmt.Errorf("public_key is required for RS256 algorithm")
-		}
-		if jwtConfig.KeyID == "" {
-			return fmt.Errorf("key_id is required for RS256 algorithm")
+		// Just validate that if keys are provided, they're complete
+		if (jwtConfig.PrivateKeyPEM != "" || jwtConfig.PublicKeyPEM != "") &&
+			(jwtConfig.PrivateKeyPEM == "" || jwtConfig.PublicKeyPEM == "") {
+			return fmt.Errorf("both private_key and public_key must be provided for RS256, or neither (for auto-generation)")
 		}
 	default:
 		return fmt.Errorf("unsupported algorithm: %s (supported: HS256, RS256)", jwtConfig.Algorithm)
 	}
 
 	return nil
+}
+
+func generateHMACSecret() (string, error) {
+	// Generate a 64-byte (512-bit) random secret
+	bytes := make([]byte, 64)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", fmt.Errorf("failed to generate random bytes: %w", err)
+	}
+	return hex.EncodeToString(bytes), nil
+}
+
+func generateRSAKeyPair() (privateKeyPEM, publicKeyPEM, keyID string, err error) {
+	// Generate RSA private key (2048 bits)
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return "", "", "", fmt.Errorf("failed to generate RSA private key: %w", err)
+	}
+
+	// Convert private key to PKCS#8 format
+	privateKeyBytes, err := x509.MarshalPKCS8PrivateKey(privateKey)
+	if err != nil {
+		return "", "", "", fmt.Errorf("failed to marshal private key: %w", err)
+	}
+
+	// PEM encode private key
+	privateKeyPEMBlock := &pem.Block{
+		Type:  "PRIVATE KEY",
+		Bytes: privateKeyBytes,
+	}
+	privateKeyPEMBytes := pem.EncodeToMemory(privateKeyPEMBlock)
+
+	// Convert public key to PKIX format
+	publicKeyBytes, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
+	if err != nil {
+		return "", "", "", fmt.Errorf("failed to marshal public key: %w", err)
+	}
+
+	// PEM encode public key
+	publicKeyPEMBlock := &pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: publicKeyBytes,
+	}
+	publicKeyPEMBytes := pem.EncodeToMemory(publicKeyPEMBlock)
+
+	// Generate a unique key ID
+	keyID = uuid.New().String()
+
+	return string(privateKeyPEMBytes), string(publicKeyPEMBytes), keyID, nil
 }
 
 func getDefaultConfig() *OIDCConfig {
@@ -168,7 +230,7 @@ func getDefaultConfig() *OIDCConfig {
 			},
 		},
 		JWTConfig: &JWTConfig{
-			Algorithm: "HS256", // Default to HS256 for backward compatibility
+			Algorithm: "RS256",
 		},
 	}
 }

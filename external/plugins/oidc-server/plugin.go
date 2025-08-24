@@ -131,19 +131,40 @@ func (o *OIDCServer) setupJWTKeys() error {
 
 	switch jwtConfig.Algorithm {
 	case "HS256":
-		// Use configured secret or warn about using random one
-		if jwtConfig.Secret != "" {
-			o.jwtSecret = []byte(jwtConfig.Secret)
-			o.logger.Debug("using configured HS256 secret for JWT signing")
-		} else {
-			o.logger.Warn("no HS256 secret configured, using randomly generated secret - this is not suitable for production use across multiple server instances")
-			key := make([]byte, 32)
-			if _, err := rand.Read(key); err != nil {
-				return fmt.Errorf("failed to generate JWT signing key: %w", err)
+		// Generate secret if not provided
+		if jwtConfig.Secret == "" {
+			secret, err := generateHMACSecret()
+			if err != nil {
+				return fmt.Errorf("failed to generate HMAC secret: %w", err)
 			}
-			o.jwtSecret = key
+			jwtConfig.Secret = secret
+			o.logger.Warn("no HS256 secret configured, using auto-generated secret - this is not suitable for production use across multiple server instances")
+		} else {
+			o.logger.Debug("using configured HS256 secret for JWT signing")
 		}
+		o.jwtSecret = []byte(jwtConfig.Secret)
 	case "RS256":
+		// Generate RSA key pair if not provided
+		if jwtConfig.PrivateKeyPEM == "" || jwtConfig.PublicKeyPEM == "" {
+			privateKeyPEM, publicKeyPEM, keyID, err := generateRSAKeyPair()
+			if err != nil {
+				return fmt.Errorf("failed to generate RSA key pair: %w", err)
+			}
+			jwtConfig.PrivateKeyPEM = privateKeyPEM
+			jwtConfig.PublicKeyPEM = publicKeyPEM
+			if jwtConfig.KeyID == "" {
+				jwtConfig.KeyID = keyID
+			}
+			o.logger.Warn("no RSA key pair configured, using auto-generated keys - these should be configured explicitly for production use")
+		} else {
+			o.logger.Debug("using configured RSA key pair for JWT signing")
+		}
+
+		// Ensure KeyID is set
+		if jwtConfig.KeyID == "" {
+			jwtConfig.KeyID = uuid.New().String()
+		}
+
 		o.logger.Debug("using RS256 algorithm for JWT signing")
 
 		// Parse private key
@@ -227,11 +248,16 @@ func (o *OIDCServer) CacheDiscoveryDocument() error {
 	}
 
 	// Set signing algorithms based on configuration
-	if o.config.JWTConfig != nil && o.config.JWTConfig.Algorithm == "RS256" {
-		discovery["id_token_signing_alg_values_supported"] = []string{"RS256"}
+	// RS256 is mandatory per OAuth discovery spec, so always include it
+	var supportedAlgorithms []string
+	if o.config.JWTConfig != nil && o.config.JWTConfig.Algorithm == "HS256" {
+		// If explicitly configured for HS256, support both RS256 (mandatory) and HS256
+		supportedAlgorithms = []string{"RS256", "HS256"}
 	} else {
-		discovery["id_token_signing_alg_values_supported"] = []string{"HS256"}
+		// Default to RS256 only (more secure and spec-compliant)
+		supportedAlgorithms = []string{"RS256"}
 	}
+	discovery["id_token_signing_alg_values_supported"] = supportedAlgorithms
 
 	// Marshal to JSON
 	discoveryJSON, err := json.Marshal(discovery)

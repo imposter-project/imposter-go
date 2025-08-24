@@ -214,16 +214,16 @@ func (o *OIDCServer) generateIDToken(user *User, clientID, nonce string, scopes 
 	var signedToken string
 	var err error
 
-	if o.config.JWTConfig != nil && o.config.JWTConfig.Algorithm == "RS256" {
-		// Use RS256 with RSA private key
+	if o.config.JWTConfig != nil && o.config.JWTConfig.Algorithm == "HS256" {
+		// Use HS256 with HMAC secret (only when explicitly configured)
+		token = jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+		signedToken, err = token.SignedString(o.jwtSecret)
+	} else {
+		// Default to RS256 with RSA private key (more secure and spec-compliant)
 		token = jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
 		// Add key ID to header for RS256
 		token.Header["kid"] = o.config.JWTConfig.KeyID
 		signedToken, err = token.SignedString(o.privateKey)
-	} else {
-		// Default to HS256 with HMAC secret
-		token = jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-		signedToken, err = token.SignedString(o.jwtSecret)
 	}
 
 	if err != nil {

@@ -13,7 +13,7 @@ import (
 )
 
 func createTestOIDCServerForToken() *OIDCServer {
-	return &OIDCServer{
+	server := &OIDCServer{
 		logger: hclog.New(&hclog.LoggerOptions{
 			Level:  hclog.Off,
 			Output: nil,
@@ -23,8 +23,15 @@ func createTestOIDCServerForToken() *OIDCServer {
 		sessions:  make(map[string]*AuthSession),
 		codes:     make(map[string]*AuthCode),
 		tokens:    make(map[string]*AccessToken),
-		jwtSecret: []byte("test-secret-key-32-bytes-long!"),
 	}
+
+	// Setup JWT keys based on the default config (RS256)
+	err := server.setupJWTKeys()
+	if err != nil {
+		panic("Failed to setup JWT keys for test: " + err.Error())
+	}
+
+	return server
 }
 
 func TestOIDCServer_handleToken(t *testing.T) {
@@ -406,7 +413,12 @@ func TestOIDCServer_generateIDToken(t *testing.T) {
 			scopes:   []string{"openid"},
 			validate: func(t *testing.T, tokenStr string) {
 				token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
-					return server.jwtSecret, nil
+					// Use the appropriate key based on algorithm
+					if server.config.JWTConfig.Algorithm == "HS256" {
+						return server.jwtSecret, nil
+					} else {
+						return server.publicKey, nil
+					}
 				})
 				if err != nil {
 					t.Fatalf("Failed to parse JWT: %v", err)
@@ -434,7 +446,12 @@ func TestOIDCServer_generateIDToken(t *testing.T) {
 			scopes:   []string{"openid"},
 			validate: func(t *testing.T, tokenStr string) {
 				token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
-					return server.jwtSecret, nil
+					// Use the appropriate key based on algorithm
+					if server.config.JWTConfig.Algorithm == "HS256" {
+						return server.jwtSecret, nil
+					} else {
+						return server.publicKey, nil
+					}
 				})
 				if err != nil {
 					t.Fatalf("Failed to parse JWT: %v", err)
@@ -453,7 +470,12 @@ func TestOIDCServer_generateIDToken(t *testing.T) {
 			scopes:   []string{"openid", "profile", "email"},
 			validate: func(t *testing.T, tokenStr string) {
 				token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
-					return server.jwtSecret, nil
+					// Use the appropriate key based on algorithm
+					if server.config.JWTConfig.Algorithm == "HS256" {
+						return server.jwtSecret, nil
+					} else {
+						return server.publicKey, nil
+					}
 				})
 				if err != nil {
 					t.Fatalf("Failed to parse JWT: %v", err)
@@ -798,7 +820,12 @@ func TestOIDCServer_TokenFlow_Integration(t *testing.T) {
 
 		// Verify: ID token is valid JWT
 		token, err := jwt.Parse(tokenResp.IDToken, func(token *jwt.Token) (interface{}, error) {
-			return server.jwtSecret, nil
+			// Use the appropriate key based on algorithm
+			if server.config.JWTConfig.Algorithm == "HS256" {
+				return server.jwtSecret, nil
+			} else {
+				return server.publicKey, nil
+			}
 		})
 		if err != nil {
 			t.Errorf("ID token validation failed: %v", err)

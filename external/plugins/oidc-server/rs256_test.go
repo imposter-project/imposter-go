@@ -227,8 +227,9 @@ func TestOIDCServer_JWKSCaching(t *testing.T) {
 }
 
 func TestOIDCServer_HS256Fallback(t *testing.T) {
-	// Test that HS256 still works when no JWT config is provided
-	config := getDefaultConfig() // This should default to HS256
+	// Test that HS256 works when explicitly configured
+	config := getDefaultConfig()
+	config.JWTConfig.Algorithm = "HS256" // Explicitly set to HS256
 
 	server := &OIDCServer{
 		logger:    hclog.NewNullLogger(),
@@ -248,7 +249,8 @@ func TestOIDCServer_HS256Fallback(t *testing.T) {
 		t.Fatalf("Failed to cache discovery document: %v", err)
 	}
 
-	// Test discovery endpoint shows HS256 support
+	// Test discovery endpoint shows both RS256 and HS256 support
+	// (RS256 is mandatory per OAuth spec, HS256 is added when configured)
 	discoveryResp := server.handleDiscovery(shared.HandlerRequest{
 		Method: "GET",
 		Path:   "/.well-known/openid-configuration",
@@ -256,13 +258,13 @@ func TestOIDCServer_HS256Fallback(t *testing.T) {
 
 	discoveryBody := string(discoveryResp.Body)
 	if !strings.Contains(discoveryBody, `"HS256"`) {
-		t.Error("Discovery document should advertise HS256 support")
+		t.Error("Discovery document should advertise HS256 support when configured")
 	}
-	if strings.Contains(discoveryBody, `"RS256"`) {
-		t.Error("Discovery document should not advertise RS256 for HS256 config")
+	if !strings.Contains(discoveryBody, `"RS256"`) {
+		t.Error("Discovery document should always advertise RS256 support (required by OAuth spec)")
 	}
 
-	// Test JWKS endpoint returns empty keys for HS256
+	// Test JWKS endpoint returns empty keys for HS256 (since HMAC secrets aren't exposed)
 	jwksResp := server.handleJWKS(shared.HandlerRequest{
 		Method: "GET",
 		Path:   "/.well-known/jwks.json",

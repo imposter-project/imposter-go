@@ -21,8 +21,11 @@ func createTestOIDCServerForPlugin() *OIDCServer {
 		sessions:  make(map[string]*AuthSession),
 		codes:     make(map[string]*AuthCode),
 		tokens:    make(map[string]*AccessToken),
-		jwtSecret: []byte("test-secret-key-32-bytes-long!"),
 	}
+
+	// Setup JWT keys based on the default config (RS256)
+	server.setupJWTKeys()
+	server.CacheDiscoveryDocument()
 
 	return server
 }
@@ -117,9 +120,21 @@ clients:
 				if server.tokens == nil {
 					t.Error("Expected tokens map to be initialized")
 				}
-				if server.jwtSecret == nil {
-					t.Error("Expected JWT secret to be generated")
+
+				// Check JWT credentials based on algorithm
+				if server.config.JWTConfig.Algorithm == "HS256" {
+					if server.jwtSecret == nil {
+						t.Error("Expected JWT secret to be generated for HS256")
+					}
+				} else if server.config.JWTConfig.Algorithm == "RS256" {
+					if server.privateKey == nil {
+						t.Error("Expected private key to be loaded for RS256")
+					}
+					if server.publicKey == nil {
+						t.Error("Expected public key to be loaded for RS256")
+					}
 				}
+
 				if server.config == nil {
 					t.Error("Expected config to be loaded")
 				}
