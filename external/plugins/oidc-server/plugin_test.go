@@ -200,8 +200,8 @@ func TestOIDCServer_Handle(t *testing.T) {
 				Method: "GET",
 				Path:   "/unknown",
 			},
-			expectedStatus: 404,
-			expectedBody:   "Not Found",
+			expectedStatus: 0,
+			expectedBody:   "",
 		},
 	}
 

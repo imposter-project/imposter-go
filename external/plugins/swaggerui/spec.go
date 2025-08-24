@@ -61,9 +61,16 @@ func getSpec(server shared.ServerConfig, specConfig SpecConfig) *shared.HandlerR
 		logger.Trace("loading spec file", "path", specPath)
 		specData, err := os.ReadFile(specPath)
 		if err != nil {
-			return &shared.HandlerResponse{
-				StatusCode: 500,
-				Body:       []byte(fmt.Sprintf("Error reading spec file: %v", err)),
+			if os.IsNotExist(err) {
+				return &shared.HandlerResponse{
+					StatusCode: 404,
+					Body:       []byte("Spec file not found"),
+				}
+			} else {
+				return &shared.HandlerResponse{
+					StatusCode: 500,
+					Body:       []byte(fmt.Sprintf("Error reading spec file: %v", err)),
+				}
 			}
 		}
 

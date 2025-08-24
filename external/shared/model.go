@@ -11,6 +11,7 @@ type HandlerRequest struct {
 }
 
 type HandlerResponse struct {
+	// If StatusCode is 0, the plugin did not handle the request.
 	StatusCode int
 	Headers    map[string]string
 	Body       []byte

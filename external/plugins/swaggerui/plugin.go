@@ -67,13 +67,14 @@ func (s *SwaggerUI) Configure(cfg shared.ExternalConfig) error {
 
 func (s *SwaggerUI) Handle(args shared.HandlerRequest) shared.HandlerResponse {
 	path := args.Path
+	if !strings.HasPrefix(path, specPrefixPath) {
+		// not handled
+		return shared.HandlerResponse{StatusCode: 0}
+	}
+
 	if !strings.EqualFold(args.Method, "get") {
 		return shared.HandlerResponse{StatusCode: 405, Body: []byte("Method Not Allowed")}
 	}
-	if !strings.HasPrefix(path, specPrefixPath) {
-		return shared.HandlerResponse{StatusCode: 404, Body: []byte("File Not Found")}
-	}
-
 	if response := serveRawSpec(config.Server, path); response != nil {
 		return *response
 	} else {

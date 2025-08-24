@@ -271,9 +271,12 @@ func (o *OIDCServer) CacheDiscoveryDocument() error {
 }
 
 func (o *OIDCServer) Handle(args shared.HandlerRequest) shared.HandlerResponse {
+	if !strings.HasPrefix(args.Path, "/oidc/") && !strings.HasPrefix(args.Path, "/.well-known/") {
+		// Not handled
+		return shared.HandlerResponse{StatusCode: 0}
+	}
 	o.logger.Debug("handling request", "method", args.Method, "path", args.Path)
 
-	// Parse the path to determine the endpoint
 	switch args.Path {
 	case "/oidc/authorize":
 		return o.handleAuthorize(args)

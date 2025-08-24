@@ -33,6 +33,10 @@ func (e ExternalPluginHandler) HandleRequest(exch *exchange.Exchange, respProc r
 	args := ConvertToExternalRequest(exch)
 	resp := impl.Handle(args)
 
+	if resp.StatusCode == 0 {
+		logger.Tracef("plugin %s did not handle the request", plg.Name)
+		return
+	}
 	logger.Debugf("response from plugin %s: status=%d body=%d bytes", plg.Name, resp.StatusCode, len(resp.Body))
 	ConvertFromExternalResponse(exch, &resp)
 	respProc(exch, nil, &config.Response{})
