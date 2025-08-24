@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.1] - 2025-08-24
+### Changed
+- ci: validate example configs on push.
+- refactor: improve OIDC server plugin error logging.
+
+### Fixed
+- fix: align OIDC discovery document ID token alg to spec.
+- fix: align config schemas to data model.
+- fix: continue handler loop if plugin does not handle request.
+
 ## [1.6.0] - 2025-08-23
 ### Added
 - feat: support both client_secret_post and client_secret_basic on OIDC server plugin token endpoint.
