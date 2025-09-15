@@ -1,6 +1,9 @@
 plugin: openapi
 specFile: users-external-ref.yaml
-externalBaseURL: http://example.com
+
+config:
+  externalBaseURL: http://example.com
+
 resources:
   - path: /users
     method: GET

@@ -25,8 +25,16 @@ func NewPluginHandler(cfg *config.Config, imposterConfig *config.ImposterConfig)
 	}
 
 	opts := parserOptions{
-		stripServerPath:          cfg.StripServerPath,
-		externalReferenceBaseURL: cfg.ExternalBaseURL,
+		stripServerPath: cfg.StripServerPath,
+	}
+
+	if !cfg.PluginConfig.IsZero() {
+		var pluginConfig map[string]interface{}
+		if err := cfg.PluginConfig.Decode(&pluginConfig); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal plugin config: %w", err)
+		}
+
+		opts.externalReferenceBaseURL = pluginConfig["externalBaseURL"].(string)
 	}
 
 	validate := cfg.Validation != nil && (cfg.Validation.IsRequestValidationEnabled() || cfg.Validation.IsResponseValidationEnabled())

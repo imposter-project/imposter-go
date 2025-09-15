@@ -2,6 +2,13 @@ package external
 
 import (
 	"fmt"
+	"os"
+	"os/exec"
+	"path"
+	"path/filepath"
+	"slices"
+	"strings"
+
 	"github.com/hashicorp/go-hclog"
 	goplugin "github.com/hashicorp/go-plugin"
 	"github.com/imposter-project/imposter-go/external/shared"
@@ -9,12 +16,6 @@ import (
 	"github.com/imposter-project/imposter-go/internal/version"
 	"github.com/imposter-project/imposter-go/pkg/logger"
 	"gopkg.in/yaml.v3"
-	"os"
-	"os/exec"
-	"path"
-	"path/filepath"
-	"slices"
-	"strings"
 )
 
 var pluginMap map[string]goplugin.Plugin

@@ -404,7 +404,6 @@ type Config struct {
 
 	// OpenAPI-specific fields
 	SpecFile        string            `yaml:"specFile,omitempty"`
-	ExternalBaseURL string            `yaml:"externalBaseUrl,omitempty"`
 	StripServerPath bool              `yaml:"stripServerPath,omitempty"`
 	Validation      *ValidationConfig `yaml:"validation,omitempty"`
 

@@ -20,9 +20,6 @@
                 "externalBaseURL": {
                     "type": "string"
                 },
-                "specFile": {
-                    "type": "string"
-                },
                 "wsdlFile": {
                     "type": "string"
                 },

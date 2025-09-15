@@ -47,6 +47,7 @@ plugin: swaggerui
 config:
   specUrl: http://localhost:8080/system/openapi
   theme: "dark"
+  externalBaseURL: "http://example.com"
   title: "Pet Store API Documentation"`,
 			expectedDocs: 2,
 			expectError:  false,
@@ -76,6 +77,10 @@ config:
 				var pluginConfig map[string]interface{}
 				if err := configs[1].PluginConfig.Decode(&pluginConfig); err != nil {
 					t.Errorf("Failed to unmarshal plugin config: %v", err)
+				}
+
+				if pluginConfig["externalBaseURL"] != "http://example.com" {
+					t.Errorf("Expected externalBaseURL 'http://example.com', got '%v'", pluginConfig["externalBaseURL"])
 				}
 
 				if specUrl, ok := pluginConfig["specUrl"].(string); !ok || specUrl != "http://localhost:8080/system/openapi" {
