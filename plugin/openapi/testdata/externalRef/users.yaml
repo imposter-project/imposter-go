@@ -16,7 +16,7 @@ paths:
                 $ref: 'http://example.com/schemas/user.json'
   /users/{id}:
     get:
-      summary: Get a users
+      summary: Get a user
       responses:
         '200':
           description: Successful operation
