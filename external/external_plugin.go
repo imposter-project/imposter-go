@@ -28,9 +28,9 @@ func (e ExternalPluginHandler) GetConfig() *config.Config {
 
 func (e ExternalPluginHandler) HandleRequest(exch *exchange.Exchange, respProc response.Processor) {
 	plg := e.loadedPlugin
-	logger.Debugf("handling request with external plugin: %s", plg.Name)
 	impl := *plg.impl
 	args := ConvertToExternalRequest(exch)
+	logger.Debugf("handling request %s %s with external plugin: %s", args.Method, args.Path, plg.Name)
 	resp := impl.Handle(args)
 
 	if resp.StatusCode == 0 {
