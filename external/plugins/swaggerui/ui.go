@@ -18,8 +18,8 @@ var www embed.FS
 
 var specPrefixPath string
 
-// indexResp is the cached response for the index page.
-var indexResp shared.HandlerResponse
+// initialiserResp is the cached response for the initialiser script.
+var initialiserResp shared.HandlerResponse
 
 func init() {
 	specPrefixPath = os.Getenv("IMPOSTER_OPENAPI_SPEC_PATH_PREFIX")
@@ -37,9 +37,13 @@ func serveStaticContent(path string) shared.HandlerResponse {
 		}}
 	}
 
-	// index is a special case
-	if path == "/" {
-		return indexResp
+    if path == "/" {
+        path = "/index.html"
+    }
+
+	// initialiser is a special case
+	if path == "/swagger-initializer.js" {
+		return initialiserResp
 	}
 
 	file, err := www.ReadFile("www" + path)
@@ -62,8 +66,8 @@ func serveStaticContent(path string) shared.HandlerResponse {
 	}
 }
 
-// generateIndexPage generates the index page response using the embedded template.
-func generateIndexPage() error {
+// generateInitialiser generates the index page response using the embedded template.
+func generateInitialiser() error {
 	// serialise the specConfigs to JSON
 	jsonData, err := json.Marshal(specConfigs)
 	if err != nil {
@@ -72,7 +76,7 @@ func generateIndexPage() error {
 	specConfigJSON := string(jsonData)
 
 	// populate the template with the specConfigJSON
-	t, err := template.ParseFS(www, "www/index.html.tmpl")
+	t, err := template.ParseFS(www, "www/swagger-initializer.js.tmpl")
 	if err != nil {
 		return fmt.Errorf("error parsing template: %v", err.Error())
 	}
@@ -83,7 +87,7 @@ func generateIndexPage() error {
 	}
 
 	// cache the index response
-	indexResp = shared.HandlerResponse{
+	initialiserResp = shared.HandlerResponse{
 		StatusCode: 200,
 		Body:       output.Bytes(),
 

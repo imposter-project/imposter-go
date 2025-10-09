@@ -59,8 +59,8 @@ func (s *SwaggerUI) Configure(cfg shared.ExternalConfig) error {
 	}
 
 	s.logger.Trace("generating index page")
-	if err := generateIndexPage(); err != nil {
-		return fmt.Errorf("could not generate index page: %w", err)
+	if err := generateInitialiser(); err != nil {
+		return fmt.Errorf("could not generate initialiser: %w", err)
 	}
 	return nil
 }
