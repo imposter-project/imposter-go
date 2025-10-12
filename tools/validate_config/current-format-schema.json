@@ -17,6 +17,9 @@
                     "description": "OpenAPI specification file (YAML or JSON)",
                     "type": "string"
                 },
+                "externalBaseURL": {
+                    "type": "string"
+                },
                 "wsdlFile": {
                     "type": "string"
                 },
@@ -82,6 +85,14 @@
                     "additionalProperties": true
                 },
                 "validation": { "$ref": "shared-definitions.json#/definitions/validation" }
+            },
+            "if": {
+                "plugin": {
+                    "type": { "const": "openapi" }
+                }
+            },
+            "then": {
+                "required": ["specFile"]
             },
             "additionalProperties": false
         }

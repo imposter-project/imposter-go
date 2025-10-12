@@ -2,6 +2,7 @@ package openapi
 
 import (
 	"fmt"
+
 	"github.com/imposter-project/imposter-go/plugin/rest"
 
 	"github.com/imposter-project/imposter-go/internal/config"
@@ -26,6 +27,16 @@ func NewPluginHandler(cfg *config.Config, imposterConfig *config.ImposterConfig)
 	opts := parserOptions{
 		stripServerPath: cfg.StripServerPath,
 	}
+
+	if !cfg.PluginConfig.IsZero() {
+		var pluginConfig map[string]interface{}
+		if err := cfg.PluginConfig.Decode(&pluginConfig); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal plugin config: %w", err)
+		}
+
+		opts.externalReferenceBaseURL = pluginConfig["externalBaseURL"].(string)
+	}
+
 	validate := cfg.Validation != nil && (cfg.Validation.IsRequestValidationEnabled() || cfg.Validation.IsResponseValidationEnabled())
 	parser, err := newOpenAPIParser(specFile, validate, opts)
 	if err != nil {

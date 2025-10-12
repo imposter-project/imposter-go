@@ -36,6 +36,8 @@ resources:
 			name: "multiple documents with OpenAPI and SwaggerUI",
 			yamlContent: `plugin: openapi
 specFile: api.json
+config:
+  externalBaseURL: "http://example.com"
 resources:
   - path: /pets
     method: GET
@@ -58,6 +60,16 @@ config:
 				if configs[0].SpecFile != "api.json" {
 					t.Errorf("Expected specFile 'api.json', got '%s'", configs[0].SpecFile)
 				}
+
+				// Verify plugin config content can be unmarshalled
+				var plugin0Config map[string]interface{}
+				if err := configs[0].PluginConfig.Decode(&plugin0Config); err != nil {
+					t.Errorf("Failed to unmarshal plugin config: %v", err)
+				}
+
+				if plugin0Config["externalBaseURL"] != "http://example.com" {
+					t.Errorf("Expected externalBaseURL 'http://example.com', got '%v'", plugin0Config["externalBaseURL"])
+				}
 				if len(configs[0].Resources) != 1 {
 					t.Errorf("Expected 1 resource in first config, got %d", len(configs[0].Resources))
 				}
@@ -73,13 +85,13 @@ config:
 				}
 
 				// Verify plugin config content can be unmarshaled
-				var pluginConfig map[string]interface{}
-				if err := configs[1].PluginConfig.Decode(&pluginConfig); err != nil {
+				var plugin1Config map[string]interface{}
+				if err := configs[1].PluginConfig.Decode(&plugin1Config); err != nil {
 					t.Errorf("Failed to unmarshal plugin config: %v", err)
 				}
 
-				if specUrl, ok := pluginConfig["specUrl"].(string); !ok || specUrl != "http://localhost:8080/system/openapi" {
-					t.Errorf("Expected specUrl 'http://localhost:8080/system/openapi', got '%v'", pluginConfig["specUrl"])
+				if specUrl, ok := plugin1Config["specUrl"].(string); !ok || specUrl != "http://localhost:8080/system/openapi" {
+					t.Errorf("Expected specUrl 'http://localhost:8080/system/openapi', got '%v'", plugin1Config["specUrl"])
 				}
 			},
 		},

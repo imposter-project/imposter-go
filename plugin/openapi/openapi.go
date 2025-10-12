@@ -2,17 +2,20 @@ package openapi
 
 import (
 	"fmt"
+	"net/http"
+	"net/url"
+	"os"
+	"sort"
+	"strings"
+
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/exchange"
 	"github.com/imposter-project/imposter-go/pkg/logger"
 	"github.com/pb33f/libopenapi"
 	validator "github.com/pb33f/libopenapi-validator"
 	"github.com/pb33f/libopenapi-validator/errors"
+	"github.com/pb33f/libopenapi/datamodel"
 	"github.com/pb33f/libopenapi/datamodel/high/base"
-	"net/http"
-	"os"
-	"sort"
-	"strings"
 )
 
 // OpenAPIVersion represents the version of OpenAPI being used
@@ -46,7 +49,8 @@ type Operation struct {
 }
 
 type parserOptions struct {
-	stripServerPath bool
+	stripServerPath          bool
+	externalReferenceBaseURL string
 }
 
 type OpenAPIParser interface {
@@ -78,6 +82,17 @@ func newOpenAPIParser(specFile string, validate bool, opts parserOptions) (OpenA
 	document, err := libopenapi.NewDocument(spec)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create new document: %e", err)
+	}
+
+	if opts.externalReferenceBaseURL != "" {
+		u, err := url.Parse(opts.externalReferenceBaseURL)
+		if err != nil {
+			return nil, fmt.Errorf("cannot parse external reference URL: %e", err)
+		}
+
+		document.SetConfiguration(&datamodel.DocumentConfiguration{BaseURL: u})
+
+		logger.Infof("external base URL set to: %s", u.String())
 	}
 
 	var oasValidator *validator.Validator

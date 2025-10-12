@@ -1,0 +1,11 @@
+plugin: openapi
+specFile: users-external-ref.yaml
+
+config:
+  externalBaseURL: http://example.com
+
+resources:
+  - path: /users
+    method: GET
+    response:
+      statusCode: 200
