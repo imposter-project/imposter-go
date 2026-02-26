@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/hashicorp/go-hclog"
@@ -31,9 +32,10 @@ func TestOIDCServer_EndToEndFlow(t *testing.T) {
 		},
 		Clients: []Client{
 			{
-				ClientID:     "test-client",
-				ClientSecret: "test-secret",
-				RedirectURIs: []string{"http://localhost:8080/callback"},
+				ClientID:               "test-client",
+				ClientSecret:           "test-secret",
+				RedirectURIs:           []string{"http://localhost:8080/callback"},
+				PostLogoutRedirectURIs: []string{"http://localhost:8080/logged-out"},
 			},
 		},
 		JWTConfig: &JWTConfig{
@@ -293,6 +295,55 @@ func TestOIDCServer_EndToEndFlow(t *testing.T) {
 		}
 
 		t.Log("✓ Cleanup validation passed")
+
+		// Step 8: Logout - RP-Initiated Logout with redirect
+		t.Log("Step 8: RP-Initiated Logout")
+
+		// Generate an ID token for the logout hint
+		logoutUser := config.Users[0]
+		logoutIDToken, err := server.generateIDToken(&logoutUser, "test-client", "", []string{"openid"}, time.Now(), 3600)
+		if err != nil {
+			t.Fatalf("Failed to generate ID token for logout: %v", err)
+		}
+
+		logoutReq := shared.HandlerRequest{
+			Method: "GET",
+			Path:   "/oidc/logout",
+			Query: url.Values{
+				"id_token_hint":            []string{logoutIDToken},
+				"post_logout_redirect_uri": []string{"http://localhost:8080/logged-out"},
+				"state":                    []string{"logout-state-abc"},
+			},
+		}
+
+		logoutResp := server.handleLogout(logoutReq)
+		if logoutResp.StatusCode != 302 {
+			t.Fatalf("Logout failed with status %d: %s", logoutResp.StatusCode, string(logoutResp.Body))
+		}
+
+		// Verify redirect location and state
+		logoutLocation := logoutResp.Headers["Location"]
+		logoutURL, err := url.Parse(logoutLocation)
+		if err != nil {
+			t.Fatalf("Failed to parse logout redirect location: %v", err)
+		}
+		if !strings.HasPrefix(logoutLocation, "http://localhost:8080/logged-out") {
+			t.Errorf("Expected redirect to logged-out URI, got %s", logoutLocation)
+		}
+		if logoutURL.Query().Get("state") != "logout-state-abc" {
+			t.Errorf("Expected state 'logout-state-abc', got '%s'", logoutURL.Query().Get("state"))
+		}
+
+		// Verify tokens were cleared for the user
+		server.mutex.RLock()
+		postLogoutTokenCount := len(server.tokens)
+		server.mutex.RUnlock()
+
+		if postLogoutTokenCount != 0 {
+			t.Errorf("Expected 0 tokens after logout, got %d", postLogoutTokenCount)
+		}
+
+		t.Log("✓ RP-Initiated Logout completed")
 		t.Log("🎉 End-to-end OIDC flow completed successfully!")
 	})
 }

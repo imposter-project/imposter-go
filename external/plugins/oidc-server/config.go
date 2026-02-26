@@ -32,9 +32,10 @@ type User struct {
 }
 
 type Client struct {
-	ClientID     string   `yaml:"client_id"`
-	ClientSecret string   `yaml:"client_secret"`
-	RedirectURIs []string `yaml:"redirect_uris"`
+	ClientID               string   `yaml:"client_id"`
+	ClientSecret           string   `yaml:"client_secret"`
+	RedirectURIs           []string `yaml:"redirect_uris"`
+	PostLogoutRedirectURIs []string `yaml:"post_logout_redirect_uris,omitempty"`
 }
 
 // loadOIDCConfig loads OIDC configuration from raw YAML bytes
@@ -227,6 +228,10 @@ func getDefaultConfig() *OIDCConfig {
 					"http://localhost:8080/callback",
 					"http://localhost:3000/callback",
 				},
+				PostLogoutRedirectURIs: []string{
+					"http://localhost:8080/logged-out",
+					"http://localhost:3000/logged-out",
+				},
 			},
 		},
 		JWTConfig: &JWTConfig{
@@ -255,6 +260,15 @@ func (c *OIDCConfig) GetClient(clientID string) *Client {
 
 func (c *Client) IsValidRedirectURI(uri string) bool {
 	for _, validURI := range c.RedirectURIs {
+		if validURI == uri {
+			return true
+		}
+	}
+	return false
+}
+
+func (c *Client) IsValidPostLogoutRedirectURI(uri string) bool {
+	for _, validURI := range c.PostLogoutRedirectURIs {
 		if validURI == uri {
 			return true
 		}

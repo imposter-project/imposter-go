@@ -195,6 +195,16 @@ func TestOIDCServer_Handle(t *testing.T) {
 			expectedBody:   "issuer",
 		},
 		{
+			name: "logout endpoint",
+			request: shared.HandlerRequest{
+				Method: "GET",
+				Path:   "/oidc/logout",
+				Query:  url.Values{},
+			},
+			expectedStatus: 200,
+			expectedBody:   "Signed Out",
+		},
+		{
 			name: "unknown endpoint",
 			request: shared.HandlerRequest{
 				Method: "GET",
@@ -240,6 +250,7 @@ func TestOIDCServer_handleDiscovery(t *testing.T) {
 					strings.Contains(body, "authorization_endpoint") &&
 					strings.Contains(body, "token_endpoint") &&
 					strings.Contains(body, "userinfo_endpoint") &&
+					strings.Contains(body, "end_session_endpoint") &&
 					strings.Contains(body, "issuer")
 			},
 		},
@@ -518,6 +529,9 @@ func TestOIDCServer_HandleIntegration(t *testing.T) {
 		}
 		if !strings.Contains(body, "https://custom-server.com/oidc/token") {
 			t.Error("Discovery document should contain correct token endpoint")
+		}
+		if !strings.Contains(body, "https://custom-server.com/oidc/logout") {
+			t.Error("Discovery document should contain correct end_session_endpoint")
 		}
 	})
 }

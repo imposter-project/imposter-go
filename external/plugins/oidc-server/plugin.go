@@ -117,7 +117,7 @@ func (o *OIDCServer) Configure(cfg shared.ExternalConfig) error {
 		return fmt.Errorf("failed to cache discovery document: %w", err)
 	}
 
-	endpoints := fmt.Sprintf("discovery: %[1]s/.well-known/openid-configuration\njwks: %[1]s/.well-known/jwks.json\nauthorize: %[1]s/oidc/authorize\ntoken: %[1]s/oidc/token\nuserinfo: %[1]s/oidc/userinfo", o.serverURL)
+	endpoints := fmt.Sprintf("discovery: %[1]s/.well-known/openid-configuration\njwks: %[1]s/.well-known/jwks.json\nauthorize: %[1]s/oidc/authorize\ntoken: %[1]s/oidc/token\nuserinfo: %[1]s/oidc/userinfo\nlogout: %[1]s/oidc/logout", o.serverURL)
 	o.logger.Info("OIDC server plugin configured successfully", "endpoints", endpoints)
 
 	return nil
@@ -237,6 +237,7 @@ func (o *OIDCServer) CacheDiscoveryDocument() error {
 		"authorization_endpoint":                o.serverURL + "/oidc/authorize",
 		"token_endpoint":                        o.serverURL + "/oidc/token",
 		"userinfo_endpoint":                     o.serverURL + "/oidc/userinfo",
+		"end_session_endpoint":                  o.serverURL + "/oidc/logout",
 		"jwks_uri":                              o.serverURL + "/.well-known/jwks.json",
 		"response_types_supported":              []string{"code"},
 		"subject_types_supported":               []string{"public"},
@@ -284,6 +285,8 @@ func (o *OIDCServer) Handle(args shared.HandlerRequest) shared.HandlerResponse {
 		return o.handleToken(args)
 	case "/oidc/userinfo":
 		return o.handleUserInfo(args)
+	case "/oidc/logout":
+		return o.handleLogout(args)
 	case "/.well-known/jwks.json":
 		return o.handleJWKS(args)
 	case "/.well-known/openid-configuration":
