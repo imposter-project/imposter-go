@@ -30,7 +30,7 @@ func (e ExternalPluginHandler) HandleRequest(exch *exchange.Exchange, respProc r
 	plg := e.loadedPlugin
 	impl := *plg.impl
 	args := ConvertToExternalRequest(exch)
-	logger.Debugf("handling request %s %s with external plugin: %s", args.Method, args.Path, plg.Name)
+	logger.Tracef("checking if external plugin %s can handle request %s %s", plg.Name, args.Method, args.Path)
 	resp := impl.Handle(args)
 
 	if resp.StatusCode == 0 {
