@@ -207,6 +207,94 @@ func TestOpenAPIHandlerEndToEnd(t *testing.T) {
 			wantBodyJson:  true,
 			wantBodyMatch: ``,
 		},
+		// Accept header tests
+		{
+			name:      "OpenAPI 3.0 - No Accept header should still match",
+			configDir: "testdata/no-accept-header",
+			request: func() *http.Request {
+				req := httptest.NewRequest(http.MethodGet, "/admin/users", nil)
+				// Intentionally no Accept header
+				return req
+			}(),
+			wantStatus:   http.StatusOK,
+			wantBodyJson: true,
+			wantBodyMatch: `{
+  "items": [
+    {
+      "user_id": "auth0|123",
+      "email": "test@example.com",
+      "name": "Test User",
+      "picture": "https://s.gravatar.com/avatar/test",
+      "email_verified": true,
+      "created_at": "2024-01-01T00:00:00Z",
+      "last_login": "2024-06-01T00:00:00Z",
+      "logins_count": 5
+    }
+  ],
+  "total": 1,
+  "page": 0,
+  "perPage": 20
+}`,
+			wantHeaders: map[string]string{
+				"Content-Type": "application/json",
+			},
+		},
+		{
+			name:      "OpenAPI 3.0 - With Accept header should still match",
+			configDir: "testdata/no-accept-header",
+			request: func() *http.Request {
+				req := httptest.NewRequest(http.MethodGet, "/admin/users", nil)
+				req.Header.Set("Accept", "application/json")
+				return req
+			}(),
+			wantStatus:   http.StatusOK,
+			wantBodyJson: true,
+			wantBodyMatch: `{
+  "items": [
+    {
+      "user_id": "auth0|123",
+      "email": "test@example.com",
+      "name": "Test User",
+      "picture": "https://s.gravatar.com/avatar/test",
+      "email_verified": true,
+      "created_at": "2024-01-01T00:00:00Z",
+      "last_login": "2024-06-01T00:00:00Z",
+      "logins_count": 5
+    }
+  ],
+  "total": 1,
+  "page": 0,
+  "perPage": 20
+}`,
+			wantHeaders: map[string]string{
+				"Content-Type": "application/json",
+			},
+		},
+		{
+			name:      "OpenAPI 3.0 - No Accept header with path param should still match",
+			configDir: "testdata/no-accept-header",
+			request: func() *http.Request {
+				req := httptest.NewRequest(http.MethodGet, "/admin/users/auth0%7C123", nil)
+				// Intentionally no Accept header
+				return req
+			}(),
+			wantStatus:   http.StatusOK,
+			wantBodyJson: true,
+			wantBodyMatch: `{
+  "user_id": "auth0|123",
+  "email": "test@example.com",
+  "name": "Test User",
+  "picture": "https://s.gravatar.com/avatar/test",
+  "email_verified": true,
+  "created_at": "2024-01-01T00:00:00Z",
+  "last_login": "2024-06-01T00:00:00Z",
+  "logins_count": 5
+}`,
+			wantHeaders: map[string]string{
+				"Content-Type": "application/json",
+			},
+		},
+		// OpenAPI 2.0 Tests
 		{
 			name:      "OpenAPI 2.0 - Upload Pet Image",
 			configDir: "testdata/v20",

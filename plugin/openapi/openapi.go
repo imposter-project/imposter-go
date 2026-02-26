@@ -126,24 +126,40 @@ func augmentConfigWithOpenApiSpec(cfg *config.Config, parser OpenAPIParser) erro
 		responses := op.Responses[responseCode]
 
 		for _, resp := range responses {
+			// Build request matcher with method and path
+			reqMatcher := config.RequestMatcher{
+				Method: op.Method,
+				Path:   op.Path,
+				// TODO check request headers, query params, etc.
+			}
+
+			// Only add Accept header matching if content type is specified.
+			// Use AnyOf so that requests without an Accept header still match,
+			// since the client has not expressed a representation constraint.
+			if resp.ContentType != "" {
+				reqMatcher.AnyOf = []config.ExpressionMatchCondition{
+					{
+						Expression: "${context.request.headers.Accept}",
+						MatchCondition: config.MatchCondition{
+							Value:    resp.ContentType,
+							Operator: "Contains",
+						},
+					},
+					{
+						Expression: "${context.request.headers.Accept}",
+						MatchCondition: config.MatchCondition{
+							Operator: "NotExists",
+						},
+					},
+				}
+			}
+
 			// Create an interceptor with default RequestMatcher
 			newInterceptor := config.Interceptor{
 				Continue: true,
 				BaseResource: config.BaseResource{
 					RuntimeGenerated: true,
-					RequestMatcher: config.RequestMatcher{
-						Method: op.Method,
-						Path:   op.Path,
-						RequestHeaders: map[string]config.MatcherUnmarshaler{
-							"Accept": {
-								Matcher: config.MatchCondition{
-									Value:    resp.ContentType,
-									Operator: "Contains",
-								},
-							},
-						},
-						// TODO check request headers, query params, etc.
-					},
+					RequestMatcher:   reqMatcher,
 					Capture: map[string]config.Capture{
 						"_matched-openapi-operation": {
 							Store: "request",
