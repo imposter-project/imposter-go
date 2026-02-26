@@ -207,6 +207,75 @@ func TestOpenAPIHandlerEndToEnd(t *testing.T) {
 			wantBodyJson:  true,
 			wantBodyMatch: ``,
 		},
+		// Accept header tests
+		{
+			name:      "OpenAPI 3.0 - No Accept header should still match",
+			configDir: "testdata/no-accept-header",
+			request: func() *http.Request {
+				req := httptest.NewRequest(http.MethodGet, "/books", nil)
+				// Intentionally no Accept header
+				return req
+			}(),
+			wantStatus:   http.StatusOK,
+			wantBodyJson: true,
+			wantBodyMatch: `{
+  "items": [
+    {
+      "id": 1,
+      "title": "Go in Action",
+      "author": "William Kennedy"
+    }
+  ],
+  "total": 1
+}`,
+			wantHeaders: map[string]string{
+				"Content-Type": "application/json",
+			},
+		},
+		{
+			name:      "OpenAPI 3.0 - With Accept header should still match",
+			configDir: "testdata/no-accept-header",
+			request: func() *http.Request {
+				req := httptest.NewRequest(http.MethodGet, "/books", nil)
+				req.Header.Set("Accept", "application/json")
+				return req
+			}(),
+			wantStatus:   http.StatusOK,
+			wantBodyJson: true,
+			wantBodyMatch: `{
+  "items": [
+    {
+      "id": 1,
+      "title": "Go in Action",
+      "author": "William Kennedy"
+    }
+  ],
+  "total": 1
+}`,
+			wantHeaders: map[string]string{
+				"Content-Type": "application/json",
+			},
+		},
+		{
+			name:      "OpenAPI 3.0 - No Accept header with path param should still match",
+			configDir: "testdata/no-accept-header",
+			request: func() *http.Request {
+				req := httptest.NewRequest(http.MethodGet, "/books/1", nil)
+				// Intentionally no Accept header
+				return req
+			}(),
+			wantStatus:   http.StatusOK,
+			wantBodyJson: true,
+			wantBodyMatch: `{
+  "id": 1,
+  "title": "Go in Action",
+  "author": "William Kennedy"
+}`,
+			wantHeaders: map[string]string{
+				"Content-Type": "application/json",
+			},
+		},
+		// OpenAPI 2.0 Tests
 		{
 			name:      "OpenAPI 2.0 - Upload Pet Image",
 			configDir: "testdata/v20",

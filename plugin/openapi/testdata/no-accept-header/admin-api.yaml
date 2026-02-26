@@ -1,0 +1,72 @@
+openapi: '3.0.3'
+info:
+  title: Bookstore API
+  version: '1.0.0'
+  description: Test API for verifying accept header handling
+
+paths:
+  /books:
+    get:
+      operationId: listBooks
+      summary: List all books
+      responses:
+        '200':
+          description: A list of books
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookList'
+              examples:
+                default:
+                  value:
+                    items:
+                      - id: 1
+                        title: 'Go in Action'
+                        author: 'William Kennedy'
+                    total: 1
+
+  /books/{bookId}:
+    get:
+      operationId: getBook
+      summary: Get a book by ID
+      parameters:
+        - name: bookId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A single book
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+              examples:
+                default:
+                  value:
+                    id: 1
+                    title: 'Go in Action'
+                    author: 'William Kennedy'
+
+components:
+  schemas:
+    Book:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        author:
+          type: string
+
+    BookList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Book'
+        total:
+          type: integer
