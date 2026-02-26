@@ -1,113 +1,72 @@
 openapi: '3.0.3'
 info:
-  title: Mockscloud Admin API
+  title: Bookstore API
   version: '1.0.0'
-  description: Internal admin API for managing platform users
+  description: Test API for verifying accept header handling
 
 paths:
-  /admin/users:
+  /books:
     get:
-      operationId: listUsers
-      summary: List users with pagination
-      parameters:
-        - name: page
-          in: query
-          schema:
-            type: integer
-            default: 0
-        - name: per_page
-          in: query
-          schema:
-            type: integer
-            default: 20
-        - name: q
-          in: query
-          schema:
-            type: string
+      operationId: listBooks
+      summary: List all books
       responses:
         '200':
-          description: Paginated list of users
+          description: A list of books
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedUsers'
+                $ref: '#/components/schemas/BookList'
               examples:
                 default:
                   value:
                     items:
-                      - user_id: 'auth0|123'
-                        email: 'test@example.com'
-                        name: 'Test User'
-                        picture: 'https://s.gravatar.com/avatar/test'
-                        email_verified: true
-                        created_at: '2024-01-01T00:00:00Z'
-                        last_login: '2024-06-01T00:00:00Z'
-                        logins_count: 5
+                      - id: 1
+                        title: 'Go in Action'
+                        author: 'William Kennedy'
                     total: 1
-                    page: 0
-                    perPage: 20
 
-  /admin/users/{userId}:
+  /books/{bookId}:
     get:
-      operationId: getUser
-      summary: Get a single user by ID
+      operationId: getBook
+      summary: Get a book by ID
       parameters:
-        - name: userId
+        - name: bookId
           in: path
           required: true
           schema:
             type: string
       responses:
         '200':
-          description: User details
+          description: A single book
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Auth0User'
+                $ref: '#/components/schemas/Book'
               examples:
                 default:
                   value:
-                    user_id: 'auth0|123'
-                    email: 'test@example.com'
-                    name: 'Test User'
-                    picture: 'https://s.gravatar.com/avatar/test'
-                    email_verified: true
-                    created_at: '2024-01-01T00:00:00Z'
-                    last_login: '2024-06-01T00:00:00Z'
-                    logins_count: 5
+                    id: 1
+                    title: 'Go in Action'
+                    author: 'William Kennedy'
 
 components:
   schemas:
-    Auth0User:
+    Book:
       type: object
       properties:
-        user_id:
-          type: string
-        email:
-          type: string
-        name:
-          type: string
-        picture:
-          type: string
-        email_verified:
-          type: boolean
-        created_at:
-          type: string
-        last_login:
-          type: string
-        logins_count:
+        id:
           type: integer
+        title:
+          type: string
+        author:
+          type: string
 
-    PaginatedUsers:
+    BookList:
       type: object
       properties:
         items:
           type: array
           items:
-            $ref: '#/components/schemas/Auth0User'
+            $ref: '#/components/schemas/Book'
         total:
-          type: integer
-        page:
-          type: integer
-        perPage:
           type: integer
