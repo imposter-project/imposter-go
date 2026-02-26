@@ -37,9 +37,9 @@ func serveStaticContent(path string) shared.HandlerResponse {
 		}}
 	}
 
-    if path == "/" {
-        path = "/index.html"
-    }
+	if path == "/" {
+		path = "/index.html"
+	}
 
 	// initialiser is a special case
 	if path == "/swagger-initializer.js" {
