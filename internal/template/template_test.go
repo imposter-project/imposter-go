@@ -9,6 +9,7 @@ import (
 
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/exchange"
+	"github.com/imposter-project/imposter-go/internal/fakedata"
 	"github.com/imposter-project/imposter-go/internal/store"
 	"github.com/stretchr/testify/assert"
 )
@@ -366,4 +367,84 @@ func TestResponseTemplates(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+// mockFakeDataProvider is a test double for fakedata.Provider.
+type mockFakeDataProvider struct{}
+
+func (m *mockFakeDataProvider) GenerateFakeData(req fakedata.Request) fakedata.Response {
+	if req.ExprCategory == "Name" && req.ExprProperty == "firstName" {
+		return fakedata.Response{Value: "Alice", Found: true}
+	}
+	if req.ExprCategory == "Internet" && req.ExprProperty == "emailAddress" {
+		return fakedata.Response{Value: "alice@example.com", Found: true}
+	}
+	if req.ExprCategory == "Address" && req.ExprProperty == "city" {
+		return fakedata.Response{Value: "Springfield", Found: true}
+	}
+	return fakedata.Response{}
+}
+
+func TestFakeDataPlaceholders(t *testing.T) {
+	// Register a mock provider for testing
+	fakedata.RegisterProvider(&mockFakeDataProvider{})
+	defer fakedata.RegisterProvider(nil) // Clean up
+
+	tests := []struct {
+		name     string
+		template string
+		want     string
+	}{
+		{
+			name:     "fake name firstName",
+			template: "${fake.Name.firstName}",
+			want:     "Alice",
+		},
+		{
+			name:     "fake internet email",
+			template: "${fake.Internet.emailAddress}",
+			want:     "alice@example.com",
+		},
+		{
+			name:     "fake address city",
+			template: "${fake.Address.city}",
+			want:     "Springfield",
+		},
+		{
+			name:     "mixed template with fake data",
+			template: "Hello ${fake.Name.firstName} from ${fake.Address.city}!",
+			want:     "Hello Alice from Springfield!",
+		},
+		{
+			name:     "unknown fake category",
+			template: "${fake.Unknown.thing}",
+			want:     "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req, _ := http.NewRequest("GET", "/", nil)
+			body := []byte("")
+			req.Body = io.NopCloser(bytes.NewReader(body))
+			imposterConfig := &config.ImposterConfig{ServerPort: "8080"}
+			exch := exchange.NewExchangeFromRequest(req, body, store.NewRequestStore())
+			got := ProcessTemplate(tt.template, exch, imposterConfig, &config.RequestMatcher{})
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestFakeDataNoProvider(t *testing.T) {
+	// Ensure no provider is registered
+	fakedata.RegisterProvider(nil)
+
+	req, _ := http.NewRequest("GET", "/", nil)
+	body := []byte("")
+	req.Body = io.NopCloser(bytes.NewReader(body))
+	imposterConfig := &config.ImposterConfig{ServerPort: "8080"}
+	exch := exchange.NewExchangeFromRequest(req, body, store.NewRequestStore())
+	got := ProcessTemplate("${fake.Name.firstName}", exch, imposterConfig, &config.RequestMatcher{})
+	// With no provider, should return empty string
+	assert.Equal(t, "", got)
 }

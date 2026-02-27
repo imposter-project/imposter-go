@@ -10,6 +10,7 @@ import (
 
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/exchange"
+	"github.com/imposter-project/imposter-go/internal/fakedata"
 	"github.com/imposter-project/imposter-go/internal/query"
 	"github.com/imposter-project/imposter-go/internal/store"
 	"github.com/imposter-project/imposter-go/pkg/utils"
@@ -59,6 +60,8 @@ func ProcessTemplate(template string, exch *exchange.Exchange, imposterConfig *c
 			rawValue = handleStoreReplacement(subcategory, field, exch.RequestStore)
 		case "datetime":
 			rawValue = handleDatetimeReplacement(subcategory, field)
+		case "fake":
+			rawValue = fakedata.Generate(subcategory, field)
 		case "system":
 			rawValue = handleSystemReplacement(subcategory, field, exch, imposterConfig)
 		default:

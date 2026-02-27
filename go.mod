@@ -19,6 +19,7 @@ require (
 require (
 	github.com/PaesslerAG/gval v1.2.4 // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
+	github.com/brianvoe/gofakeit/v7 v7.14.0 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
