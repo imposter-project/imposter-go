@@ -134,7 +134,7 @@ func generateCompany(prop string) (string, bool) {
 	case "buzzword":
 		return gofakeit.BuzzWord(), true
 	case "catchphrase":
-		return gofakeit.HipsterSentence(5), true
+		return gofakeit.HipsterSentence(), true
 	case "bs":
 		return gofakeit.BS(), true
 	default:
