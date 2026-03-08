@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-	"html/template"
 	"net/url"
 	"strings"
 	"time"
@@ -169,142 +167,6 @@ func (o *OIDCServer) renderLoginForm(sessionID, clientID string, errorMsg ...str
 		errorMessage = errorMsg[0]
 	}
 
-	tmpl := `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign In - OIDC Server</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            margin: 0;
-            padding: 20px;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .login-container {
-            background: white;
-            padding: 40px;
-            border-radius: 10px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            width: 100%;
-            max-width: 400px;
-        }
-        .login-header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        .login-header h1 {
-            color: #333;
-            margin: 0;
-            font-size: 28px;
-        }
-        .login-header p {
-            color: #666;
-            margin: 10px 0 0 0;
-        }
-        .form-group {
-            margin-bottom: 20px;
-        }
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            color: #333;
-            font-weight: 500;
-        }
-        .form-group input {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e1e5e9;
-            border-radius: 5px;
-            font-size: 16px;
-            transition: border-color 0.3s;
-            box-sizing: border-box;
-        }
-        .form-group input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        .btn {
-            width: 100%;
-            padding: 12px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-        .btn:hover {
-            transform: translateY(-2px);
-        }
-        .error {
-            background: #fee;
-            color: #c33;
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            border: 1px solid #fcc;
-        }
-        .client-info {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-        .client-info p {
-            margin: 0;
-            color: #666;
-            font-size: 14px;
-        }
-    </style>
-</head>
-<body>
-    <div class="login-container">
-        <div class="login-header">
-            <h1>Sign In</h1>
-            <p>OIDC Authorization Server</p>
-        </div>
-        
-        <div class="client-info">
-            <p>Application <strong>{{.ClientID}}</strong> is requesting access to your account</p>
-        </div>
-        
-        {{if .Error}}
-        <div class="error">{{.Error}}</div>
-        {{end}}
-        
-        <form method="POST" action="{{.PathPrefix}}/authorize">
-            <input type="hidden" name="session_id" value="{{.SessionID}}">
-            
-            <div class="form-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" required autofocus>
-            </div>
-            
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" required>
-            </div>
-            
-            <button type="submit" class="btn">Sign In</button>
-        </form>
-    </div>
-</body>
-</html>`
-
-	t, err := template.New("login").Parse(tmpl)
-	if err != nil {
-		o.logger.Error("failed to parse login template", "error", err)
-		return shared.HandlerResponse{StatusCode: 500, Body: []byte("Internal Server Error")}
-	}
-
 	data := struct {
 		SessionID  string
 		ClientID   string
@@ -318,7 +180,7 @@ func (o *OIDCServer) renderLoginForm(sessionID, clientID string, errorMsg ...str
 	}
 
 	var buf strings.Builder
-	if err := t.Execute(&buf, data); err != nil {
+	if err := loginTemplate.Execute(&buf, data); err != nil {
 		o.logger.Error("failed to execute login template", "error", err)
 		return shared.HandlerResponse{StatusCode: 500, Body: []byte("Internal Server Error")}
 	}
@@ -335,31 +197,26 @@ func (o *OIDCServer) renderLoginForm(sessionID, clientID string, errorMsg ...str
 func (o *OIDCServer) renderError(errorCode, errorDescription string) shared.HandlerResponse {
 	o.logger.Error("OIDC error", "code", errorCode, "description", errorDescription)
 
-	body := fmt.Sprintf(`<!DOCTYPE html>
-<html>
-<head>
-    <title>Error - OIDC Server</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 40px; }
-        .error { background: #fee; color: #c33; padding: 20px; border-radius: 5px; border: 1px solid #fcc; }
-        .error h1 { margin: 0 0 10px 0; }
-        .error p { margin: 0; }
-    </style>
-</head>
-<body>
-    <div class="error">
-        <h1>Error: %s</h1>
-        <p>%s</p>
-    </div>
-</body>
-</html>`, errorCode, errorDescription)
+	data := struct {
+		ErrorCode        string
+		ErrorDescription string
+	}{
+		ErrorCode:        errorCode,
+		ErrorDescription: errorDescription,
+	}
+
+	var buf strings.Builder
+	if err := errorTemplate.Execute(&buf, data); err != nil {
+		o.logger.Error("failed to execute error template", "error", err)
+		return shared.HandlerResponse{StatusCode: 500, Body: []byte("Internal Server Error")}
+	}
 
 	return shared.HandlerResponse{
 		StatusCode: 400,
 		Headers: map[string]string{
 			"Content-Type": "text/html; charset=utf-8",
 		},
-		Body: []byte(body),
+		Body: []byte(buf.String()),
 	}
 }
 

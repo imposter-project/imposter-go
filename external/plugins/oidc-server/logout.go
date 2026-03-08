@@ -153,51 +153,11 @@ func (o *OIDCServer) redirectAfterLogout(uri, state string) shared.HandlerRespon
 }
 
 func (o *OIDCServer) renderLogoutConfirmation() shared.HandlerResponse {
-	body := `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Signed Out - OIDC Server</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            margin: 0;
-            padding: 20px;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .logout-container {
-            background: white;
-            padding: 40px;
-            border-radius: 10px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            width: 100%;
-            max-width: 400px;
-            text-align: center;
-        }
-        .logout-container h1 {
-            color: #333;
-            margin: 0 0 15px 0;
-            font-size: 28px;
-        }
-        .logout-container p {
-            color: #666;
-            margin: 0;
-            font-size: 16px;
-        }
-    </style>
-</head>
-<body>
-    <div class="logout-container">
-        <h1>Signed Out</h1>
-        <p>You have been signed out of the OIDC Authorisation Server.</p>
-    </div>
-</body>
-</html>`
+	var buf strings.Builder
+	if err := logoutTemplate.Execute(&buf, nil); err != nil {
+		o.logger.Error("failed to execute logout template", "error", err)
+		return shared.HandlerResponse{StatusCode: 500, Body: []byte("Internal Server Error")}
+	}
 
 	return shared.HandlerResponse{
 		StatusCode: 200,
@@ -205,6 +165,6 @@ func (o *OIDCServer) renderLogoutConfirmation() shared.HandlerResponse {
 			"Content-Type":  "text/html; charset=utf-8",
 			"Cache-Control": "no-store",
 		},
-		Body: []byte(body),
+		Body: []byte(buf.String()),
 	}
 }
