@@ -257,6 +257,30 @@ func TestOpenAPIHandlerEndToEnd(t *testing.T) {
 			},
 		},
 		{
+			name:      "OpenAPI 3.0 - With wildcard Accept header should still match",
+			configDir: "testdata/no-accept-header",
+			request: func() *http.Request {
+				req := httptest.NewRequest(http.MethodGet, "/books", nil)
+				req.Header.Set("Accept", "*/*")
+				return req
+			}(),
+			wantStatus:   http.StatusOK,
+			wantBodyJson: true,
+			wantBodyMatch: `{
+  "items": [
+    {
+      "id": 1,
+      "title": "Go in Action",
+      "author": "William Kennedy"
+    }
+  ],
+  "total": 1
+}`,
+			wantHeaders: map[string]string{
+				"Content-Type": "application/json",
+			},
+		},
+		{
 			name:      "OpenAPI 3.0 - No Accept header with path param should still match",
 			configDir: "testdata/no-accept-header",
 			request: func() *http.Request {

@@ -1,9 +1,10 @@
 package handler
 
 import (
-	"github.com/imposter-project/imposter-go/internal/matcher"
 	"net/http"
 	"strings"
+
+	"github.com/imposter-project/imposter-go/internal/matcher"
 
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/exchange"

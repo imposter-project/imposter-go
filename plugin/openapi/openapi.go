@@ -141,8 +141,15 @@ func augmentConfigWithOpenApiSpec(cfg *config.Config, parser OpenAPIParser) erro
 					{
 						Expression: "${context.request.headers.Accept}",
 						MatchCondition: config.MatchCondition{
-							Value:    resp.ContentType,
 							Operator: "Contains",
+							Value:    resp.ContentType,
+						},
+					},
+					{
+						Expression: "${context.request.headers.Accept}",
+						MatchCondition: config.MatchCondition{
+							Operator: "EqualTo",
+							Value:    "*/*",
 						},
 					},
 					{
