@@ -280,7 +280,7 @@ func (o *OIDCServer) renderLoginForm(sessionID, clientID string, errorMsg ...str
         <div class="error">{{.Error}}</div>
         {{end}}
         
-        <form method="POST" action="/oidc/authorize">
+        <form method="POST" action="{{.PathPrefix}}/authorize">
             <input type="hidden" name="session_id" value="{{.SessionID}}">
             
             <div class="form-group">
@@ -306,13 +306,15 @@ func (o *OIDCServer) renderLoginForm(sessionID, clientID string, errorMsg ...str
 	}
 
 	data := struct {
-		SessionID string
-		ClientID  string
-		Error     string
+		SessionID  string
+		ClientID   string
+		PathPrefix string
+		Error      string
 	}{
-		SessionID: sessionID,
-		ClientID:  clientID,
-		Error:     errorMessage,
+		SessionID:  sessionID,
+		ClientID:   clientID,
+		PathPrefix: o.pathPrefix,
+		Error:      errorMessage,
 	}
 
 	var buf strings.Builder

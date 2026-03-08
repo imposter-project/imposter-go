@@ -11,16 +11,18 @@ import (
 )
 
 func createTestOIDCServerForPlugin() *OIDCServer {
+	config := getDefaultConfig()
 	server := &OIDCServer{
 		logger: hclog.New(&hclog.LoggerOptions{
 			Level:  hclog.Off, // Disable logging during tests
 			Output: nil,
 		}),
-		config:    getDefaultConfig(),
-		serverURL: "http://localhost:8080",
-		sessions:  make(map[string]*AuthSession),
-		codes:     make(map[string]*AuthCode),
-		tokens:    make(map[string]*AccessToken),
+		config:     config,
+		serverURL:  "http://localhost:8080",
+		pathPrefix: config.PathPrefix,
+		sessions:   make(map[string]*AuthSession),
+		codes:      make(map[string]*AuthCode),
+		tokens:     make(map[string]*AccessToken),
 	}
 
 	// Setup JWT keys based on the default config (RS256)
@@ -189,7 +191,7 @@ func TestOIDCServer_Handle(t *testing.T) {
 			name: "discovery endpoint",
 			request: shared.HandlerRequest{
 				Method: "GET",
-				Path:   "/.well-known/openid-configuration",
+				Path:   "/oidc/.well-known/openid-configuration",
 			},
 			expectedStatus: 200,
 			expectedBody:   "issuer",
@@ -276,7 +278,7 @@ func TestOIDCServer_handleDiscovery(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			req := shared.HandlerRequest{
 				Method: tt.method,
-				Path:   "/.well-known/openid-configuration",
+				Path:   "/oidc/.well-known/openid-configuration",
 			}
 
 			resp := server.handleDiscovery(req)
@@ -511,7 +513,7 @@ func TestOIDCServer_HandleIntegration(t *testing.T) {
 
 		req := shared.HandlerRequest{
 			Method: "GET",
-			Path:   "/.well-known/openid-configuration",
+			Path:   "/oidc/.well-known/openid-configuration",
 		}
 
 		resp := server.Handle(req)

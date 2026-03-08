@@ -109,7 +109,7 @@
         <div class="error">{{.Error}}</div>
         {{end}}
         
-        <form method="POST" action="/oidc/authorize">
+        <form method="POST" action="{{.PathPrefix}}/authorize">
             <input type="hidden" name="session_id" value="{{.SessionID}}">
             
             <div class="form-group">

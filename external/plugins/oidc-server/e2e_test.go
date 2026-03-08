@@ -43,14 +43,16 @@ func TestOIDCServer_EndToEndFlow(t *testing.T) {
 			Secret:    "test-secret-key-for-deterministic-jwt-signing-in-end-to-end-test",
 		},
 	}
+	config.PathPrefix = "/oidc"
 
 	server := &OIDCServer{
-		logger:    hclog.NewNullLogger(),
-		config:    config,
-		serverURL: "http://localhost:8080",
-		sessions:  make(map[string]*AuthSession),
-		codes:     make(map[string]*AuthCode),
-		tokens:    make(map[string]*AccessToken),
+		logger:     hclog.NewNullLogger(),
+		config:     config,
+		serverURL:  "http://localhost:8080",
+		pathPrefix: config.PathPrefix,
+		sessions:   make(map[string]*AuthSession),
+		codes:      make(map[string]*AuthCode),
+		tokens:     make(map[string]*AccessToken),
 	}
 
 	// Initialize JWT setup
@@ -374,14 +376,16 @@ func TestOIDCServer_EndToEndFlowWithPKCE(t *testing.T) {
 			Secret:    "pkce-test-secret-key-for-deterministic-jwt-signing-in-end-to-end-test",
 		},
 	}
+	config.PathPrefix = "/oidc"
 
 	server := &OIDCServer{
-		logger:    hclog.NewNullLogger(),
-		config:    config,
-		serverURL: "http://localhost:8080",
-		sessions:  make(map[string]*AuthSession),
-		codes:     make(map[string]*AuthCode),
-		tokens:    make(map[string]*AccessToken),
+		logger:     hclog.NewNullLogger(),
+		config:     config,
+		serverURL:  "http://localhost:8080",
+		pathPrefix: config.PathPrefix,
+		sessions:   make(map[string]*AuthSession),
+		codes:      make(map[string]*AuthCode),
+		tokens:     make(map[string]*AccessToken),
 	}
 
 	err := server.setupJWTKeys()

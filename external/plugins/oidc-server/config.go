@@ -7,14 +7,16 @@ import (
 	"encoding/hex"
 	"encoding/pem"
 	"fmt"
+
 	"github.com/google/uuid"
 	"gopkg.in/yaml.v3"
 )
 
 type OIDCConfig struct {
-	Users     []User     `yaml:"users"`
-	Clients   []Client   `yaml:"clients"`
-	JWTConfig *JWTConfig `yaml:"jwt,omitempty"`
+	PathPrefix string     `yaml:"path_prefix,omitempty"`
+	Users      []User     `yaml:"users"`
+	Clients    []Client   `yaml:"clients"`
+	JWTConfig  *JWTConfig `yaml:"jwt,omitempty"`
 }
 
 type JWTConfig struct {
@@ -38,6 +40,8 @@ type Client struct {
 	PostLogoutRedirectURIs []string `yaml:"post_logout_redirect_uris,omitempty"`
 }
 
+const defaultPathPrefix = "/oidc"
+
 // loadOIDCConfig loads OIDC configuration from raw YAML bytes
 // as provided by the main config system's plugin config block
 func loadOIDCConfig(pluginConfigBytes []byte) (*OIDCConfig, error) {
@@ -49,6 +53,11 @@ func loadOIDCConfig(pluginConfigBytes []byte) (*OIDCConfig, error) {
 	var config OIDCConfig
 	if err := yaml.Unmarshal(pluginConfigBytes, &config); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal plugin config: %w", err)
+	}
+
+	// Set default path prefix if not provided
+	if config.PathPrefix == "" {
+		config.PathPrefix = defaultPathPrefix
 	}
 
 	// Validate configuration
@@ -196,6 +205,7 @@ func generateRSAKeyPair() (privateKeyPEM, publicKeyPEM, keyID string, err error)
 
 func getDefaultConfig() *OIDCConfig {
 	return &OIDCConfig{
+		PathPrefix: defaultPathPrefix,
 		Users: []User{
 			{
 				Username: "alice",

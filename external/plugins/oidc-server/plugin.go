@@ -24,6 +24,7 @@ type OIDCServer struct {
 	logger          hclog.Logger
 	config          *OIDCConfig
 	serverURL       string
+	pathPrefix      string
 	sessions        map[string]*AuthSession
 	codes           map[string]*AuthCode
 	tokens          map[string]*AccessToken
@@ -107,6 +108,9 @@ func (o *OIDCServer) Configure(cfg shared.ExternalConfig) error {
 		o.config = getDefaultConfig()
 	}
 
+	// Store the path prefix for use in routing and URLs
+	o.pathPrefix = o.config.PathPrefix
+
 	// Setup JWT signing keys based on algorithm
 	if err := o.setupJWTKeys(); err != nil {
 		return fmt.Errorf("failed to setup JWT keys: %w", err)
@@ -117,7 +121,7 @@ func (o *OIDCServer) Configure(cfg shared.ExternalConfig) error {
 		return fmt.Errorf("failed to cache discovery document: %w", err)
 	}
 
-	endpoints := fmt.Sprintf("discovery: %[1]s/oidc/.well-known/openid-configuration\njwks: %[1]s/oidc/.well-known/jwks.json\nauthorize: %[1]s/oidc/authorize\ntoken: %[1]s/oidc/token\nuserinfo: %[1]s/oidc/userinfo\nlogout: %[1]s/oidc/logout", o.serverURL)
+	endpoints := fmt.Sprintf("discovery: %[1]s%[2]s/.well-known/openid-configuration\njwks: %[1]s%[2]s/.well-known/jwks.json\nauthorize: %[1]s%[2]s/authorize\ntoken: %[1]s%[2]s/token\nuserinfo: %[1]s%[2]s/userinfo\nlogout: %[1]s%[2]s/logout", o.serverURL, o.pathPrefix)
 	o.logger.Info("OIDC server plugin configured successfully", "endpoints", endpoints)
 
 	return nil
@@ -234,11 +238,11 @@ func (o *OIDCServer) CacheDiscoveryDocument() error {
 	// Build discovery document as a map
 	discovery := map[string]interface{}{
 		"issuer":                                o.serverURL,
-		"authorization_endpoint":                o.serverURL + "/oidc/authorize",
-		"token_endpoint":                        o.serverURL + "/oidc/token",
-		"userinfo_endpoint":                     o.serverURL + "/oidc/userinfo",
-		"end_session_endpoint":                  o.serverURL + "/oidc/logout",
-		"jwks_uri":                              o.serverURL + "/oidc/.well-known/jwks.json",
+		"authorization_endpoint":                o.serverURL + o.pathPrefix + "/authorize",
+		"token_endpoint":                        o.serverURL + o.pathPrefix + "/token",
+		"userinfo_endpoint":                     o.serverURL + o.pathPrefix + "/userinfo",
+		"end_session_endpoint":                  o.serverURL + o.pathPrefix + "/logout",
+		"jwks_uri":                              o.serverURL + o.pathPrefix + "/.well-known/jwks.json",
 		"response_types_supported":              []string{"code"},
 		"subject_types_supported":               []string{"public"},
 		"scopes_supported":                      []string{"openid", "profile", "email"},
@@ -272,24 +276,24 @@ func (o *OIDCServer) CacheDiscoveryDocument() error {
 }
 
 func (o *OIDCServer) Handle(args shared.HandlerRequest) shared.HandlerResponse {
-	if !strings.HasPrefix(args.Path, "/oidc/") && !strings.HasPrefix(args.Path, "/.well-known/") {
+	if !strings.HasPrefix(args.Path, o.pathPrefix+"/") {
 		// Not handled
 		return shared.HandlerResponse{StatusCode: 0}
 	}
 	o.logger.Debug("handling request", "method", args.Method, "path", args.Path)
 
 	switch args.Path {
-	case "/oidc/authorize":
+	case o.pathPrefix + "/authorize":
 		return o.handleAuthorize(args)
-	case "/oidc/token":
+	case o.pathPrefix + "/token":
 		return o.handleToken(args)
-	case "/oidc/userinfo":
+	case o.pathPrefix + "/userinfo":
 		return o.handleUserInfo(args)
-	case "/oidc/logout":
+	case o.pathPrefix + "/logout":
 		return o.handleLogout(args)
-	case "/oidc/.well-known/jwks.json":
+	case o.pathPrefix + "/.well-known/jwks.json":
 		return o.handleJWKS(args)
-	case "/oidc/.well-known/openid-configuration":
+	case o.pathPrefix + "/.well-known/openid-configuration":
 		return o.handleDiscovery(args)
 	default:
 		return shared.HandlerResponse{StatusCode: 404, Body: []byte("Not Found")}

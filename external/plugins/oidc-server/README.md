@@ -6,12 +6,12 @@ An OpenID Connect authorization server implementation as an external plugin for 
 
 - **OpenID Connect Authorization Code Flow** with full RFC compliance
 - **PKCE Support** (RFC 7636) with both S256 and plain code challenge methods
-- **Standard OIDC Endpoints**:
-  - `/.well-known/openid-configuration` - OIDC Discovery
-  - `/oidc/authorize` - Authorization endpoint
-  - `/oidc/token` - Token endpoint
-  - `/oidc/userinfo` - Userinfo endpoint
-  - `/.well-known/jwks.json` - JSON Web Key Set (for RS256)
+- **Standard OIDC Endpoints** (under configurable path prefix, default `/oidc`):
+  - `<prefix>/.well-known/openid-configuration` - OIDC Discovery
+  - `<prefix>/authorize` - Authorization endpoint
+  - `<prefix>/token` - Token endpoint
+  - `<prefix>/userinfo` - Userinfo endpoint
+  - `<prefix>/.well-known/jwks.json` - JSON Web Key Set (for RS256)
 - **Web-based User Authentication** with responsive HTML login form
 - **JWT Token Generation** with HS256 or RS256 signing algorithms  
 - **Configurable Users and Clients** via YAML configuration files
@@ -46,6 +46,9 @@ plugin: oidc-server
 resources: []
 
 config:
+  # Optional: path prefix for all OIDC endpoints (default: /oidc)
+  path_prefix: "/oidc"
+
   users:
     - username: "alice"
       password: "password123"
@@ -204,10 +207,10 @@ make run /path/to/your/config
 
 ### OIDC Discovery
 
-**Endpoint:** `GET /.well-known/openid-configuration`
+**Endpoint:** `GET /oidc/.well-known/openid-configuration`
 
 ```bash
-curl http://localhost:8080/.well-known/openid-configuration
+curl http://localhost:8080/oidc/.well-known/openid-configuration
 ```
 
 **Response:**
@@ -226,7 +229,7 @@ curl http://localhost:8080/.well-known/openid-configuration
 }
 ```
 
-**Note:** The URLs in the discovery document will automatically use the server URL configured in Imposter, not hardcoded localhost addresses.
+**Note:** The URLs in the discovery document will automatically use the server URL configured in Imposter, not hardcoded localhost addresses. All endpoint paths use the configured `path_prefix` (default: `/oidc`).
 
 ### Authorization Endpoint
 

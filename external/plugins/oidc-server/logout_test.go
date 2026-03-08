@@ -55,14 +55,16 @@ func createTestOIDCServerForLogout() *OIDCServer {
 			Secret:    "test-secret-key-for-deterministic-jwt-signing-in-logout-tests",
 		},
 	}
+	config.PathPrefix = "/oidc"
 
 	server := &OIDCServer{
-		logger:    hclog.NewNullLogger(),
-		config:    config,
-		serverURL: "http://localhost:8080",
-		sessions:  make(map[string]*AuthSession),
-		codes:     make(map[string]*AuthCode),
-		tokens:    make(map[string]*AccessToken),
+		logger:     hclog.NewNullLogger(),
+		config:     config,
+		serverURL:  "http://localhost:8080",
+		pathPrefix: config.PathPrefix,
+		sessions:   make(map[string]*AuthSession),
+		codes:      make(map[string]*AuthCode),
+		tokens:     make(map[string]*AccessToken),
 	}
 
 	server.setupJWTKeys()
@@ -563,14 +565,16 @@ func TestOIDCServer_parseIDTokenHint_RS256(t *testing.T) {
 			Algorithm: "RS256",
 		},
 	}
+	config.PathPrefix = "/oidc"
 
 	server := &OIDCServer{
-		logger:    hclog.NewNullLogger(),
-		config:    config,
-		serverURL: "http://localhost:8080",
-		sessions:  make(map[string]*AuthSession),
-		codes:     make(map[string]*AuthCode),
-		tokens:    make(map[string]*AccessToken),
+		logger:     hclog.NewNullLogger(),
+		config:     config,
+		serverURL:  "http://localhost:8080",
+		pathPrefix: config.PathPrefix,
+		sessions:   make(map[string]*AuthSession),
+		codes:      make(map[string]*AuthCode),
+		tokens:     make(map[string]*AccessToken),
 	}
 	server.setupJWTKeys()
 	server.CacheDiscoveryDocument()

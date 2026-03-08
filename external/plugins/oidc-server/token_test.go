@@ -13,16 +13,18 @@ import (
 )
 
 func createTestOIDCServerForToken() *OIDCServer {
+	config := getDefaultConfig()
 	server := &OIDCServer{
 		logger: hclog.New(&hclog.LoggerOptions{
 			Level:  hclog.Off,
 			Output: nil,
 		}),
-		config:    getDefaultConfig(),
-		serverURL: "http://localhost:8080",
-		sessions:  make(map[string]*AuthSession),
-		codes:     make(map[string]*AuthCode),
-		tokens:    make(map[string]*AccessToken),
+		config:     config,
+		serverURL:  "http://localhost:8080",
+		pathPrefix: config.PathPrefix,
+		sessions:   make(map[string]*AuthSession),
+		codes:      make(map[string]*AuthCode),
+		tokens:     make(map[string]*AccessToken),
 	}
 
 	// Setup JWT keys based on the default config (RS256)

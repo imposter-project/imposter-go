@@ -11,17 +11,19 @@ import (
 )
 
 func createTestOIDCServerForAuth() *OIDCServer {
+	config := getDefaultConfig()
 	return &OIDCServer{
 		logger: hclog.New(&hclog.LoggerOptions{
 			Level:  hclog.Off,
 			Output: nil,
 		}),
-		config:    getDefaultConfig(),
-		serverURL: "http://localhost:8080",
-		sessions:  make(map[string]*AuthSession),
-		codes:     make(map[string]*AuthCode),
-		tokens:    make(map[string]*AccessToken),
-		jwtSecret: []byte("test-secret-key-32-bytes-long!"),
+		config:     config,
+		serverURL:  "http://localhost:8080",
+		pathPrefix: config.PathPrefix,
+		sessions:   make(map[string]*AuthSession),
+		codes:      make(map[string]*AuthCode),
+		tokens:     make(map[string]*AccessToken),
+		jwtSecret:  []byte("test-secret-key-32-bytes-long!"),
 	}
 }
 

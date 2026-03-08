@@ -70,14 +70,17 @@ func TestOIDCServer_RS256Support(t *testing.T) {
 		},
 	}
 
+	config.PathPrefix = "/oidc"
+
 	// Create OIDC server
 	server := &OIDCServer{
-		logger:    hclog.NewNullLogger(),
-		config:    config,
-		serverURL: "http://localhost:8080",
-		sessions:  make(map[string]*AuthSession),
-		codes:     make(map[string]*AuthCode),
-		tokens:    make(map[string]*AccessToken),
+		logger:     hclog.NewNullLogger(),
+		config:     config,
+		serverURL:  "http://localhost:8080",
+		pathPrefix: config.PathPrefix,
+		sessions:   make(map[string]*AuthSession),
+		codes:      make(map[string]*AuthCode),
+		tokens:     make(map[string]*AccessToken),
 	}
 
 	// Setup JWT keys
@@ -190,11 +193,13 @@ func TestOIDCServer_JWKSCaching(t *testing.T) {
 			KeyID:         "test-key",
 		},
 	}
+	config.PathPrefix = "/oidc"
 
 	server := &OIDCServer{
-		logger:    hclog.NewNullLogger(),
-		config:    config,
-		serverURL: "http://localhost:8080",
+		logger:     hclog.NewNullLogger(),
+		config:     config,
+		serverURL:  "http://localhost:8080",
+		pathPrefix: config.PathPrefix,
 	}
 
 	// Setup JWT keys (this should cache the JWKS)
@@ -232,9 +237,10 @@ func TestOIDCServer_HS256Fallback(t *testing.T) {
 	config.JWTConfig.Algorithm = "HS256" // Explicitly set to HS256
 
 	server := &OIDCServer{
-		logger:    hclog.NewNullLogger(),
-		config:    config,
-		serverURL: "http://localhost:8080",
+		logger:     hclog.NewNullLogger(),
+		config:     config,
+		serverURL:  "http://localhost:8080",
+		pathPrefix: config.PathPrefix,
 	}
 
 	// Setup JWT keys
@@ -288,11 +294,13 @@ func TestOIDCServer_HS256WithSecret(t *testing.T) {
 			Secret:    configuredSecret,
 		},
 	}
+	config.PathPrefix = "/oidc"
 
 	server := &OIDCServer{
-		logger:    hclog.NewNullLogger(),
-		config:    config,
-		serverURL: "http://localhost:8080",
+		logger:     hclog.NewNullLogger(),
+		config:     config,
+		serverURL:  "http://localhost:8080",
+		pathPrefix: config.PathPrefix,
 	}
 
 	// Setup JWT keys

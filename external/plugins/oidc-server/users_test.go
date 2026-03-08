@@ -16,7 +16,9 @@ func createTestOIDCServer() *OIDCServer {
 			Output:     os.Stderr,
 			JSONFormat: true,
 		}),
+		pathPrefix: "/oidc",
 		config: &OIDCConfig{
+			PathPrefix: "/oidc",
 			Users: []User{
 				{
 					Username: "alice",
