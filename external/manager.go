@@ -87,6 +87,7 @@ func buildConfig(imposterConfig *config.ImposterConfig, configs []config.Config)
 			Plugin:       cfg.Plugin,
 			PluginConfig: pluginConfigBytes,
 			SpecFile:     cfg.SpecFile,
+			WSDLFile:     cfg.WSDLFile,
 		})
 	}
 
