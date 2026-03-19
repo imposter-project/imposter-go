@@ -1,17 +1,15 @@
 # WSDL Web Plugin
 
-A web-based interactive viewer for WSDL/SOAP service definitions as an external plugin for Imposter. This plugin serves WSDL files through an embedded web interface, making it easy to explore SOAP services, operations, messages, and bindings in your mocks.
+An external plugin for Imposter that embeds [WSDL Web](https://github.com/wsdl-web/wsdl-web) — an open-source interactive WSDL/SOAP viewer (similar to Swagger UI for OpenAPI). This plugin allows users to explore SOAP/WSDL specs in their mocks.
 
 ## Features
 
-- **Interactive WSDL Viewer** with service, port, and operation browsing
-- **WSDL 1.1 and WSDL 2.0 Support** - handles both versions
-- **SOAP 1.1 and SOAP 1.2** - displays SOAPAction, bindings, and addresses
-- **Multi-WSDL Support** - displays multiple WSDL files with a dropdown selector
-- **Raw XML View** - toggle to see the original WSDL XML
-- **Embedded Web Interface** - serves static assets from embedded filesystem
-- **Caching** - caches loaded WSDL files for optimal performance
-- **Zero Configuration** - automatically discovers WSDL files from SOAP plugin configs
+- **Embeds WSDL Web v0.9.1** — the full WSDL Web dist bundle is embedded as static assets
+- **Multiple WSDL Support** — automatically discovers all WSDL files from SOAP plugin configs and passes them as `urls` to WSDL Web with a dropdown switcher
+- **Zero Configuration** — automatically detects `wsdlFile` entries from SOAP plugin configs
+- **Locked UI** — URL input and file browse controls are hidden since WSDLs are pre-configured
+- **Raw WSDL Serving** — serves WSDL files at `/_wsdl/wsdl/{filename}` for WSDL Web to fetch
+- **Caching** — caches loaded WSDL files for optimal performance
 
 ## File Structure
 
@@ -23,56 +21,54 @@ external/plugins/wsdlweb/
 ├── wsdl_test.go           # Tests for WSDL processing functionality
 ├── ui_test.go             # Tests for UI functionality
 └── www/                   # Embedded web assets
-    ├── index.html         # HTML page for the viewer
-    ├── wsdl-web.css       # Viewer styles
-    ├── wsdl-web.js        # WSDL parsing and rendering logic
-    └── wsdl-initializer.js.tmpl  # Template for dynamic config injection
+    ├── index.html         # HTML page embedding WSDL Web
+    ├── wsdl-web.css       # WSDL Web v0.9.1 stylesheet
+    ├── wsdl-web.js         # WSDL Web v0.9.1 bundle (includes React)
+    ├── icons.svg           # WSDL Web icons
+    ├── favicon.ico         # Favicon
+    └── wsdl-initializer.js.tmpl  # Template for WsdlWeb.init() config injection
 ```
 
 ## Configuration
 
-The WSDL Web plugin works alongside SOAP plugin configurations. You need both a SOAP plugin configuration (with a WSDL file) and a WSDL Web plugin configuration.
+The WSDL Web plugin works alongside SOAP plugin configurations. Add a `wsdlweb` plugin section to your config:
 
-### Basic Usage
-
-As shown in the `examples/wsdlweb/` directory:
-
-**Configuration (`imposter-config.yaml`):**
 ```yaml
 plugin: soap
 wsdlFile: petstore.wsdl
 ---
 plugin: wsdlweb
 ```
-
-The WSDL Web plugin will automatically:
-1. Detect the `petstore.wsdl` from the SOAP plugin configuration
-2. Serve it at `/_wsdl/wsdl/petstore.wsdl`
-3. Create an interactive web interface at `/_wsdl/`
 
 ### Multiple WSDLs
 
-#### petstore-config.yaml
+All WSDL files from all SOAP configs are automatically discovered. WSDL Web displays a dropdown switcher in the top bar to toggle between them:
 
 ```yaml
+# petstore-config.yaml
 plugin: soap
 wsdlFile: petstore.wsdl
-resources: []
 ---
-plugin: wsdlweb
-```
-
-#### orders-config.yaml
-
-```yaml
+# orders-config.yaml
 plugin: soap
 wsdlFile: orders.wsdl
-resources: []
 ---
 plugin: wsdlweb
 ```
 
-All WSDL files will be available in the viewer interface with a dropdown selector.
+This produces the equivalent of:
+
+```javascript
+WsdlWeb.init(document.getElementById('wsdl-web'), {
+  urls: [
+    { label: 'petstore.wsdl', url: '/_wsdl/wsdl/petstore.wsdl' },
+    { label: 'orders.wsdl', url: '/_wsdl/wsdl/orders.wsdl' },
+  ],
+  showUrlInput: false,
+  showExploreButton: false,
+  showBrowseButton: false,
+})
+```
 
 ## Usage
 
@@ -82,65 +78,33 @@ All WSDL files will be available in the viewer interface with a dropdown selecto
 export IMPOSTER_EXTERNAL_PLUGINS=true
 ```
 
-### 2. Create Configuration Files
-
-Create both SOAP and WSDL Web plugin configurations (see `examples/wsdlweb/`):
-
-```yaml
-plugin: soap
-wsdlFile: service.wsdl
-resources: []
----
-plugin: wsdlweb
-```
-
-### 3. Run Imposter
+### 2. Run Imposter
 
 ```bash
 make run /path/to/your/config
 ```
 
-### 4. Access WSDL Web Interface
+### 3. Access WSDL Web Interface
 
 Navigate to `http://localhost:8080/_wsdl/` to view the interactive WSDL documentation.
 
 ## API Endpoints
 
-### WSDL Web Interface
-
-**Endpoint:** `GET /_wsdl/`
-
-Opens the interactive WSDL viewer showing all discovered WSDL files.
-
-### Raw WSDL Files
-
-**Endpoint:** `GET /_wsdl/wsdl/{wsdl-filename}`
-
-Serves the raw WSDL XML file.
-
-```bash
-curl http://localhost:8080/_wsdl/wsdl/petstore.wsdl
-```
+| Endpoint | Description |
+|----------|-------------|
+| `GET /_wsdl/` | WSDL Web interactive viewer |
+| `GET /_wsdl/wsdl/{filename}` | Raw WSDL XML file |
 
 ## Environment Variables
 
-### IMPOSTER_WSDL_SPEC_PATH_PREFIX
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `IMPOSTER_WSDL_SPEC_PATH_PREFIX` | `/_wsdl` | URL prefix for WSDL Web interface |
 
-Customizes the URL prefix for the WSDL Web interface.
+## Updating WSDL Web
 
-```bash
-export IMPOSTER_WSDL_SPEC_PATH_PREFIX="/soap-docs"
-# WSDL Web will be available at /soap-docs/ instead of /_wsdl/
-```
+To update the embedded WSDL Web version:
 
-**Default:** `/_wsdl`
-
-## Building
-
-The plugin is built as part of the main Imposter build:
-
-```bash
-make build-plugins
-```
-
-This creates `bin/plugin-wsdlweb` which is automatically discovered by Imposter when external plugins are enabled.
+1. Download the latest standalone zip from [WSDL Web releases](https://github.com/wsdl-web/wsdl-web/releases)
+2. Extract `wsdl-web.js`, `wsdl-web.css`, `icons.svg`, and `favicon.ico` into `www/`
+3. Rebuild the plugin

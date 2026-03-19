@@ -1,3 +1,6 @@
-window.onload = function() {
-  WSDLWeb.init({{.}});
-};
+WsdlWeb.init(document.getElementById('wsdl-web'), {
+  urls: {{.}},
+  showUrlInput: false,
+  showExploreButton: false,
+  showBrowseButton: false,
+})

@@ -16,7 +16,7 @@ var mu sync.RWMutex
 var cachedWSDLs = make(map[string][]byte)
 
 type WSDLConfig struct {
-	Name         string `json:"name"`
+	Label        string `json:"label"`
 	URL          string `json:"url"`
 	OriginalPath string `json:"-"`
 	ConfigDir    string `json:"-"`
@@ -29,7 +29,7 @@ func generateWSDLConfig(configs []shared.LightweightConfig) error {
 		}
 		wsdlFile := strings.TrimPrefix(cfg.WSDLFile, "/")
 		wsdlConfigs = append(wsdlConfigs, WSDLConfig{
-			Name:         wsdlFile,
+			Label:        wsdlFile,
 			URL:          wsdlPrefixPath + "/wsdl/" + wsdlFile,
 			OriginalPath: cfg.WSDLFile,
 			ConfigDir:    cfg.ConfigDir,

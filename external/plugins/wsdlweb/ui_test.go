@@ -93,8 +93,8 @@ func TestServeStaticContent_Initialiser(t *testing.T) {
 
 func TestGenerateInitialiser(t *testing.T) {
 	wsdlConfigs = []WSDLConfig{
-		{Name: "petstore.wsdl", URL: "/_wsdl/wsdl/petstore.wsdl"},
-		{Name: "service.wsdl", URL: "/_wsdl/wsdl/service.wsdl"},
+		{Label: "petstore.wsdl", URL: "/_wsdl/wsdl/petstore.wsdl"},
+		{Label: "service.wsdl", URL: "/_wsdl/wsdl/service.wsdl"},
 	}
 
 	err := generateInitialiser()
@@ -118,8 +118,8 @@ func TestGenerateInitialiser(t *testing.T) {
 	if !contains(body, "service.wsdl") {
 		t.Error("Expected body to contain 'service.wsdl'")
 	}
-	if !contains(body, "WSDLWeb.init(") {
-		t.Error("Expected body to contain 'WSDLWeb.init('")
+	if !contains(body, "WsdlWeb.init(") {
+		t.Error("Expected body to contain 'WsdlWeb.init('")
 	}
 }
 
@@ -132,8 +132,8 @@ func TestGenerateInitialiser_EmptyConfigs(t *testing.T) {
 	}
 
 	body := string(initialiserResp.Body)
-	if !contains(body, "WSDLWeb.init(") {
-		t.Error("Expected body to contain 'WSDLWeb.init('")
+	if !contains(body, "WsdlWeb.init(") {
+		t.Error("Expected body to contain 'WsdlWeb.init('")
 	}
 }
 

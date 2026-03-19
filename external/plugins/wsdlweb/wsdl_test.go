@@ -39,15 +39,15 @@ func TestGenerateWSDLConfig(t *testing.T) {
 		t.Fatalf("Expected 2 WSDL configs, got %d", len(wsdlConfigs))
 	}
 
-	if wsdlConfigs[0].Name != "petstore.wsdl" {
-		t.Errorf("Expected name 'petstore.wsdl', got '%s'", wsdlConfigs[0].Name)
+	if wsdlConfigs[0].Label != "petstore.wsdl" {
+		t.Errorf("Expected label 'petstore.wsdl', got '%s'", wsdlConfigs[0].Label)
 	}
 	if wsdlConfigs[0].URL != "/_wsdl/wsdl/petstore.wsdl" {
 		t.Errorf("Expected URL '/_wsdl/wsdl/petstore.wsdl', got '%s'", wsdlConfigs[0].URL)
 	}
 
-	if wsdlConfigs[1].Name != "service.wsdl" {
-		t.Errorf("Expected name 'service.wsdl', got '%s'", wsdlConfigs[1].Name)
+	if wsdlConfigs[1].Label != "service.wsdl" {
+		t.Errorf("Expected label 'service.wsdl', got '%s'", wsdlConfigs[1].Label)
 	}
 }
 
@@ -96,7 +96,7 @@ func TestServeRawWSDL(t *testing.T) {
 	// Reset global state
 	wsdlConfigs = []WSDLConfig{
 		{
-			Name:         "petstore.wsdl",
+			Label:        "petstore.wsdl",
 			URL:          "/_wsdl/wsdl/petstore.wsdl",
 			OriginalPath: "petstore.wsdl",
 			ConfigDir:    tmpDir,
@@ -138,7 +138,7 @@ func TestServeRawWSDL_FileNotFound(t *testing.T) {
 
 	wsdlConfigs = []WSDLConfig{
 		{
-			Name:         "missing.wsdl",
+			Label:        "missing.wsdl",
 			URL:          "/_wsdl/wsdl/missing.wsdl",
 			OriginalPath: "missing.wsdl",
 			ConfigDir:    tmpDir,
@@ -170,7 +170,7 @@ func TestServeRawWSDL_Cached(t *testing.T) {
 
 	wsdlConfigs = []WSDLConfig{
 		{
-			Name:         "cached.wsdl",
+			Label:        "cached.wsdl",
 			URL:          "/_wsdl/wsdl/cached.wsdl",
 			OriginalPath: "cached.wsdl",
 			ConfigDir:    tmpDir,
