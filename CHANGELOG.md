@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.11.0] - 2026-03-20
+### Added
+- feat: add WSDL Web plugin for interactive SOAP/WSDL documentation (#35)
+
 ## [1.10.0] - 2026-03-08
 ### Added
 - feat(oidc): allow path prefix to be configured
