@@ -96,6 +96,7 @@ func TestGenerateInitialiser(t *testing.T) {
 		{Label: "petstore.wsdl", URL: "/_wsdl/wsdl/petstore.wsdl"},
 		{Label: "service.wsdl", URL: "/_wsdl/wsdl/service.wsdl"},
 	}
+	config.Server.URL = "http://localhost:8080"
 
 	err := generateInitialiser()
 	if err != nil {
@@ -120,6 +121,9 @@ func TestGenerateInitialiser(t *testing.T) {
 	}
 	if !contains(body, "WsdlWeb.init(") {
 		t.Error("Expected body to contain 'WsdlWeb.init('")
+	}
+	if !contains(body, "baseUrlOverride: 'http://localhost:8080'") {
+		t.Error("Expected body to contain baseUrlOverride with server URL")
 	}
 }
 

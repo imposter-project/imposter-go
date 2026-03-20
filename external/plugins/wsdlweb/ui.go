@@ -67,6 +67,12 @@ func serveStaticContent(path string) shared.HandlerResponse {
 	}
 }
 
+// initialiserData holds the template data for the initialiser script.
+type initialiserData struct {
+	Urls            string
+	BaseUrlOverride string
+}
+
 // generateInitialiser generates the initialiser script response using the embedded template.
 func generateInitialiser() error {
 	// serialise the wsdlConfigs to JSON
@@ -74,15 +80,19 @@ func generateInitialiser() error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal WSDL config JSON: %w", err)
 	}
-	wsdlConfigJSON := string(jsonData)
 
-	// populate the template with the wsdlConfigJSON
+	data := initialiserData{
+		Urls:            string(jsonData),
+		BaseUrlOverride: config.Server.URL,
+	}
+
+	// populate the template with the initialiser data
 	t, err := template.ParseFS(www, "www/wsdl-initializer.js.tmpl")
 	if err != nil {
 		return fmt.Errorf("error parsing template: %v", err.Error())
 	}
 	var output bytes.Buffer
-	err = t.Execute(&output, wsdlConfigJSON)
+	err = t.Execute(&output, data)
 	if err != nil {
 		return fmt.Errorf("error executing template: %v", err.Error())
 	}
