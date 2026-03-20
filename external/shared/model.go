@@ -37,6 +37,7 @@ type LightweightConfig struct {
 	ConfigDir    string
 	Plugin       string
 	SpecFile     string
+	WSDLFile     string
 	PluginConfig []byte
 }
 
