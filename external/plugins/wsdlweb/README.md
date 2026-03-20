@@ -4,7 +4,7 @@ An external plugin for Imposter that embeds [WSDL Web](https://github.com/wsdl-w
 
 ## Features
 
-- **Embeds WSDL Web v0.9.1** — the full WSDL Web dist bundle is embedded as static assets
+- **Embeds WSDL Web** — the full WSDL Web standalone bundle is embedded as static assets
 - **Multiple WSDL Support** — automatically discovers all WSDL files from SOAP plugin configs and passes them as `urls` to WSDL Web with a dropdown switcher
 - **Zero Configuration** — automatically detects `wsdlFile` entries from SOAP plugin configs
 - **Locked UI** — URL input and file browse controls are hidden since WSDLs are pre-configured
