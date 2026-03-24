@@ -47,19 +47,23 @@ func main() {
 	})
 }
 
-func (w *WSDLWeb) Configure(cfg shared.ExternalConfig) error {
+func (w *WSDLWeb) Configure(cfg shared.ExternalConfig) (shared.PluginCapabilities, error) {
 	config = cfg
 
 	w.logger.Trace("generating WSDL config")
 	if err := generateWSDLConfig(config.Configs); err != nil {
-		return fmt.Errorf("could not generate WSDL Web plugin config: %w", err)
+		return shared.PluginCapabilities{}, fmt.Errorf("could not generate WSDL Web plugin config: %w", err)
 	}
 
 	w.logger.Trace("generating index page")
 	if err := generateInitialiser(); err != nil {
-		return fmt.Errorf("could not generate initialiser: %w", err)
+		return shared.PluginCapabilities{}, fmt.Errorf("could not generate initialiser: %w", err)
 	}
-	return nil
+	return shared.PluginCapabilities{HandleRequests: true}, nil
+}
+
+func (w *WSDLWeb) GenerateFakeData(req shared.FakeDataRequest) shared.FakeDataResponse {
+	return shared.FakeDataResponse{}
 }
 
 func (w *WSDLWeb) Handle(args shared.HandlerRequest) shared.HandlerResponse {
