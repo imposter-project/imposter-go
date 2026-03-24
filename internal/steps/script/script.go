@@ -65,6 +65,8 @@ func ExecuteScriptStep(step *config.Step, exch *exchange.Exchange, imposterConfi
 	vm.Set("stores", buildStores(vm, exch))
 	vm.Set("random", buildRandomWrapper(vm))
 	vm.Set("respond", buildRespond(vm, responseState, imposterConfig))
+	vm.Set("env", buildEnv())
+	vm.Set("config", buildConfig(configDir))
 
 	// Run the script
 	_, err := vm.RunString(scriptContent)

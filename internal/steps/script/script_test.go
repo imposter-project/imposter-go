@@ -2,6 +2,7 @@ package script
 
 import (
 	"net/http"
+	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -22,7 +23,71 @@ func TestExecuteScriptStep(t *testing.T) {
 		validate    func(t *testing.T, responseState *exchange.ResponseState)
 		expectError bool
 		reqMatcher  *config.RequestMatcher
+		configDir   string
 	}{
+		{
+			name: "env object exposes environment variables",
+			step: config.Step{
+				Type: config.ScriptStepType,
+				Lang: "javascript",
+				Code: `
+					if (typeof env !== "object") {
+						throw new Error("env should be an object");
+					}
+					if (env.PATH === undefined || env.PATH === "") {
+						throw new Error("env.PATH should be set");
+					}
+					respond().withContent(env.IMPOSTER_TEST_VAR);
+				`,
+			},
+			setupExch: func() *exchange.Exchange {
+				req, _ := http.NewRequest("GET", "/test", nil)
+				return &exchange.Exchange{
+					Request: &exchange.RequestContext{
+						Request: req,
+						Body:    []byte{},
+					},
+				}
+			},
+			setupStore: func() {
+				os.Setenv("IMPOSTER_TEST_VAR", "test-env-value")
+			},
+			validate: func(t *testing.T, rs *exchange.ResponseState) {
+				assert.Equal(t, "test-env-value", string(rs.Body))
+			},
+			reqMatcher: &config.RequestMatcher{
+				Path: "/test",
+			},
+		},
+		{
+			name: "config object exposes config dir",
+			step: config.Step{
+				Type: config.ScriptStepType,
+				Lang: "javascript",
+				Code: `
+					if (typeof config !== "object") {
+						throw new Error("config should be an object");
+					}
+					respond().withContent(config.dir);
+				`,
+			},
+			setupExch: func() *exchange.Exchange {
+				req, _ := http.NewRequest("GET", "/test", nil)
+				return &exchange.Exchange{
+					Request: &exchange.RequestContext{
+						Request: req,
+						Body:    []byte{},
+					},
+				}
+			},
+			validate: func(t *testing.T, rs *exchange.ResponseState) {
+				assert.Equal(t, "/tmp/test-config", string(rs.Body))
+			},
+			reqMatcher: &config.RequestMatcher{
+				Path: "/test",
+			},
+			configDir: "/tmp/test-config",
+		},
 		{
 			name: "inline script accessing request context",
 			step: config.Step{
@@ -452,7 +517,7 @@ func TestExecuteScriptStep(t *testing.T) {
 
 			exch := tt.setupExch()
 			responseState := response.NewResponseState()
-			err := ExecuteScriptStep(&tt.step, exch, &config.ImposterConfig{}, responseState, "", tt.reqMatcher)
+			err := ExecuteScriptStep(&tt.step, exch, &config.ImposterConfig{}, responseState, tt.configDir, tt.reqMatcher)
 
 			if tt.expectError {
 				assert.Error(t, err)
