@@ -9,13 +9,13 @@ import (
 // ExtPluginRPC is the RPC client
 type ExtPluginRPC struct{ client *rpc.Client }
 
-func (s *ExtPluginRPC) Configure(cfg ExternalConfig) error {
-	var resp struct{} // No response needed
+func (s *ExtPluginRPC) Configure(cfg ExternalConfig) (PluginCapabilities, error) {
+	var resp PluginCapabilities
 	err := s.client.Call("Plugin.Configure", cfg, &resp)
 	if err != nil {
-		return fmt.Errorf("plugin.Configure: %w", err)
+		return PluginCapabilities{}, fmt.Errorf("plugin.Configure: %w", err)
 	}
-	return nil
+	return resp, nil
 }
 
 func (s *ExtPluginRPC) Handle(args HandlerRequest) HandlerResponse {
@@ -25,7 +25,15 @@ func (s *ExtPluginRPC) Handle(args HandlerRequest) HandlerResponse {
 		// TODO return an error instead of panic
 		panic(err)
 	}
+	return resp
+}
 
+func (s *ExtPluginRPC) GenerateFakeData(req FakeDataRequest) FakeDataResponse {
+	var resp FakeDataResponse
+	err := s.client.Call("Plugin.GenerateFakeData", req, &resp)
+	if err != nil {
+		return FakeDataResponse{}
+	}
 	return resp
 }
 
@@ -36,17 +44,22 @@ type ExtPluginRPCServer struct {
 	Impl ExternalHandler
 }
 
-func (s *ExtPluginRPCServer) Configure(cfg ExternalConfig, resp *struct{}) error {
-	err := s.Impl.Configure(cfg)
+func (s *ExtPluginRPCServer) Configure(cfg ExternalConfig, resp *PluginCapabilities) error {
+	caps, err := s.Impl.Configure(cfg)
 	if err != nil {
 		return fmt.Errorf("plugin.Configure: %w", err)
 	}
-	*resp = struct{}{} // No response needed
+	*resp = caps
 	return nil
 }
 
 func (s *ExtPluginRPCServer) Handle(args HandlerRequest, resp *HandlerResponse) error {
 	*resp = s.Impl.Handle(args)
+	return nil
+}
+
+func (s *ExtPluginRPCServer) GenerateFakeData(req FakeDataRequest, resp *FakeDataResponse) error {
+	*resp = s.Impl.GenerateFakeData(req)
 	return nil
 }
 

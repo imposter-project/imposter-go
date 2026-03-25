@@ -50,19 +50,23 @@ func main() {
 	})
 }
 
-func (s *SwaggerUI) Configure(cfg shared.ExternalConfig) error {
+func (s *SwaggerUI) Configure(cfg shared.ExternalConfig) (shared.PluginCapabilities, error) {
 	config = cfg
 
 	s.logger.Trace("generating spec config")
 	if err := generateSpecConfig(config.Configs); err != nil {
-		return fmt.Errorf("could not generate swagger UI plugin config: %w", err)
+		return shared.PluginCapabilities{}, fmt.Errorf("could not generate swagger UI plugin config: %w", err)
 	}
 
 	s.logger.Trace("generating index page")
 	if err := generateInitialiser(); err != nil {
-		return fmt.Errorf("could not generate initialiser: %w", err)
+		return shared.PluginCapabilities{}, fmt.Errorf("could not generate initialiser: %w", err)
 	}
-	return nil
+	return shared.PluginCapabilities{HandleRequests: true}, nil
+}
+
+func (s *SwaggerUI) GenerateFakeData(_ shared.FakeDataRequest) shared.FakeDataResponse {
+	return shared.FakeDataResponse{}
 }
 
 func (s *SwaggerUI) Handle(args shared.HandlerRequest) shared.HandlerResponse {

@@ -102,7 +102,7 @@ clients:
 				}),
 			}
 
-			err := server.Configure(tt.config)
+			_, err := server.Configure(tt.config)
 
 			if tt.expectError && err == nil {
 				t.Error("Expected error but got none")

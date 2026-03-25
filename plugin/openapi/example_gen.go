@@ -3,10 +3,12 @@ package openapi
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/imposter-project/imposter-go/pkg/logger"
 	"strconv"
+	"strings"
 	"time"
 
+	"github.com/imposter-project/imposter-go/internal/fakedata"
+	"github.com/imposter-project/imposter-go/pkg/logger"
 	"github.com/pb33f/libopenapi/datamodel/high/base"
 )
 
@@ -114,6 +116,13 @@ func generateExample(schemaProxy *base.SchemaProxy) (interface{}, error) {
 		schemaType = "array"
 	}
 
+	// Check for x-fake-data extension before falling through to default generation
+	if ext := getFakeDataExtension(schema); ext != "" {
+		if val, ok := generateFromFakeDataExtension(ext, schemaType); ok {
+			return val, nil
+		}
+	}
+
 	switch schemaType {
 	case "string":
 		return generateStringExample(schema)
@@ -177,17 +186,48 @@ func generateStringExample(schema *base.Schema) (string, error) {
 			// base64 encoded string
 			return "SW1wb3N0ZXI0bGlmZQo=", nil
 		case "date-time":
+			if val, ok := fakedata.GenerateForFormat("date-time"); ok {
+				return val, nil
+			}
 			return time.Now().UTC().Format(time.RFC3339), nil
 		case "date":
+			if val, ok := fakedata.GenerateForFormat("date"); ok {
+				return val, nil
+			}
 			return time.Now().UTC().Format("2006-01-02"), nil
 		case "email":
+			if val, ok := fakedata.GenerateForFormat("email"); ok {
+				return val, nil
+			}
 			return "test@example.com", nil
 		case "password":
+			if val, ok := fakedata.GenerateForFormat("password"); ok {
+				return val, nil
+			}
 			return "changeme", nil
 		case "uuid":
 			return "123e4567-e89b-12d3-a456-426614174000", nil
+		case "uri", "url":
+			if val, ok := fakedata.GenerateForFormat("uri"); ok {
+				return val, nil
+			}
+			return "https://example.com", nil
+		case "hostname":
+			if val, ok := fakedata.GenerateForFormat("hostname"); ok {
+				return val, nil
+			}
+			return "example.com", nil
+		case "ipv4":
+			if val, ok := fakedata.GenerateForFormat("ipv4"); ok {
+				return val, nil
+			}
+			return "192.168.1.1", nil
+		case "ipv6":
+			if val, ok := fakedata.GenerateForFormat("ipv6"); ok {
+				return val, nil
+			}
+			return "::1", nil
 		}
-		// TODO implement other formats per https://swagger.io/docs/specification/v3_0/data-models/data-types/#strings
 	}
 	return "example", nil
 }
@@ -235,6 +275,35 @@ func generateObjectExample(schema *base.Schema) (map[string]interface{}, error) 
 		for pair := schema.Properties.First(); pair != nil; pair = pair.Next() {
 			name := pair.Key()
 			prop := pair.Value()
+			propSchema := prop.Schema()
+
+			// If property schema has an explicit example, use standard generation
+			if propSchema.Example != nil {
+				value, err := generateExample(prop)
+				if err != nil {
+					return nil, fmt.Errorf("failed to generate example for property %s: %w", name, err)
+				}
+				result[name] = value
+				continue
+			}
+
+			// Check for x-fake-data extension on the property
+			if ext := getFakeDataExtension(propSchema); ext != "" {
+				schemaType := getSchemaType(propSchema)
+				if val, ok := generateFromFakeDataExtension(ext, schemaType); ok {
+					result[name] = val
+					continue
+				}
+			}
+
+			// Try to infer fake data from the property name
+			if val, ok := fakedata.GenerateForPropertyName(name); ok {
+				schemaType := getSchemaType(propSchema)
+				result[name] = renderExampleAsType(val, schemaType)
+				continue
+			}
+
+			// Fall back to standard example generation
 			value, err := generateExample(prop)
 			if err != nil {
 				return nil, fmt.Errorf("failed to generate example for property %s: %w", name, err)
@@ -244,4 +313,33 @@ func generateObjectExample(schema *base.Schema) (map[string]interface{}, error) 
 	}
 
 	return result, nil
+}
+
+// getFakeDataExtension extracts the x-fake-data extension value from a schema.
+// Returns the value (e.g. "Color.name") or empty string if not present.
+func getFakeDataExtension(schema *base.Schema) string {
+	if schema.Extensions == nil {
+		return ""
+	}
+	node, ok := schema.Extensions.Get("x-fake-data")
+	if !ok || node == nil {
+		return ""
+	}
+	return node.Value
+}
+
+// generateFromFakeDataExtension generates a fake data value from an x-fake-data
+// extension value like "Color.name" or "Name.firstName".
+// Returns the generated value rendered as the appropriate type and true if successful.
+func generateFromFakeDataExtension(ext string, schemaType string) (interface{}, bool) {
+	parts := strings.SplitN(ext, ".", 2)
+	if len(parts) != 2 {
+		logger.Warnf("invalid x-fake-data value: %s (expected Category.property)", ext)
+		return nil, false
+	}
+	val := fakedata.Generate(parts[0], parts[1])
+	if val == "" {
+		return nil, false
+	}
+	return renderExampleAsType(val, schemaType), true
 }

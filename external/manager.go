@@ -13,6 +13,7 @@ import (
 	goplugin "github.com/hashicorp/go-plugin"
 	"github.com/imposter-project/imposter-go/external/shared"
 	"github.com/imposter-project/imposter-go/internal/config"
+	"github.com/imposter-project/imposter-go/internal/fakedata"
 	"github.com/imposter-project/imposter-go/internal/version"
 	"github.com/imposter-project/imposter-go/pkg/logger"
 	"gopkg.in/yaml.v3"
@@ -52,19 +53,66 @@ func StartExternalPlugins(imposterConfig *config.ImposterConfig, configs []confi
 
 	requestedPlugins := listRequestedPlugins(configs)
 	for pluginName, p := range pluginMap {
-		if !slices.Contains(requestedPlugins, pluginName) {
-			logger.Tracef("skipping external plugin %s, not requested in config", pluginName)
-			continue
-		}
 		plg := p.(*shared.ExternalPlugin)
-		err := start(cfg, pluginName, plg, hclogger)
+
+		// Start all discovered plugins to learn their capabilities
+		caps, err := start(cfg, pluginName, plg, hclogger)
 		if err != nil {
 			return nil, fmt.Errorf("failed to start plugin %s: %v", pluginName, err)
+		}
+
+		// Register fake data providers
+		if caps.GenerateFakeData {
+			logger.Infof("registering fake data provider from plugin: %s", pluginName)
+			registerFakeDataProvider(pluginName)
+		}
+
+		// Only keep handler plugins that are referenced in configs
+		if caps.HandleRequests && !slices.Contains(requestedPlugins, pluginName) {
+			logger.Tracef("external plugin %s can handle requests but is not requested in config, skipping handler registration", pluginName)
+			// Remove from loaded list since it's not needed as a handler
+			for i, l := range loaded {
+				if l.Name == pluginName && !caps.GenerateFakeData {
+					// Plugin only handles requests and isn't requested — stop it
+					l.client.Kill()
+					loaded = append(loaded[:i], loaded[i+1:]...)
+					break
+				}
+			}
 		}
 	}
 
 	logger.Debugf("successfully loaded %d external plugins", len(loaded))
 	return loaded, nil
+}
+
+// registerFakeDataProvider registers a loaded plugin as a fake data provider.
+func registerFakeDataProvider(pluginName string) {
+	for _, l := range loaded {
+		if l.Name == pluginName {
+			impl := *l.impl
+			fakedata.RegisterProvider(&externalFakeDataProvider{handler: impl})
+			return
+		}
+	}
+}
+
+// externalFakeDataProvider wraps an ExternalHandler to implement fakedata.Provider.
+type externalFakeDataProvider struct {
+	handler shared.ExternalHandler
+}
+
+func (p *externalFakeDataProvider) GenerateFakeData(req fakedata.Request) fakedata.Response {
+	resp := p.handler.GenerateFakeData(shared.FakeDataRequest{
+		ExprCategory: req.ExprCategory,
+		ExprProperty: req.ExprProperty,
+		PropertyName: req.PropertyName,
+		Format:       req.Format,
+	})
+	return fakedata.Response{
+		Value: resp.Value,
+		Found: resp.Found,
+	}
 }
 
 // buildConfig constructs the ExternalConfig to be passed to each plugin.
@@ -129,8 +177,8 @@ func getHcLogLevel() hclog.Level {
 	}
 }
 
-// start starts and configures an external plugin
-func start(cfg shared.ExternalConfig, pluginName string, plg *shared.ExternalPlugin, hclogger hclog.Logger) error {
+// start starts and configures an external plugin, returning its capabilities.
+func start(cfg shared.ExternalConfig, pluginName string, plg *shared.ExternalPlugin, hclogger hclog.Logger) (shared.PluginCapabilities, error) {
 	logger.Debugf("loading external plugin: %s", pluginName)
 
 	singlePlugin := map[string]goplugin.Plugin{
@@ -148,27 +196,28 @@ func start(cfg shared.ExternalConfig, pluginName string, plg *shared.ExternalPlu
 	// connect via RPC
 	rpcClient, err := client.Client()
 	if err != nil {
-		return fmt.Errorf("error connecting to plugin %s: %v", pluginName, err)
+		return shared.PluginCapabilities{}, fmt.Errorf("error connecting to plugin %s: %v", pluginName, err)
 	}
 
 	// request the plugin
 	raw, err := rpcClient.Dispense(pluginName)
 	if err != nil {
-		return fmt.Errorf("error dispensing plugin %s: %v", pluginName, err)
+		return shared.PluginCapabilities{}, fmt.Errorf("error dispensing plugin %s: %v", pluginName, err)
 	}
 	impl := raw.(shared.ExternalHandler)
 
-	err = impl.Configure(cfg)
+	caps, err := impl.Configure(cfg)
 	if err != nil {
-		return fmt.Errorf("failed to configure plugin %s: %v", pluginName, err)
+		return shared.PluginCapabilities{}, fmt.Errorf("failed to configure plugin %s: %v", pluginName, err)
 	}
+	logger.Debugf("plugin %s capabilities: handleRequests=%v, generateFakeData=%v", pluginName, caps.HandleRequests, caps.GenerateFakeData)
 
 	loaded = append(loaded, LoadedPlugin{
 		Name:   pluginName,
 		client: client,
 		impl:   &impl,
 	})
-	return nil
+	return caps, nil
 }
 
 // StopExternalPlugins stops all loaded external plugins by killing their processes.

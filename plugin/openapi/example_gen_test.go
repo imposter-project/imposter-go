@@ -2,12 +2,13 @@ package openapi
 
 import (
 	"encoding/json"
-	uuid "github.com/satori/go.uuid"
 	"testing"
 	"time"
 
+	"github.com/imposter-project/imposter-go/internal/fakedata"
 	"github.com/pb33f/libopenapi/datamodel/high/base"
 	"github.com/pb33f/libopenapi/orderedmap"
+	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -249,4 +250,184 @@ func createSchemaProxyWithAnyOf(schemas []*base.SchemaProxy) *base.SchemaProxy {
 		AnyOf: schemas,
 	}
 	return base.CreateSchemaProxy(schema)
+}
+
+// mockOAFakeDataProvider is a test double for fakedata.Provider in OpenAPI tests.
+type mockOAFakeDataProvider struct{}
+
+func (m *mockOAFakeDataProvider) GenerateFakeData(req fakedata.Request) fakedata.Response {
+	// Expression-based
+	if req.ExprCategory == "Color" && req.ExprProperty == "name" {
+		return fakedata.Response{Value: "blue", Found: true}
+	}
+	if req.ExprCategory == "Name" && req.ExprProperty == "firstName" {
+		return fakedata.Response{Value: "Jane", Found: true}
+	}
+	// Property name inference
+	if req.PropertyName == "firstName" {
+		return fakedata.Response{Value: "Jane", Found: true}
+	}
+	if req.PropertyName == "email" {
+		return fakedata.Response{Value: "jane@example.com", Found: true}
+	}
+	if req.PropertyName == "city" {
+		return fakedata.Response{Value: "Portland", Found: true}
+	}
+	// Format inference
+	if req.Format == "email" {
+		return fakedata.Response{Value: "fake@example.com", Found: true}
+	}
+	return fakedata.Response{}
+}
+
+// createSchemaProxyWithExtension creates a SchemaProxy with an x-fake-data extension.
+func createSchemaProxyWithExtension(schemaType []string, fakeDataValue string) *base.SchemaProxy {
+	schema := &base.Schema{
+		Type: schemaType,
+	}
+	extensions := orderedmap.New[string, *yaml.Node]()
+	extensions.Set("x-fake-data", &yaml.Node{Kind: yaml.ScalarNode, Value: fakeDataValue})
+	schema.Extensions = extensions
+	return base.CreateSchemaProxy(schema)
+}
+
+func TestGenerateExampleJSON_WithFakeDataExtension(t *testing.T) {
+	fakedata.RegisterProvider(&mockOAFakeDataProvider{})
+	defer fakedata.RegisterProvider(nil)
+
+	response := Response{
+		UniqueID: uuid.NewV4().String(),
+		SparseResponse: SparseResponse{
+			Schema: createSchemaProxyWithExtension([]string{"string"}, "Color.name"),
+		},
+	}
+
+	got, err := generateExampleJSON(response.SparseResponse, defaultExampleName)
+	require.NoError(t, err)
+	assert.Equal(t, `"blue"`, got)
+}
+
+func TestGenerateExampleJSON_WithPropertyNameInference(t *testing.T) {
+	fakedata.RegisterProvider(&mockOAFakeDataProvider{})
+	defer fakedata.RegisterProvider(nil)
+
+	// Create an object schema with properties that should be inferred
+	response := Response{
+		UniqueID: uuid.NewV4().String(),
+		SparseResponse: SparseResponse{
+			Schema: createSchemaProxy([]string{"object"}, "", map[string]*base.SchemaProxy{
+				"firstName": createSchemaProxy([]string{"string"}, "", nil, nil, nil),
+				"email":     createSchemaProxy([]string{"string"}, "", nil, nil, nil),
+				"city":      createSchemaProxy([]string{"string"}, "", nil, nil, nil),
+				"age":       createSchemaProxy([]string{"integer"}, "", nil, nil, nil),
+			}, nil, nil),
+		},
+	}
+
+	got, err := generateExampleJSON(response.SparseResponse, defaultExampleName)
+	require.NoError(t, err)
+
+	var result map[string]interface{}
+	err = json.Unmarshal([]byte(got), &result)
+	require.NoError(t, err)
+
+	// firstName, email, city should be inferred from property names
+	assert.Equal(t, "Jane", result["firstName"])
+	assert.Equal(t, "jane@example.com", result["email"])
+	assert.Equal(t, "Portland", result["city"])
+	// age should fall through to default number generation
+	assert.Equal(t, float64(42), result["age"])
+}
+
+func TestGenerateExampleJSON_WithFormatFakeData(t *testing.T) {
+	fakedata.RegisterProvider(&mockOAFakeDataProvider{})
+	defer fakedata.RegisterProvider(nil)
+
+	response := Response{
+		UniqueID: uuid.NewV4().String(),
+		SparseResponse: SparseResponse{
+			Schema: createSchemaProxy([]string{"string"}, "email", nil, nil, nil),
+		},
+	}
+
+	got, err := generateExampleJSON(response.SparseResponse, defaultExampleName)
+	require.NoError(t, err)
+	assert.Equal(t, `"fake@example.com"`, got)
+}
+
+func TestGenerateExampleJSON_WithFakeDataExtensionOnProperty(t *testing.T) {
+	fakedata.RegisterProvider(&mockOAFakeDataProvider{})
+	defer fakedata.RegisterProvider(nil)
+
+	// Create an object with a property that has x-fake-data extension
+	props := map[string]*base.SchemaProxy{
+		"favoriteColor": createSchemaProxyWithExtension([]string{"string"}, "Color.name"),
+	}
+	schema := &base.Schema{
+		Type: []string{"object"},
+	}
+	schema.Properties = orderedmap.New[string, *base.SchemaProxy]()
+	for k, v := range props {
+		schema.Properties.Set(k, v)
+	}
+
+	response := Response{
+		UniqueID: uuid.NewV4().String(),
+		SparseResponse: SparseResponse{
+			Schema: base.CreateSchemaProxy(schema),
+		},
+	}
+
+	got, err := generateExampleJSON(response.SparseResponse, defaultExampleName)
+	require.NoError(t, err)
+
+	var result map[string]interface{}
+	err = json.Unmarshal([]byte(got), &result)
+	require.NoError(t, err)
+
+	assert.Equal(t, "blue", result["favoriteColor"])
+}
+
+func TestGenerateExampleJSON_NoProviderFallback(t *testing.T) {
+	// Ensure no provider is registered
+	fakedata.RegisterProvider(nil)
+
+	// With no provider, should fall back to default behavior
+	response := Response{
+		UniqueID: uuid.NewV4().String(),
+		SparseResponse: SparseResponse{
+			Schema: createSchemaProxy([]string{"object"}, "", map[string]*base.SchemaProxy{
+				"firstName": createSchemaProxy([]string{"string"}, "", nil, nil, nil),
+			}, nil, nil),
+		},
+	}
+
+	got, err := generateExampleJSON(response.SparseResponse, defaultExampleName)
+	require.NoError(t, err)
+
+	var result map[string]interface{}
+	err = json.Unmarshal([]byte(got), &result)
+	require.NoError(t, err)
+
+	// Without provider, should fall back to "example"
+	assert.Equal(t, "example", result["firstName"])
+}
+
+func TestGetFakeDataExtension(t *testing.T) {
+	// With extension
+	schema := &base.Schema{Type: []string{"string"}}
+	extensions := orderedmap.New[string, *yaml.Node]()
+	extensions.Set("x-fake-data", &yaml.Node{Kind: yaml.ScalarNode, Value: "Name.firstName"})
+	schema.Extensions = extensions
+
+	assert.Equal(t, "Name.firstName", getFakeDataExtension(schema))
+
+	// Without extension
+	schema2 := &base.Schema{Type: []string{"string"}}
+	assert.Equal(t, "", getFakeDataExtension(schema2))
+
+	// With nil extensions map
+	schema3 := &base.Schema{Type: []string{"string"}}
+	schema3.Extensions = nil
+	assert.Equal(t, "", getFakeDataExtension(schema3))
 }

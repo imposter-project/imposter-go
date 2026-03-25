@@ -71,7 +71,7 @@ type AccessToken struct {
 	ExpiresAt time.Time
 }
 
-func (o *OIDCServer) Configure(cfg shared.ExternalConfig) error {
+func (o *OIDCServer) Configure(cfg shared.ExternalConfig) (shared.PluginCapabilities, error) {
 	o.logger.Trace("configuring OIDC server plugin")
 
 	// Store server URL from configuration
@@ -96,7 +96,7 @@ func (o *OIDCServer) Configure(cfg shared.ExternalConfig) error {
 		o.logger.Debug("loading OIDC config from plugin config block")
 		config, err := loadOIDCConfig(lwConfig.PluginConfig)
 		if err != nil {
-			return fmt.Errorf("failed to load OIDC config from plugin config block: %w", err)
+			return shared.PluginCapabilities{}, fmt.Errorf("failed to load OIDC config from plugin config block: %w", err)
 		}
 		o.config = config
 		o.logger.Info("OIDC server configured from plugin config block", "users", len(config.Users), "clients", len(config.Clients))
@@ -113,18 +113,22 @@ func (o *OIDCServer) Configure(cfg shared.ExternalConfig) error {
 
 	// Setup JWT signing keys based on algorithm
 	if err := o.setupJWTKeys(); err != nil {
-		return fmt.Errorf("failed to setup JWT keys: %w", err)
+		return shared.PluginCapabilities{}, fmt.Errorf("failed to setup JWT keys: %w", err)
 	}
 
 	// Cache the discovery document
 	if err := o.CacheDiscoveryDocument(); err != nil {
-		return fmt.Errorf("failed to cache discovery document: %w", err)
+		return shared.PluginCapabilities{}, fmt.Errorf("failed to cache discovery document: %w", err)
 	}
 
 	endpoints := fmt.Sprintf("discovery: %[1]s%[2]s/.well-known/openid-configuration\njwks: %[1]s%[2]s/.well-known/jwks.json\nauthorize: %[1]s%[2]s/authorize\ntoken: %[1]s%[2]s/token\nuserinfo: %[1]s%[2]s/userinfo\nlogout: %[1]s%[2]s/logout", o.serverURL, o.pathPrefix)
 	o.logger.Info("OIDC server plugin configured successfully", "endpoints", endpoints)
 
-	return nil
+	return shared.PluginCapabilities{HandleRequests: true}, nil
+}
+
+func (o *OIDCServer) GenerateFakeData(_ shared.FakeDataRequest) shared.FakeDataResponse {
+	return shared.FakeDataResponse{}
 }
 
 func (o *OIDCServer) setupJWTKeys() error {
