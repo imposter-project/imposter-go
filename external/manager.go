@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"syscall"
 
 	"github.com/hashicorp/go-hclog"
 	goplugin "github.com/hashicorp/go-plugin"
@@ -52,10 +53,17 @@ func StartExternalPlugins(imposterConfig *config.ImposterConfig, configs []confi
 	cfg := buildConfig(imposterConfig, configs)
 
 	requestedPlugins := listRequestedPlugins(configs)
+
+	// Only start external plugins that are referenced in the configuration.
+	// Plugins that provide additional capabilities (e.g. fake data generation)
+	// must be explicitly declared in the config with their plugin name.
 	for pluginName, p := range pluginMap {
+		if !slices.Contains(requestedPlugins, pluginName) {
+			logger.Tracef("skipping external plugin %s: not referenced in config", pluginName)
+			continue
+		}
 		plg := p.(*shared.ExternalPlugin)
 
-		// Start all discovered plugins to learn their capabilities
 		caps, err := start(cfg, pluginName, plg, hclogger)
 		if err != nil {
 			return nil, fmt.Errorf("failed to start plugin %s: %v", pluginName, err)
@@ -65,20 +73,6 @@ func StartExternalPlugins(imposterConfig *config.ImposterConfig, configs []confi
 		if caps.GenerateFakeData {
 			logger.Infof("registering fake data provider from plugin: %s", pluginName)
 			registerFakeDataProvider(pluginName)
-		}
-
-		// Only keep handler plugins that are referenced in configs
-		if caps.HandleRequests && !slices.Contains(requestedPlugins, pluginName) {
-			logger.Tracef("external plugin %s can handle requests but is not requested in config, skipping handler registration", pluginName)
-			// Remove from loaded list since it's not needed as a handler
-			for i, l := range loaded {
-				if l.Name == pluginName && !caps.GenerateFakeData {
-					// Plugin only handles requests and isn't requested — stop it
-					l.client.Kill()
-					loaded = append(loaded[:i], loaded[i+1:]...)
-					break
-				}
-			}
 		}
 	}
 
@@ -185,11 +179,15 @@ func start(cfg shared.ExternalConfig, pluginName string, plg *shared.ExternalPlu
 		pluginName: plg,
 	}
 
-	// launch the plugin process
+	// launch the plugin process in its own process group so it does not
+	// receive signals (e.g. SIGTERM) sent to the parent process group
+	cmd := exec.Command(plg.FilePath)
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+
 	client := goplugin.NewClient(&goplugin.ClientConfig{
 		HandshakeConfig: handshakeConfig,
 		Plugins:         singlePlugin,
-		Cmd:             exec.Command(plg.FilePath),
+		Cmd:             cmd,
 		Logger:          hclogger,
 	})
 
