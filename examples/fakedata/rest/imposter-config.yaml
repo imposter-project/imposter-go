@@ -1,0 +1,67 @@
+plugin: fake-data
+---
+plugin: rest
+resources:
+  - method: GET
+    path: /user
+    response:
+      template: true
+      content: |
+        {
+          "firstName": "${fake.Name.firstName}",
+          "lastName": "${fake.Name.lastName}",
+          "email": "${fake.Internet.emailAddress}",
+          "username": "${fake.Name.username}",
+          "phone": "${fake.PhoneNumber.phoneNumber}",
+          "city": "${fake.Address.city}",
+          "company": "${fake.Company.name}"
+        }
+      statusCode: 200
+      headers:
+        Content-Type: application/json
+
+  - method: GET
+    path: /address
+    response:
+      template: true
+      content: |
+        {
+          "street": "${fake.Address.streetAddress}",
+          "city": "${fake.Address.city}",
+          "state": "${fake.Address.state}",
+          "zipCode": "${fake.Address.zipCode}",
+          "country": "${fake.Address.country}"
+        }
+      statusCode: 200
+      headers:
+        Content-Type: application/json
+
+  - method: GET
+    path: /text
+    response:
+      template: true
+      content: |
+        {
+          "word": "${fake.Lorem.word}",
+          "sentence": "${fake.Lorem.sentence}",
+          "paragraph": "${fake.Lorem.paragraph}"
+        }
+      statusCode: 200
+      headers:
+        Content-Type: application/json
+
+  - method: GET
+    path: /mixed
+    response:
+      template: true
+      content: |
+        {
+          "id": "${random.uuid()}",
+          "name": "${fake.Name.fullName}",
+          "email": "${fake.Internet.emailAddress}",
+          "registered": "${datetime.now.iso8601_datetime}",
+          "colour": "${fake.Color.name}"
+        }
+      statusCode: 200
+      headers:
+        Content-Type: application/json
