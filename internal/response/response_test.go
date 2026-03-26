@@ -369,3 +369,43 @@ func TestProcessResponse(t *testing.T) {
 		})
 	}
 }
+
+func TestSetContentTypeHeader(t *testing.T) {
+	tests := []struct {
+		name                string
+		fileNameHint        string
+		expectedContentType string
+	}{
+		{
+			name:                "markdown file",
+			fileNameHint:        "readme.md",
+			expectedContentType: "text/markdown",
+		},
+		{
+			name:                "yaml file",
+			fileNameHint:        "config.yaml",
+			expectedContentType: "application/x-yaml",
+		},
+		{
+			name:                "yml file",
+			fileNameHint:        "config.yml",
+			expectedContentType: "application/x-yaml",
+		},
+		{
+			name:                "json file",
+			fileNameHint:        "data.json",
+			expectedContentType: "application/json",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rs := &exchange.ResponseState{
+				Headers: make(map[string]string),
+				Body:    []byte("test content"),
+			}
+			SetContentTypeHeader(rs, tt.fileNameHint, "application/octet-stream", "application/json")
+			assert.Equal(t, tt.expectedContentType, rs.Headers["Content-Type"])
+		})
+	}
+}

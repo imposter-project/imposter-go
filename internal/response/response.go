@@ -200,6 +200,8 @@ func SetContentTypeHeader(
 			contentType := mime.TypeByExtension(ext)
 			if contentType == "" {
 				switch ext {
+				case ".md":
+					contentType = "text/markdown"
 				case ".yaml", ".yml":
 					contentType = "application/x-yaml"
 				default:
