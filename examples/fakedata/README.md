@@ -9,10 +9,12 @@ There are two examples:
 
 ## Prerequisites
 
-The fake-data plugin must be built before use:
+The quickest way to run these examples is to install [imposter-cli](https://github.com/imposter-project/imposter-cli)
+
+Install the plugin as follows:
 
 ```bash
-make build-plugins
+imposter plugin install -d fake-data -t golang
 ```
 
 ## REST Example
@@ -20,7 +22,7 @@ make build-plugins
 ### Running
 
 ```bash
-imposter examples/fakedata/rest
+imposter up examples/fakedata/rest
 ```
 
 ### Endpoints
@@ -134,7 +136,7 @@ This example shows how the fake-data plugin enriches auto-generated OpenAPI resp
 ### Running
 
 ```bash
-imposter examples/fakedata/openapi
+imposter up examples/fakedata/openapi
 ```
 
 ### Endpoints
