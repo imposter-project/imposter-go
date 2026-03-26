@@ -8,8 +8,6 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-	"syscall"
-
 	"github.com/hashicorp/go-hclog"
 	goplugin "github.com/hashicorp/go-plugin"
 	"github.com/imposter-project/imposter-go/external/shared"
@@ -179,10 +177,10 @@ func start(cfg shared.ExternalConfig, pluginName string, plg *shared.ExternalPlu
 		pluginName: plg,
 	}
 
-	// launch the plugin process in its own process group so it does not
-	// receive signals (e.g. SIGTERM) sent to the parent process group
+	// launch the plugin process, isolating it from the parent's process
+	// group where supported so it does not receive stray signals
 	cmd := exec.Command(plg.FilePath)
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	setPluginProcessAttr(cmd)
 
 	client := goplugin.NewClient(&goplugin.ClientConfig{
 		HandshakeConfig: handshakeConfig,
