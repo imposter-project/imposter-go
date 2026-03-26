@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.0] - 2026-03-26
+### Added
+- feat: add fake data external plugin for generating synthetic mock data (#34)
+
+### Changed
+- docs: add example for fake-data plugin
+
 ## [1.12.0] - 2026-03-24
 ### Added
 - feat: add script support for config.dir and env
