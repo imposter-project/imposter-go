@@ -6,7 +6,7 @@ This example demonstrates the `oidc-server` external plugin that provides OpenID
 
 - **Authorization Code Flow** with optional PKCE support
 - **Standard OIDC Endpoints**:
-  - `/.well-known/openid-configuration` - OIDC discovery
+  - `/oidc/.well-known/openid-configuration` - OIDC discovery
   - `/oidc/authorize` - Authorization endpoint
   - `/oidc/token` - Token endpoint  
   - `/oidc/userinfo` - Userinfo endpoint
@@ -59,25 +59,29 @@ config:
 
 ## Usage
 
-1. **Enable External Plugins**:
-   ```bash
-   export IMPOSTER_EXTERNAL_PLUGINS=true
-   ```
+### Prerequisites
 
-2. **Run Imposter**:
-   ```bash
-   make run ./examples/oidc
-   ```
+The quickest way to run these examples is to install [imposter-cli](https://github.com/imposter-project/imposter-cli)
 
-3. **Test Authorization Flow**:
-   Navigate to:
-   ```
-   http://localhost:8080/oidc/authorize?client_id=webapp&redirect_uri=http://localhost:8080/callback&response_type=code&scope=openid+profile+email&state=test123
-   ```
+Install the plugin as follows:
 
-4. **Login Credentials**:
-   - Username: `alice` / Password: `password123`
-   - Username: `bob` / Password: `password456`
+```bash
+imposter plugin install -d oidc-server -t golang
+```
+
+Run Imposter:
+```bash
+imposter up ./examples/oidc
+```
+
+Test Authorization Flow by navigating to:
+```
+http://localhost:8080/oidc/authorize?client_id=webapp&redirect_uri=http://localhost:8080/callback&response_type=code&scope=openid+profile+email&state=test123
+```
+
+Login Credentials:
+ - Username: `alice` / Password: `password123`
+ - Username: `bob` / Password: `password456`
 
 ## OIDC Flow Example
 
@@ -155,7 +159,7 @@ The plugin supports PKCE (RFC 7636) for enhanced security:
 
 The OIDC discovery document is available at:
 ```
-GET /.well-known/openid-configuration
+GET /oidc/.well-known/openid-configuration
 ```
 
 This provides metadata about the authorization server endpoints and capabilities.
