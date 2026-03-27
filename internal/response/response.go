@@ -197,14 +197,15 @@ func SetContentTypeHeader(
 		// If response is from file, try to determine content type from extension
 		if fileNameMIMEHint != "" {
 			ext := filepath.Ext(fileNameMIMEHint)
-			contentType := mime.TypeByExtension(ext)
-			if contentType == "" {
-				switch ext {
-				case ".md":
-					contentType = "text/markdown"
-				case ".yaml", ".yml":
-					contentType = "application/x-yaml"
-				default:
+			var contentType string
+			switch ext {
+			case ".md":
+				contentType = "text/markdown"
+			case ".yaml", ".yml":
+				contentType = "application/x-yaml"
+			default:
+				contentType = mime.TypeByExtension(ext)
+				if contentType == "" {
 					contentType = defaultFileContentType
 				}
 			}
