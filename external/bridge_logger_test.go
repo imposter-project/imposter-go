@@ -77,3 +77,21 @@ func TestFormatMsg_OddArgs_IgnoresTrailing(t *testing.T) {
 		t.Errorf("got %q, want %q", got, "msg")
 	}
 }
+
+func TestFormatMsg_SkipsTimestamp(t *testing.T) {
+	b := &bridgeLogger{}
+	got := b.formatMsg("grpc plugin started", "timestamp", "2026-03-31T17:43:44.628+0100")
+	want := "grpc plugin started"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestFormatMsg_SkipsTimestampButKeepsOtherArgs(t *testing.T) {
+	b := &bridgeLogger{}
+	got := b.formatMsg("registered method", "path", "/store.PetStore/GetPet", "timestamp", "2026-03-31T17:43:44.633+0100")
+	want := "registered method path=/store.PetStore/GetPet"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}

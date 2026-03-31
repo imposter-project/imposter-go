@@ -33,8 +33,12 @@ func (b *bridgeLogger) formatMsg(msg string, args ...interface{}) string {
 	}
 	sb.WriteString(msg)
 
-	// Append key=value pairs.
+	// Append key=value pairs, skipping "timestamp" as the main logger
+	// already prepends one.
 	for i := 0; i+1 < len(all); i += 2 {
+		if all[i] == "timestamp" {
+			continue
+		}
 		sb.WriteString(fmt.Sprintf(" %v=%v", all[i], all[i+1]))
 	}
 	return sb.String()
