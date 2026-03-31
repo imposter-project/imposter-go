@@ -5,14 +5,14 @@ go 1.23.4
 require gopkg.in/yaml.v3 v3.0.1
 
 require (
-	github.com/antchfx/xmlquery v1.4.4
+	github.com/antchfx/xmlquery v1.5.1
 	github.com/dlclark/regexp2 v1.11.5
 	github.com/dop251/goja v0.0.0-20250531102226-cb187b08699c
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-plugin v1.6.3
 	github.com/pb33f/libopenapi v0.22.3
 	github.com/pb33f/libopenapi-validator v0.4.7
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	golang.org/x/exp v0.0.0-20250606033433-dcc06ee1d476
 )
 
@@ -53,16 +53,14 @@ require (
 
 require (
 	github.com/PaesslerAG/jsonpath v0.1.1
-	github.com/antchfx/xpath v1.3.4
+	github.com/antchfx/xpath v1.3.6
 	github.com/aws/aws-lambda-go v1.49.0
 	github.com/aws/aws-sdk-go v1.55.7
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
-	github.com/outofcoffee/go-wsdl-parser v0.0.0
+	github.com/outofcoffee/go-wsdl-parser v0.1.0
 	github.com/outofcoffee/go-xml-example-generator v0.4.2
 	github.com/satori/go.uuid v1.2.0
 	golang.org/x/net v0.42.0
 	golang.org/x/text v0.28.0 // indirect
 )
-
-replace github.com/outofcoffee/go-wsdl-parser => /home/user/go-wsdl-parser
