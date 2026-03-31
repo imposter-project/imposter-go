@@ -2,12 +2,6 @@ package external
 
 import (
 	"fmt"
-	"os"
-	"os/exec"
-	"path"
-	"path/filepath"
-	"slices"
-	"strings"
 	"github.com/hashicorp/go-hclog"
 	goplugin "github.com/hashicorp/go-plugin"
 	"github.com/imposter-project/imposter-go/external/shared"
@@ -16,6 +10,12 @@ import (
 	"github.com/imposter-project/imposter-go/internal/version"
 	"github.com/imposter-project/imposter-go/pkg/logger"
 	"gopkg.in/yaml.v3"
+	"os"
+	"os/exec"
+	"path"
+	"path/filepath"
+	"slices"
+	"strings"
 )
 
 var pluginMap map[string]goplugin.Plugin
@@ -42,11 +42,7 @@ func StartExternalPlugins(imposterConfig *config.ImposterConfig, configs []confi
 	}
 	logger.Tracef("external plugins enabled")
 
-	hclogger := hclog.New(&hclog.LoggerOptions{
-		Name:   "plugin",
-		Output: os.Stdout,
-		Level:  getHcLogLevel(),
-	})
+	hclogger := newBridgeLogger()
 
 	cfg := buildConfig(imposterConfig, configs)
 
