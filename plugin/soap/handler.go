@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/imposter-project/imposter-go/pkg/logger"
-	"github.com/imposter-project/imposter-go/pkg/wsdlmsg"
+	"github.com/outofcoffee/go-wsdl-parser/wsdlmsg"
 
 	"github.com/antchfx/xmlquery"
 	"github.com/imposter-project/imposter-go/internal/capture"

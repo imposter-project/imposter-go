@@ -5,12 +5,13 @@ import (
 	"path/filepath"
 
 	"github.com/imposter-project/imposter-go/internal/config"
+	wsdlparser "github.com/outofcoffee/go-wsdl-parser"
 )
 
 // PluginHandler handles SOAP requests based on WSDL configuration
 type PluginHandler struct {
 	config         *config.Config
-	wsdlParser     WSDLParser
+	wsdlParser     wsdlparser.WSDLParser
 	imposterConfig *config.ImposterConfig
 }
 
@@ -22,7 +23,7 @@ func NewPluginHandler(cfg *config.Config, imposterConfig *config.ImposterConfig)
 		wsdlPath = filepath.Join(cfg.ConfigDir, wsdlPath)
 	}
 
-	parser, err := newWSDLParser(wsdlPath)
+	parser, err := wsdlparser.NewWSDLParser(wsdlPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse WSDL: %w", err)
 	}

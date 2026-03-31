@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	wsdlparser "github.com/outofcoffee/go-wsdl-parser"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -86,7 +87,7 @@ func TestNewWSDLParser(t *testing.T) {
 			require.NoError(t, err)
 
 			// Parse WSDL
-			parser, err := newWSDLParser(wsdlPath)
+			parser, err := wsdlparser.NewWSDLParser(wsdlPath)
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
@@ -118,7 +119,7 @@ func TestValidateRequest(t *testing.T) {
 	require.NoError(t, err)
 
 	// Parse WSDL
-	parser, err := newWSDLParser(wsdlPath)
+	parser, err := wsdlparser.NewWSDLParser(wsdlPath)
 	require.NoError(t, err)
 
 	// Test ValidateRequest (currently a no-op)
@@ -128,7 +129,7 @@ func TestValidateRequest(t *testing.T) {
 
 func TestErrorCases(t *testing.T) {
 	t.Run("non-existent file", func(t *testing.T) {
-		_, err := newWSDLParser("non_existent.wsdl")
+		_, err := wsdlparser.NewWSDLParser("non_existent.wsdl")
 		assert.Error(t, err)
 	})
 
@@ -138,7 +139,7 @@ func TestErrorCases(t *testing.T) {
 		err := os.WriteFile(wsdlPath, []byte("invalid xml content"), 0644)
 		require.NoError(t, err)
 
-		_, err = newWSDLParser(wsdlPath)
+		_, err = wsdlparser.NewWSDLParser(wsdlPath)
 		assert.Error(t, err)
 	})
 
@@ -148,7 +149,7 @@ func TestErrorCases(t *testing.T) {
 		err := os.WriteFile(wsdlPath, []byte(""), 0644)
 		require.NoError(t, err)
 
-		_, err = newWSDLParser(wsdlPath)
+		_, err = wsdlparser.NewWSDLParser(wsdlPath)
 		assert.Error(t, err)
 	})
 }
@@ -187,29 +188,14 @@ func TestGetLocalPart(t *testing.T) {
 		qname string
 		want  string
 	}{
-		{
-			name:  "QName with prefix",
-			qname: "ns:localPart",
-			want:  "localPart",
-		},
-		{
-			name:  "QName without prefix",
-			qname: "localPart",
-			want:  "localPart",
-		},
-		{
-			name:  "Empty string",
-			qname: "",
-			want:  "",
-		},
+		{"QName with prefix", "ns:localPart", "localPart"},
+		{"QName without prefix", "localPart", "localPart"},
+		{"Empty string", "", ""},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := getLocalPart(tt.qname)
-			if got != tt.want {
-				t.Errorf("getLocalPart() = %v, want %v", got, tt.want)
-			}
+			got := wsdlparser.GetLocalPart(tt.qname)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
@@ -220,29 +206,14 @@ func TestGetPrefix(t *testing.T) {
 		qname string
 		want  string
 	}{
-		{
-			name:  "QName with prefix",
-			qname: "ns:localPart",
-			want:  "ns",
-		},
-		{
-			name:  "QName without prefix",
-			qname: "localPart",
-			want:  "",
-		},
-		{
-			name:  "Empty string",
-			qname: "",
-			want:  "",
-		},
+		{"QName with prefix", "ns:localPart", "ns"},
+		{"QName without prefix", "localPart", ""},
+		{"Empty string", "", ""},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := getPrefix(tt.qname)
-			if got != tt.want {
-				t.Errorf("getPrefix() = %v, want %v", got, tt.want)
-			}
+			got := wsdlparser.GetPrefix(tt.qname)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }

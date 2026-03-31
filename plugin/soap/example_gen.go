@@ -3,18 +3,14 @@ package soap
 import (
 	"encoding/xml"
 	"fmt"
-	"github.com/imposter-project/imposter-go/pkg/logger"
-	"github.com/imposter-project/imposter-go/pkg/wsdlmsg"
-	"github.com/imposter-project/imposter-go/pkg/xsd"
 	"os"
 	"strings"
 
 	"github.com/antchfx/xmlquery"
+	"github.com/imposter-project/imposter-go/pkg/logger"
+	"github.com/outofcoffee/go-wsdl-parser/wsdlmsg"
+	"github.com/outofcoffee/go-wsdl-parser/xsd"
 	"github.com/outofcoffee/go-xml-example-generator/examplegen"
-)
-
-const (
-	soapExamplePlaceholder = "${soap.example()}"
 )
 
 // generateExampleXML generates example XML based on the WSDL schema
