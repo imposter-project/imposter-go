@@ -2,11 +2,12 @@ package soap
 
 import (
 	"encoding/xml"
-	"github.com/imposter-project/imposter-go/pkg/wsdlmsg"
 	"os"
 	"path/filepath"
 	"testing"
 
+	wsdlparser "github.com/outofcoffee/go-wsdl-parser"
+	"github.com/outofcoffee/go-wsdl-parser/wsdlmsg"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -65,7 +66,7 @@ func TestWSDL2Operations(t *testing.T) {
 	require.NoError(t, err)
 
 	// Parse WSDL
-	parser, err := newWSDLParser(wsdlPath)
+	parser, err := wsdlparser.NewWSDLParser(wsdlPath)
 	require.NoError(t, err)
 
 	// Test GetOperations
