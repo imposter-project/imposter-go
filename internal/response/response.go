@@ -1,7 +1,6 @@
 package response
 
 import (
-	"github.com/imposter-project/imposter-go/internal/exchange"
 	"math/rand"
 	"mime"
 	"net/http"
@@ -9,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/imposter-project/imposter-go/internal/exchange"
 
 	"github.com/imposter-project/imposter-go/pkg/logger"
 	"github.com/imposter-project/imposter-go/pkg/utils"
@@ -168,7 +169,7 @@ func processResponse(
 	}
 	SetContentTypeHeader(rs, respFile, defaultBinaryContentType, "application/json")
 
-	logger.Debugf("updated response state - method:%s, path:%s, status:%d, length:%d",
+	logger.Tracef("updated response state - method:%s, path:%s, status:%d, length:%d",
 		req.Method, req.URL.Path, rs.StatusCode, len(rs.Body))
 }
 
