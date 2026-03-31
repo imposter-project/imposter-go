@@ -33,6 +33,10 @@ install:
 run:
 	go run -tags lambda.norpc -ldflags "$(LDFLAGS)" ./cmd/imposter/main.go $(filter-out $@,$(MAKECMDGOALS))
 
+.PHONY: run-with-plugins
+run-with-plugins: build-plugins
+	IMPOSTER_EXTERNAL_PLUGINS=true IMPOSTER_PLUGIN_DIR=$(CURDIR)/bin go run -tags lambda.norpc -ldflags "$(LDFLAGS)" ./cmd/imposter/main.go $(filter-out $@,$(MAKECMDGOALS))
+
 .PHONY: test
 test:
 	go test ./... 
