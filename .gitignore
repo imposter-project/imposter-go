@@ -18,6 +18,7 @@ venv/
 
 # Outputs
 bootstrap
+imposter
 imposter-go
 imposter.zip
 
