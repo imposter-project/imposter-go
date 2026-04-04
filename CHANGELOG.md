@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.14.3] - 2026-04-04
+### Changed
+- build: add debug plugin build target
+- chore: add imposter binary to gitignore
+- refactor: make processResponse less chatty
+
+### Fixed
+- fix: default capture store to "request" when not specified (#48)
+
 ## [5.14.2] - 2026-03-31
 ### Changed
 - refactor: skip logging duplicate plugin timestamp field
