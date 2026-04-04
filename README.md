@@ -73,6 +73,46 @@ sudo mv imposter-go /usr/local/bin/
 2. Extract the `imposter-go_windows_amd64.zip` file
 3. Add the extracted `imposter-go.exe` to your PATH or move it to a directory in your PATH
 
+### Using Docker
+
+Docker images are available on [Docker Hub](https://hub.docker.com/r/outofcoffee/imposter).
+
+There are two image variants:
+
+| Variant | Image | Description |
+|---------|-------|-------------|
+| Core | `outofcoffee/imposter` | Minimal image with core functionality |
+| All | `outofcoffee/imposter-all` | Includes all plugins |
+
+Each image is published with the following tags:
+
+- `5-beta` - latest beta release (major version)
+- `<version>-beta` - specific version, e.g. `5.14.3-beta`
+
+#### Quick start
+
+```bash
+docker run --rm -p 8080:8080 \
+  -v /path/to/config:/opt/imposter/config \
+  outofcoffee/imposter:5-beta
+```
+
+#### Pin to a specific version
+
+```bash
+docker run --rm -p 8080:8080 \
+  -v /path/to/config:/opt/imposter/config \
+  outofcoffee/imposter:5.14.3-beta
+```
+
+To use the all-in-one image (with all plugins):
+
+```bash
+docker run --rm -p 8080:8080 \
+  -v /path/to/config:/opt/imposter/config \
+  outofcoffee/imposter-all:5-beta
+```
+
 ## Usage
 
 Run with a directory containing Imposter configuration file(s):
