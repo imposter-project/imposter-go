@@ -62,23 +62,41 @@ func (w *WSDLWeb) Configure(cfg shared.ExternalConfig) (shared.PluginCapabilitie
 	return shared.PluginCapabilities{HandleRequests: true}, nil
 }
 
-func (w *WSDLWeb) GenerateFakeData(req shared.FakeDataRequest) shared.FakeDataResponse {
-	return shared.FakeDataResponse{}
+func (w *WSDLWeb) GenerateFakeData(_ shared.FakeDataRequest) (shared.FakeDataResponse, error) {
+	return shared.FakeDataResponse{}, nil
 }
 
-func (w *WSDLWeb) Handle(args shared.HandlerRequest) shared.HandlerResponse {
-	path := args.Path
-	if !strings.HasPrefix(path, wsdlPrefixPath) {
-		// not handled
-		return shared.HandlerResponse{StatusCode: 0}
+func (w *WSDLWeb) NormaliseRequest(args shared.HandlerRequest) (shared.NormaliseResponse, error) {
+	if !strings.HasPrefix(args.Path, wsdlPrefixPath) {
+		return shared.NormaliseResponse{Skip: true}, nil
+	}
+	return shared.NormaliseResponse{}, nil
+}
+
+func (w *WSDLWeb) TransformResponse(args shared.TransformRequest) (shared.TransformResponseResult, error) {
+	if args.Handled {
+		return shared.TransformResponseResult{
+			StatusCode: args.StatusCode,
+			Headers:    args.ResponseHeaders,
+			Body:       args.ResponseBody,
+		}, nil
 	}
 
+	// Pipeline did not match — serve WSDL content
 	if !strings.EqualFold(args.Method, "get") {
-		return shared.HandlerResponse{StatusCode: 405, Body: []byte("Method Not Allowed")}
+		return shared.TransformResponseResult{StatusCode: 405, Body: []byte("Method Not Allowed")}, nil
 	}
-	if response := serveRawWSDL(path); response != nil {
-		return *response
-	} else {
-		return serveStaticContent(path)
+	if response := serveRawWSDL(args.Path); response != nil {
+		return shared.TransformResponseResult{
+			StatusCode: response.StatusCode,
+			Headers:    response.Headers,
+			Body:       response.Body,
+		}, nil
 	}
+	resp := serveStaticContent(args.Path)
+	return shared.TransformResponseResult{
+		StatusCode: resp.StatusCode,
+		Headers:    resp.Headers,
+		Body:       resp.Body,
+	}, nil
 }

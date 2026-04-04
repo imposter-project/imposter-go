@@ -16,32 +16,35 @@ func (f *FakeDataPlugin) Configure(_ shared.ExternalConfig) (shared.PluginCapabi
 	return shared.PluginCapabilities{GenerateFakeData: true}, nil
 }
 
-func (f *FakeDataPlugin) Handle(_ shared.HandlerRequest) shared.HandlerResponse {
-	// This plugin does not handle HTTP requests.
-	return shared.HandlerResponse{StatusCode: 0}
+func (f *FakeDataPlugin) NormaliseRequest(_ shared.HandlerRequest) (shared.NormaliseResponse, error) {
+	return shared.NormaliseResponse{Skip: true}, nil
 }
 
-func (f *FakeDataPlugin) GenerateFakeData(req shared.FakeDataRequest) shared.FakeDataResponse {
+func (f *FakeDataPlugin) TransformResponse(_ shared.TransformRequest) (shared.TransformResponseResult, error) {
+	return shared.TransformResponseResult{}, nil
+}
+
+func (f *FakeDataPlugin) GenerateFakeData(req shared.FakeDataRequest) (shared.FakeDataResponse, error) {
 	// Try expression-based generation first (${fake.Category.property})
 	if req.ExprCategory != "" && req.ExprProperty != "" {
 		if val, ok := Generate(req.ExprCategory, req.ExprProperty); ok {
-			return shared.FakeDataResponse{Value: val, Found: true}
+			return shared.FakeDataResponse{Value: val, Found: true}, nil
 		}
 	}
 
 	// Try property name inference (OpenAPI property name → fake data)
 	if req.PropertyName != "" {
 		if val, ok := GenerateForPropertyName(req.PropertyName); ok {
-			return shared.FakeDataResponse{Value: val, Found: true}
+			return shared.FakeDataResponse{Value: val, Found: true}, nil
 		}
 	}
 
 	// Try format inference (OpenAPI string format → fake data)
 	if req.Format != "" {
 		if val, ok := GenerateForFormat(req.Format); ok {
-			return shared.FakeDataResponse{Value: val, Found: true}
+			return shared.FakeDataResponse{Value: val, Found: true}, nil
 		}
 	}
 
-	return shared.FakeDataResponse{}
+	return shared.FakeDataResponse{}, nil
 }

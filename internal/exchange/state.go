@@ -1,8 +1,9 @@
 package exchange
 
 import (
-	"github.com/imposter-project/imposter-go/internal/config"
 	"net/http"
+
+	"github.com/imposter-project/imposter-go/internal/config"
 )
 
 // ResponseState tracks the state of the HTTP response

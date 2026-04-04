@@ -92,12 +92,16 @@ type externalFakeDataProvider struct {
 }
 
 func (p *externalFakeDataProvider) GenerateFakeData(req fakedata.Request) fakedata.Response {
-	resp := p.handler.GenerateFakeData(shared.FakeDataRequest{
+	resp, err := p.handler.GenerateFakeData(shared.FakeDataRequest{
 		ExprCategory: req.ExprCategory,
 		ExprProperty: req.ExprProperty,
 		PropertyName: req.PropertyName,
 		Format:       req.Format,
 	})
+	if err != nil {
+		logger.Errorf("GenerateFakeData failed: %v", err)
+		return fakedata.Response{}
+	}
 	return fakedata.Response{
 		Value: resp.Value,
 		Found: resp.Found,

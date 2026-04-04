@@ -10,6 +10,25 @@ import (
 	"github.com/imposter-project/imposter-go/external/shared"
 )
 
+// handleRequest simulates the NormaliseRequest → TransformResponse flow
+// that the core ExternalPluginHandler orchestrates.
+func (o *OIDCServer) handleRequest(args shared.HandlerRequest) shared.TransformResponseResult {
+	normResp, _ := o.NormaliseRequest(args)
+	if normResp.Skip {
+		return shared.TransformResponseResult{StatusCode: 0}
+	}
+	result, _ := o.TransformResponse(shared.TransformRequest{
+		Method:   args.Method,
+		Path:     args.Path,
+		Query:    args.Query,
+		Headers:  args.Headers,
+		Body:     args.Body,
+		Handled:  false,
+		Metadata: normResp.Metadata,
+	})
+	return result
+}
+
 func createTestOIDCServerForPlugin() *OIDCServer {
 	config := getDefaultConfig()
 	server := &OIDCServer{
@@ -219,7 +238,7 @@ func TestOIDCServer_Handle(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resp := server.Handle(tt.request)
+			resp := server.handleRequest(tt.request)
 
 			if resp.StatusCode != tt.expectedStatus {
 				t.Errorf("Expected status code %d, got %d", tt.expectedStatus, resp.StatusCode)
@@ -516,7 +535,7 @@ func TestOIDCServer_HandleIntegration(t *testing.T) {
 			Path:   "/oidc/.well-known/openid-configuration",
 		}
 
-		resp := server.Handle(req)
+		resp := server.handleRequest(req)
 
 		if resp.StatusCode != 200 {
 			t.Fatalf("Expected status 200, got %d", resp.StatusCode)

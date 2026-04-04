@@ -10,13 +10,11 @@ import (
 	"github.com/outofcoffee/go-wsdl-parser/wsdlmsg"
 
 	"github.com/antchfx/xmlquery"
-	"github.com/imposter-project/imposter-go/internal/capture"
-	"github.com/imposter-project/imposter-go/internal/common"
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/exchange"
 	"github.com/imposter-project/imposter-go/internal/matcher"
+	"github.com/imposter-project/imposter-go/internal/pipeline"
 	"github.com/imposter-project/imposter-go/internal/response"
-	"github.com/imposter-project/imposter-go/internal/steps"
 )
 
 // MessageBodyHolder represents a parsed SOAP message
@@ -228,7 +226,7 @@ func (h *PluginHandler) HandleRequest(exch *exchange.Exchange, respProc response
 
 	// Only handle POST requests for SOAP
 	if r.Method != http.MethodPost {
-		return // Let the main handler deal with non-POST requests
+		return
 	}
 
 	wsdlVersion := h.wsdlParser.GetVersion()
@@ -249,108 +247,30 @@ func (h *PluginHandler) HandleRequest(exch *exchange.Exchange, respProc response
 	// Determine operation
 	op := h.determineOperation(soapAction, bodyHolder)
 	if op == nil {
-		return // Let the main handler deal with no operation match
+		return
 	}
 
-	// Process interceptors first
-	for _, interceptorCfg := range h.config.Interceptors {
-		score, _ := h.calculateScore(exch, &interceptorCfg.RequestMatcher, op, soapAction)
-		if score > 0 {
-			logger.Infof("matched interceptor - method:%s, path:%s", r.Method, r.URL.Path)
-			if interceptorCfg.Capture != nil {
-				capture.CaptureRequestData(h.imposterConfig, &interceptorCfg.RequestMatcher, interceptorCfg.Capture, exch)
-			}
-
-			// Execute steps if present
-			if len(interceptorCfg.Steps) > 0 {
-				if err := steps.RunSteps(interceptorCfg.Steps, exch, h.imposterConfig, h.config.ConfigDir, responseState, &interceptorCfg.RequestMatcher); err != nil {
-					logger.Errorf("failed to execute interceptor steps: %v", err)
-					soapVersion := bodyHolder.GetSOAPVersion()
-					h.failWithSOAPFault(soapVersion, bodyHolder.EnvNamespace, responseState, "Failed to execute steps", http.StatusInternalServerError)
-					responseState.Handled = true
-					return
-				}
-				if responseState.Handled {
-					// Step(s) handled the request, so we don't need to process the response
-					return
-				}
-			}
-
-			if interceptorCfg.Response != nil {
-				h.processResponse(exch, bodyHolder, &interceptorCfg.RequestMatcher, interceptorCfg.Response, op, respProc)
-			}
-			if !interceptorCfg.Continue {
-				responseState.HandledWithResource(&interceptorCfg.BaseResource)
-				return // Short-circuit if interceptor continue is false
-			}
-		}
-	}
-
-	// Find matching resources
-	var matches []matcher.MatchResult
-	for _, resource := range h.config.Resources {
-		score, isWildcard := h.calculateScore(exch, &resource.RequestMatcher, op, soapAction)
-		if score > 0 {
-			matches = append(matches, matcher.MatchResult{Resource: &resource, Score: score, Wildcard: isWildcard, RuntimeGenerated: resource.RuntimeGenerated})
-		}
-	}
-
-	if len(matches) == 0 {
-		return // Let the main handler deal with no matches
-	}
-
-	// Find the best match
-	best, tie := matcher.FindBestMatch(matches)
-	if tie {
-		logger.Warnf("multiple equally specific matches, using the first")
-	}
-
-	// Check rate limiting if configured
-	if len(best.Resource.Concurrency) > 0 {
-		processResponseFunc := func(exch *exchange.Exchange, requestMatcher *config.RequestMatcher, response *config.Response, respProc response.Processor) {
-			h.processResponse(exch, bodyHolder, requestMatcher, response, op, respProc)
-		}
-
-		shouldLimit := common.RateLimitCheck(
-			best.Resource,
-			"POST",  // defaultMethod for SOAP
-			op.Name, // resourceName (operation name)
-			exch,
-			respProc,
-			processResponseFunc,
-		)
-
-		if shouldLimit {
-			return
-		}
-	}
-
-	// Capture request data
-	capture.CaptureRequestData(h.imposterConfig, &best.Resource.RequestMatcher, best.Resource.Capture, exch)
-
-	// Execute steps if present
-	if len(best.Resource.Steps) > 0 {
-		if err := steps.RunSteps(best.Resource.Steps, exch, h.imposterConfig, h.config.ConfigDir, responseState, &best.Resource.RequestMatcher); err != nil {
-			logger.Errorf("failed to execute resource steps: %v", err)
+	// Build SOAP-specific hooks that close over bodyHolder, op, and soapAction
+	hooks := &pipeline.ProtocolHooks{
+		CalculateScore: func(exch *exchange.Exchange, reqMatcher *config.RequestMatcher,
+			systemNamespaces map[string]string, imposterConfig *config.ImposterConfig,
+		) (int, bool) {
+			return h.calculateScore(exch, reqMatcher, op, soapAction)
+		},
+		OnStepError: func(rs *exchange.ResponseState, msg string) {
 			soapVersion := bodyHolder.GetSOAPVersion()
-			h.failWithSOAPFault(soapVersion, bodyHolder.EnvNamespace, responseState, "Failed to execute steps", http.StatusInternalServerError)
-			responseState.Handled = true // Error case, no resource to attach
-			return
-		}
-		if responseState.Handled {
-			// Step(s) handled the request, so we don't need to process the response
-			return
-		}
+			h.failWithSOAPFault(soapVersion, bodyHolder.EnvNamespace, rs, msg, http.StatusInternalServerError)
+			rs.Handled = true
+		},
+		ProcessResponse: func(exch *exchange.Exchange, reqMatcher *config.RequestMatcher,
+			resp *config.Response, respProc response.Processor,
+		) {
+			h.processResponse(exch, bodyHolder, reqMatcher, resp, op, respProc)
+		},
+		GetResourceName: func(resource *config.Resource) (string, string) {
+			return op.Name, "POST"
+		},
 	}
 
-	// Process the response
-	if best.Resource.Response != nil {
-		h.processResponse(exch, bodyHolder, &best.Resource.RequestMatcher, best.Resource.Response, op, respProc)
-	}
-
-	// If we matched a resource, ensure the request is marked as handled
-	// even if there's no response block (e.g. steps modified response directly)
-	if !responseState.Handled {
-		responseState.HandledWithResource(&best.Resource.BaseResource)
-	}
+	pipeline.RunPipeline(h.config, h.imposterConfig, exch, respProc, hooks)
 }
