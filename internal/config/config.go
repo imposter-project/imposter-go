@@ -21,19 +21,41 @@ func LoadImposterConfig() *ImposterConfig {
 		port = "8080" // Default port
 	}
 
+	tlsCertFile := os.Getenv("IMPOSTER_TLS_CERT_FILE")
+	tlsKeyFile := os.Getenv("IMPOSTER_TLS_KEY_FILE")
+
+	// Warn if only one TLS file is set
+	if (tlsCertFile != "") != (tlsKeyFile != "") {
+		logger.Warnf("both IMPOSTER_TLS_CERT_FILE and IMPOSTER_TLS_KEY_FILE must be set for TLS; ignoring partial config")
+		tlsCertFile = ""
+		tlsKeyFile = ""
+	}
+
+	tlsEnabled := tlsCertFile != "" && tlsKeyFile != ""
+
+	// HTTP/2 is enabled by default; set IMPOSTER_HTTP2_ENABLED=false to serve HTTP/1.1 only.
+	http2Enabled := !strings.EqualFold(os.Getenv("IMPOSTER_HTTP2_ENABLED"), "false")
+
 	serverUrl := os.Getenv("IMPOSTER_SERVER_URL")
 	if serverUrl == "" {
 		var hostSuffix string
-		if port != "80" {
+		if port != "80" && port != "443" {
 			hostSuffix = fmt.Sprintf(":%s", port)
 		}
-		serverUrl = fmt.Sprintf("http://localhost%s", hostSuffix)
+		scheme := "http"
+		if tlsEnabled {
+			scheme = "https"
+		}
+		serverUrl = fmt.Sprintf("%s://localhost%s", scheme, hostSuffix)
 	}
 
 	return &ImposterConfig{
 		LegacyConfigSupported: isLegacyConfigEnabled(),
 		ServerPort:            port,
 		ServerUrl:             serverUrl,
+		TLSCertFile:           tlsCertFile,
+		TLSKeyFile:            tlsKeyFile,
+		HTTP2Enabled:          http2Enabled,
 	}
 }
 

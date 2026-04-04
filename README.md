@@ -169,6 +169,21 @@ The default log level is DEBUG. Available log levels:
 - WARN - Warning messages for potentially harmful situations
 - ERROR - Error messages for serious problems
 
+### TLS and HTTP/2
+
+By default Imposter serves HTTP/2. Without TLS the server runs with `h2c` (HTTP/2 cleartext), which also remains compatible with HTTP/1.1 clients.
+
+To enable TLS (`h2` — HTTP/2 over TLS), set both of:
+
+```bash
+export IMPOSTER_TLS_CERT_FILE=/path/to/server.crt
+export IMPOSTER_TLS_KEY_FILE=/path/to/server.key
+```
+
+Both variables must be set; setting only one is ignored with a warning. When TLS is enabled, the default `IMPOSTER_SERVER_URL` scheme becomes `https`.
+
+HTTP/2 can be disabled (serving HTTP/1.1 only) by setting `IMPOSTER_HTTP2_ENABLED=false`. This applies to both cleartext and TLS modes.
+
 ### Legacy Configuration Support
 
 Imposter Go supports legacy configuration formats, for backwards compatibility with older Imposter configurations.

@@ -13,6 +13,18 @@ This document lists all environment variables that Imposter supports, their purp
 | `IMPOSTER_AUTO_BASE_PATH` | Auto-generate base paths from directory structure | `false` | `IMPOSTER_AUTO_BASE_PATH=true` |
 | `IMPOSTER_SUPPORT_LEGACY_CONFIG` | Enable legacy configuration format support | `false` | `IMPOSTER_SUPPORT_LEGACY_CONFIG=true` |
 
+## TLS and HTTP/2
+
+By default Imposter serves HTTP/2. When TLS is configured, the server uses `h2` (HTTP/2 over TLS); otherwise it uses `h2c` (HTTP/2 cleartext), which also remains compatible with HTTP/1.1 clients. HTTP/2 can be disabled via `IMPOSTER_HTTP2_ENABLED=false` to serve HTTP/1.1 only (applies to both cleartext and TLS modes). Both `IMPOSTER_TLS_CERT_FILE` and `IMPOSTER_TLS_KEY_FILE` must be set together to enable TLS; setting only one is ignored with a warning.
+
+| Variable | Purpose | Default Value | Example |
+|----------|---------|---------------|---------|
+| `IMPOSTER_TLS_CERT_FILE` | Path to the PEM-encoded TLS certificate file | Not set (TLS disabled) | `IMPOSTER_TLS_CERT_FILE=/etc/imposter/tls/server.crt` |
+| `IMPOSTER_TLS_KEY_FILE` | Path to the PEM-encoded TLS private key file | Not set (TLS disabled) | `IMPOSTER_TLS_KEY_FILE=/etc/imposter/tls/server.key` |
+| `IMPOSTER_HTTP2_ENABLED` | Enable HTTP/2 (h2/h2c). Set to `false` to serve HTTP/1.1 only | `true` | `IMPOSTER_HTTP2_ENABLED=false` |
+
+When TLS is enabled, the default `IMPOSTER_SERVER_URL` scheme becomes `https`, and port `443` is omitted from the generated URL.
+
 ## Plugin System
 
 | Variable | Purpose | Default Value | Example |
@@ -126,6 +138,13 @@ export IMPOSTER_CONFIG_DIR=/var/task/config
 export IMPOSTER_STORE_DRIVER=store-dynamodb
 export IMPOSTER_STORE_DYNAMODB_TABLE=imposter-lambda-data
 export IMPOSTER_STORE_DYNAMODB_TTL=300
+```
+
+### TLS (h2)
+```bash
+export IMPOSTER_TLS_CERT_FILE=/etc/imposter/tls/server.crt
+export IMPOSTER_TLS_KEY_FILE=/etc/imposter/tls/server.key
+imposter
 ```
 
 ### External Plugins
