@@ -1,14 +1,17 @@
 package httpserver
 
 import (
-	"github.com/imposter-project/imposter-go/pkg/logger"
 	"net/http"
 	"os"
 	"time"
 
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
+
 	"github.com/imposter-project/imposter-go/internal/adapter"
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/handler"
+	"github.com/imposter-project/imposter-go/pkg/logger"
 	"github.com/imposter-project/imposter-go/plugin"
 )
 
@@ -51,14 +54,33 @@ func newServer(imposterConfig *config.ImposterConfig, plugins []plugin.Plugin) *
 }
 
 // start begins listening for HTTP requests and handles them.
+// When TLS is configured, the server uses h2 (HTTP/2 over TLS).
+// Otherwise it uses h2c (HTTP/2 cleartext) for backwards compatibility.
 func (s *httpServer) start(imposterConfig *config.ImposterConfig) {
-	logger.Infof("server is listening on %s...", s.Addr)
-
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		handler.HandleRequest(imposterConfig, w, r, s.Plugins)
 	})
 
-	if err := http.ListenAndServe(s.Addr, nil); err != nil {
-		logger.Errorf("error starting server: %v", err)
+	if imposterConfig.TLSEnabled() {
+		logger.Infof("server is listening on %s (h2/TLS)...", s.Addr)
+		server := &http.Server{
+			Addr:    s.Addr,
+			Handler: mux,
+		}
+		if err := server.ListenAndServeTLS(imposterConfig.TLSCertFile, imposterConfig.TLSKeyFile); err != nil {
+			logger.Errorf("error starting TLS server: %v", err)
+		}
+	} else {
+		logger.Infof("server is listening on %s (h2c)...", s.Addr)
+		h2s := &http2.Server{}
+		h2cHandler := h2c.NewHandler(mux, h2s)
+		server := &http.Server{
+			Addr:    s.Addr,
+			Handler: h2cHandler,
+		}
+		if err := server.ListenAndServe(); err != nil {
+			logger.Errorf("error starting server: %v", err)
+		}
 	}
 }

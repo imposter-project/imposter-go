@@ -442,6 +442,56 @@ func TestLoadImposterConfig(t *testing.T) {
 	require.Equal(t, "8080", cfg.ServerPort)
 }
 
+func TestLoadImposterConfig_TLS(t *testing.T) {
+	t.Cleanup(func() {
+		os.Unsetenv("IMPOSTER_TLS_CERT_FILE")
+		os.Unsetenv("IMPOSTER_TLS_KEY_FILE")
+		os.Unsetenv("IMPOSTER_SERVER_URL")
+		os.Unsetenv("IMPOSTER_PORT")
+	})
+
+	t.Run("both cert and key set", func(t *testing.T) {
+		os.Setenv("IMPOSTER_TLS_CERT_FILE", "/path/to/cert.pem")
+		os.Setenv("IMPOSTER_TLS_KEY_FILE", "/path/to/key.pem")
+		os.Unsetenv("IMPOSTER_SERVER_URL")
+
+		cfg := LoadImposterConfig()
+		require.True(t, cfg.TLSEnabled())
+		require.Equal(t, "/path/to/cert.pem", cfg.TLSCertFile)
+		require.Equal(t, "/path/to/key.pem", cfg.TLSKeyFile)
+		require.Contains(t, cfg.ServerUrl, "https://")
+
+		os.Unsetenv("IMPOSTER_TLS_CERT_FILE")
+		os.Unsetenv("IMPOSTER_TLS_KEY_FILE")
+	})
+
+	t.Run("only cert set - TLS disabled", func(t *testing.T) {
+		os.Setenv("IMPOSTER_TLS_CERT_FILE", "/path/to/cert.pem")
+		os.Unsetenv("IMPOSTER_TLS_KEY_FILE")
+		os.Unsetenv("IMPOSTER_SERVER_URL")
+
+		cfg := LoadImposterConfig()
+		require.False(t, cfg.TLSEnabled())
+		require.Empty(t, cfg.TLSCertFile)
+		require.Empty(t, cfg.TLSKeyFile)
+		require.Contains(t, cfg.ServerUrl, "http://")
+
+		os.Unsetenv("IMPOSTER_TLS_CERT_FILE")
+	})
+
+	t.Run("neither set - TLS disabled", func(t *testing.T) {
+		os.Unsetenv("IMPOSTER_TLS_CERT_FILE")
+		os.Unsetenv("IMPOSTER_TLS_KEY_FILE")
+		os.Unsetenv("IMPOSTER_SERVER_URL")
+
+		cfg := LoadImposterConfig()
+		require.False(t, cfg.TLSEnabled())
+		require.Empty(t, cfg.TLSCertFile)
+		require.Empty(t, cfg.TLSKeyFile)
+		require.Contains(t, cfg.ServerUrl, "http://")
+	})
+}
+
 func TestLoadConfig_WithRequestBody(t *testing.T) {
 	imposterConfig := &ImposterConfig{}
 

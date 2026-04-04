@@ -421,6 +421,13 @@ type ImposterConfig struct {
 	LegacyConfigSupported bool
 	ServerPort            string
 	ServerUrl             string
+	TLSCertFile           string
+	TLSKeyFile            string
+}
+
+// TLSEnabled returns true when both TLS certificate and key files are configured.
+func (c *ImposterConfig) TLSEnabled() bool {
+	return c.TLSCertFile != "" && c.TLSKeyFile != ""
 }
 
 // MatcherUnmarshaler is a helper type for unmarshaling Matcher from YAML
