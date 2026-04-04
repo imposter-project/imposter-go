@@ -123,6 +123,126 @@ func TestHandler_HandleRequest_MatchingResource(t *testing.T) {
 	}
 }
 
+func TestHandler_HandleRequest_ScriptStepSetsStatusCode(t *testing.T) {
+	// Create a temporary directory for test files
+	tempDir, err := os.MkdirTemp("", "imposter-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	// Write a script that sets response status code
+	scriptFile := filepath.Join(tempDir, "order-api.js")
+	if err := os.WriteFile(scriptFile, []byte(`respond().withStatusCode(201)`), 0644); err != nil {
+		t.Fatalf("Failed to write script file: %v", err)
+	}
+
+	// Create test configuration with a script step and no response block
+	cfg := &config.Config{
+		Plugin:    "rest",
+		ConfigDir: tempDir,
+		Resources: []config.Resource{
+			{
+				BaseResource: config.BaseResource{
+					RequestMatcher: config.RequestMatcher{
+						Method: "POST",
+						Path:   "/orders",
+					},
+					Steps: []config.Step{
+						{
+							Type: config.ScriptStepType,
+							File: "order-api.js",
+						},
+					},
+					// No Response block
+				},
+			},
+		},
+	}
+
+	// Create handler
+	handler, err := NewPluginHandler(cfg, &config.ImposterConfig{})
+	if err != nil {
+		t.Fatalf("Failed to create handler: %v", err)
+	}
+
+	// Create test request
+	req := httptest.NewRequest("POST", "/orders", bytes.NewReader([]byte(`{}`)))
+
+	// Initialise store and response state
+	requestStore := store.NewRequestStore()
+	responseState := response.NewResponseState()
+	responseProc := response.NewProcessor(&config.ImposterConfig{}, tempDir)
+	exch := exchange.NewExchange(req, []byte(`{}`), requestStore, responseState)
+
+	// Handle request
+	handler.HandleRequest(exch, responseProc)
+
+	// Check that request is marked as handled
+	if !responseState.Handled {
+		t.Error("Expected response to be handled when script step sets status code")
+	}
+
+	// Check that the script-set status code is preserved
+	if responseState.StatusCode != http.StatusCreated {
+		t.Errorf("Expected status code %d, got %d", http.StatusCreated, responseState.StatusCode)
+	}
+}
+
+func TestHandler_HandleRequest_MatchingResourceNoResponseBlock(t *testing.T) {
+	// Create a temporary directory for test files
+	tempDir, err := os.MkdirTemp("", "imposter-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	// Create test configuration with no response block and no steps
+	cfg := &config.Config{
+		Plugin:    "rest",
+		ConfigDir: tempDir,
+		Resources: []config.Resource{
+			{
+				BaseResource: config.BaseResource{
+					RequestMatcher: config.RequestMatcher{
+						Method: "GET",
+						Path:   "/test",
+					},
+					// No Response block, no Steps
+				},
+			},
+		},
+	}
+
+	// Create handler
+	handler, err := NewPluginHandler(cfg, &config.ImposterConfig{})
+	if err != nil {
+		t.Fatalf("Failed to create handler: %v", err)
+	}
+
+	// Create test request
+	req := httptest.NewRequest("GET", "/test", nil)
+
+	// Initialise store and response state
+	requestStore := store.NewRequestStore()
+	responseState := response.NewResponseState()
+	responseProc := response.NewProcessor(&config.ImposterConfig{}, tempDir)
+	exch := exchange.NewExchange(req, nil, requestStore, responseState)
+
+	// Handle request
+	handler.HandleRequest(exch, responseProc)
+
+	// Check that request is marked as handled (matched resource, even without response block)
+	if !responseState.Handled {
+		t.Error("Expected response to be handled for matched resource without response block")
+	}
+
+	// Default status code should be 200 OK
+	if responseState.StatusCode != http.StatusOK {
+		t.Errorf("Expected status code %d, got %d", http.StatusOK, responseState.StatusCode)
+	}
+}
+
 func TestHandler_HandleRequest_WithInterceptor(t *testing.T) {
 	// Create a temporary directory for test files
 	tempDir, err := os.MkdirTemp("", "imposter-test-*")
