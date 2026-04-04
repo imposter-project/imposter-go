@@ -33,6 +33,9 @@ func LoadImposterConfig() *ImposterConfig {
 
 	tlsEnabled := tlsCertFile != "" && tlsKeyFile != ""
 
+	// HTTP/2 is enabled by default; set IMPOSTER_HTTP2_ENABLED=false to serve HTTP/1.1 only.
+	http2Enabled := !strings.EqualFold(os.Getenv("IMPOSTER_HTTP2_ENABLED"), "false")
+
 	serverUrl := os.Getenv("IMPOSTER_SERVER_URL")
 	if serverUrl == "" {
 		var hostSuffix string
@@ -52,6 +55,7 @@ func LoadImposterConfig() *ImposterConfig {
 		ServerUrl:             serverUrl,
 		TLSCertFile:           tlsCertFile,
 		TLSKeyFile:            tlsKeyFile,
+		HTTP2Enabled:          http2Enabled,
 	}
 }
 

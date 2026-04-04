@@ -492,6 +492,36 @@ func TestLoadImposterConfig_TLS(t *testing.T) {
 	})
 }
 
+func TestLoadImposterConfig_HTTP2(t *testing.T) {
+	t.Cleanup(func() {
+		os.Unsetenv("IMPOSTER_HTTP2_ENABLED")
+	})
+
+	t.Run("default - HTTP/2 enabled", func(t *testing.T) {
+		os.Unsetenv("IMPOSTER_HTTP2_ENABLED")
+		cfg := LoadImposterConfig()
+		require.True(t, cfg.HTTP2Enabled)
+	})
+
+	t.Run("explicitly enabled", func(t *testing.T) {
+		os.Setenv("IMPOSTER_HTTP2_ENABLED", "true")
+		cfg := LoadImposterConfig()
+		require.True(t, cfg.HTTP2Enabled)
+	})
+
+	t.Run("explicitly disabled", func(t *testing.T) {
+		os.Setenv("IMPOSTER_HTTP2_ENABLED", "false")
+		cfg := LoadImposterConfig()
+		require.False(t, cfg.HTTP2Enabled)
+	})
+
+	t.Run("disabled case-insensitive", func(t *testing.T) {
+		os.Setenv("IMPOSTER_HTTP2_ENABLED", "False")
+		cfg := LoadImposterConfig()
+		require.False(t, cfg.HTTP2Enabled)
+	})
+}
+
 func TestLoadConfig_WithRequestBody(t *testing.T) {
 	imposterConfig := &ImposterConfig{}
 

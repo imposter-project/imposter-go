@@ -423,6 +423,7 @@ type ImposterConfig struct {
 	ServerUrl             string
 	TLSCertFile           string
 	TLSKeyFile            string
+	HTTP2Enabled          bool
 }
 
 // TLSEnabled returns true when both TLS certificate and key files are configured.
