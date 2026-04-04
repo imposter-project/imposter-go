@@ -13,9 +13,9 @@ VERSION=$(git describe --tags --always --dirty 2>/dev/null | sed 's/^v//' || ech
 # Set default tag based on distro
 if [ -z "$2" ]; then
     if [ "$DISTRO" = "all" ]; then
-        TAG="outofcoffee/imposter-all:5-beta"
+        TAG="outofcoffee/imposter-all:${VERSION}-beta"
     else
-        TAG="outofcoffee/imposter:5-beta"
+        TAG="outofcoffee/imposter:${VERSION}-beta"
     fi
 else
     TAG="$2"
