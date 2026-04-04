@@ -192,7 +192,9 @@ jobs:
         file: ./distro/core/Dockerfile
         platforms: linux/amd64,linux/arm64
         push: true
-        tags: outofcoffee/imposter:5-beta
+        tags: |
+          outofcoffee/imposter:5-beta
+          outofcoffee/imposter:${{ steps.version.outputs.VERSION }}-beta
         build-args: |
           VERSION=${{ steps.version.outputs.VERSION }}
 
@@ -203,6 +205,8 @@ jobs:
         file: ./distro/all/Dockerfile
         platforms: linux/amd64,linux/arm64
         push: true
-        tags: outofcoffee/imposter-all:5-beta
+        tags: |
+          outofcoffee/imposter-all:5-beta
+          outofcoffee/imposter-all:${{ steps.version.outputs.VERSION }}-beta
         build-args: |
           VERSION=${{ steps.version.outputs.VERSION }}
