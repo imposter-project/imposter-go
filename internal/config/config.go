@@ -9,9 +9,25 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/imposter-project/imposter-go/pkg/feature"
 	"github.com/imposter-project/imposter-go/pkg/logger"
 
 	"gopkg.in/yaml.v3"
+)
+
+var (
+	flagConfigScanRecursive = feature.Register(feature.Flag{
+		Name:        "config.scanRecursive",
+		EnvVar:      "IMPOSTER_CONFIG_SCAN_RECURSIVE",
+		Default:     false,
+		Description: "Scan the config directory recursively for config files.",
+	})
+	flagConfigAutoBasePath = feature.Register(feature.Flag{
+		Name:        "config.autoBasePath",
+		EnvVar:      "IMPOSTER_AUTO_BASE_PATH",
+		Default:     false,
+		Description: "Automatically derive a resource basePath from the config file's relative directory.",
+	})
 )
 
 // LoadImposterConfig loads configurations from environment variables
@@ -42,8 +58,8 @@ func LoadConfig(configDir string, imposterConfig *ImposterConfig) []Config {
 	logger.Debugf("loading config files from %s", configDir)
 	var configs []Config
 
-	scanRecursive := (os.Getenv("IMPOSTER_CONFIG_SCAN_RECURSIVE") == "true")
-	autoBasePath := (os.Getenv("IMPOSTER_AUTO_BASE_PATH") == "true")
+	scanRecursive := feature.Bool(flagConfigScanRecursive)
+	autoBasePath := feature.Bool(flagConfigAutoBasePath)
 
 	ignorePaths := loadIgnorePaths(configDir)
 

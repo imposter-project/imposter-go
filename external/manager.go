@@ -8,6 +8,7 @@ import (
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/fakedata"
 	"github.com/imposter-project/imposter-go/internal/version"
+	"github.com/imposter-project/imposter-go/pkg/feature"
 	"github.com/imposter-project/imposter-go/pkg/logger"
 	"gopkg.in/yaml.v3"
 	"os"
@@ -28,6 +29,13 @@ type LoadedPlugin struct {
 
 var pluginDir string
 var hasPlugins bool
+
+var flagExternalPluginsEnabled = feature.Register(feature.Flag{
+	Name:        "external.pluginsEnabled",
+	EnvVar:      "IMPOSTER_EXTERNAL_PLUGINS",
+	Default:     false,
+	Description: "Enable loading of external (out-of-process) plugins from the plugin directory.",
+})
 var loaded []LoadedPlugin
 
 // StartExternalPlugins initialises and starts all external plugins defined in the pluginMap,
@@ -226,7 +234,7 @@ func StopExternalPlugins() {
 
 // discoverPlugins finds the directory from which plugins are loaded.
 func discoverPlugins() error {
-	if os.Getenv("IMPOSTER_EXTERNAL_PLUGINS") != "true" {
+	if !feature.Bool(flagExternalPluginsEnabled) {
 		logger.Tracef("external plugins are disabled by environment variable IMPOSTER_EXTERNAL_PLUGINS")
 		hasPlugins = false
 		return nil

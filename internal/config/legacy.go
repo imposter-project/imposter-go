@@ -2,23 +2,24 @@ package config
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
+	"github.com/imposter-project/imposter-go/pkg/feature"
 	"github.com/imposter-project/imposter-go/pkg/logger"
 
 	"gopkg.in/yaml.v3"
 )
 
+var flagLegacyConfigSupport = feature.Register(feature.Flag{
+	Name:        "config.supportLegacy",
+	EnvVar:      "IMPOSTER_SUPPORT_LEGACY_CONFIG",
+	Default:     false,
+	Description: "Enable support for the legacy (pre-current) config file format with on-the-fly transformation.",
+})
+
 // isLegacyConfigEnabled returns whether legacy config support is enabled
 func isLegacyConfigEnabled() bool {
-	legacySupport := strings.ToLower(os.Getenv("IMPOSTER_SUPPORT_LEGACY_CONFIG")) == "true"
-	if legacySupport {
-		logger.Debugln("legacy config support is enabled")
-	} else {
-		logger.Traceln("legacy config support is disabled")
-	}
-	return legacySupport
+	return feature.Bool(flagLegacyConfigSupport)
 }
 
 // convertColonPathToOpenAPI converts a path with colon-prefixed parameters to OpenAPI bracketed format

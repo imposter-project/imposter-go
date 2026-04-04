@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/imposter-project/imposter-go/pkg/feature"
 	"github.com/stretchr/testify/require"
 )
 
@@ -223,9 +224,13 @@ func TestLoadConfig_WithAutoBasePath(t *testing.T) {
 	// Set up auto base path and recursive scanning environment variables
 	os.Setenv("IMPOSTER_AUTO_BASE_PATH", "true")
 	os.Setenv("IMPOSTER_CONFIG_SCAN_RECURSIVE", "true")
+	// Feature flags are cached on first read; reset so this test sees the
+	// env values even if an earlier test primed the defaults.
+	feature.Reset()
 	defer func() {
 		os.Unsetenv("IMPOSTER_AUTO_BASE_PATH")
 		os.Unsetenv("IMPOSTER_CONFIG_SCAN_RECURSIVE")
+		feature.Reset()
 	}()
 
 	// Create a temporary directory structure for test files
