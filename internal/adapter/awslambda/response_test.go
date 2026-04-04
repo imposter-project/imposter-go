@@ -1,10 +1,12 @@
 package awslambda
 
 import (
+	"encoding/base64"
 	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestResponseRecorder_Header(t *testing.T) {
@@ -147,4 +149,73 @@ func TestResponseRecorder_Integration(t *testing.T) {
 	assert.Equal(t, "text/plain", recorder.Headers.Get("Content-Type"))
 	assert.Equal(t, "test-value", recorder.Headers.Get("X-Custom-Header"))
 	assert.True(t, recorder.writtenStatus)
+}
+
+func TestConvertHTTPResponseToLambdaResponse_TextBody(t *testing.T) {
+	recorder := &responseRecorder{Headers: make(http.Header)}
+	recorder.Headers.Set("Content-Type", "application/json")
+	recorder.WriteHeader(200)
+	recorder.Write([]byte(`{"key":"value"}`))
+
+	resp := convertHTTPResponseToLambdaResponse(recorder)
+	assert.Equal(t, 200, resp.StatusCode)
+	assert.False(t, resp.IsBase64Encoded)
+	assert.Equal(t, `{"key":"value"}`, resp.Body)
+}
+
+func TestConvertHTTPResponseToLambdaResponse_GRPCBinary(t *testing.T) {
+	binaryData := []byte{0x00, 0x00, 0x00, 0x00, 0x02, 0x08, 0x01} // gRPC frame
+	recorder := &responseRecorder{Headers: make(http.Header)}
+	recorder.Headers.Set("Content-Type", "application/grpc")
+	recorder.WriteHeader(200)
+	recorder.Write(binaryData)
+
+	resp := convertHTTPResponseToLambdaResponse(recorder)
+	assert.Equal(t, 200, resp.StatusCode)
+	assert.True(t, resp.IsBase64Encoded)
+	decoded, err := base64.StdEncoding.DecodeString(resp.Body)
+	require.NoError(t, err)
+	assert.Equal(t, binaryData, decoded)
+}
+
+func TestConvertHTTPResponseToLambdaResponse_BinaryWithoutContentType(t *testing.T) {
+	// PNG magic bytes + a NUL — no Content-Type set by the handler.
+	binaryData := []byte{0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00}
+	recorder := &responseRecorder{Headers: make(http.Header)}
+	recorder.WriteHeader(200)
+	recorder.Write(binaryData)
+
+	resp := convertHTTPResponseToLambdaResponse(recorder)
+	assert.Equal(t, 200, resp.StatusCode)
+	assert.True(t, resp.IsBase64Encoded)
+	decoded, err := base64.StdEncoding.DecodeString(resp.Body)
+	require.NoError(t, err)
+	assert.Equal(t, binaryData, decoded)
+}
+
+func TestConvertHTTPResponseToLambdaFunctionURLResponse_TextBody(t *testing.T) {
+	recorder := &responseRecorder{Headers: make(http.Header)}
+	recorder.Headers.Set("Content-Type", "text/plain")
+	recorder.WriteHeader(200)
+	recorder.Write([]byte("hello"))
+
+	resp := convertHTTPResponseToLambdaFunctionURLResponse(recorder)
+	assert.Equal(t, 200, resp.StatusCode)
+	assert.False(t, resp.IsBase64Encoded)
+	assert.Equal(t, "hello", resp.Body)
+}
+
+func TestConvertHTTPResponseToLambdaFunctionURLResponse_GRPCBinary(t *testing.T) {
+	binaryData := []byte{0x00, 0x00, 0x00, 0x00, 0x02, 0x08, 0x01}
+	recorder := &responseRecorder{Headers: make(http.Header)}
+	recorder.Headers.Set("Content-Type", "application/grpc+proto")
+	recorder.WriteHeader(200)
+	recorder.Write(binaryData)
+
+	resp := convertHTTPResponseToLambdaFunctionURLResponse(recorder)
+	assert.Equal(t, 200, resp.StatusCode)
+	assert.True(t, resp.IsBase64Encoded)
+	decoded, err := base64.StdEncoding.DecodeString(resp.Body)
+	require.NoError(t, err)
+	assert.Equal(t, binaryData, decoded)
 }

@@ -1,12 +1,16 @@
 package awslambda
 
 import (
+	"bytes"
+	"encoding/base64"
 	"encoding/json"
-	"github.com/imposter-project/imposter-go/pkg/logger"
 	"net/http"
 	"os"
 	"strings"
 	"time"
+	"unicode/utf8"
+
+	"github.com/imposter-project/imposter-go/pkg/logger"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -125,21 +129,52 @@ func convertLambdaRequestToHTTPRequest(method, path string, headers map[string]s
 }
 
 // convertHTTPResponseToLambdaResponse converts an http.Response to an APIGatewayProxyResponse.
+// Binary responses are base64-encoded so API Gateway can deliver them correctly.
 func convertHTTPResponseToLambdaResponse(recorder *responseRecorder) events.APIGatewayProxyResponse {
-	return events.APIGatewayProxyResponse{
+	resp := events.APIGatewayProxyResponse{
 		StatusCode: recorder.StatusCode,
 		Headers:    convertHTTPHeaderToMap(recorder.Headers),
-		Body:       recorder.Body.String(),
 	}
+	if isBinaryResponse(recorder) {
+		resp.Body = base64.StdEncoding.EncodeToString(recorder.Body.Bytes())
+		resp.IsBase64Encoded = true
+	} else {
+		resp.Body = recorder.Body.String()
+	}
+	return resp
 }
 
 // convertHTTPResponseToLambdaFunctionURLResponse converts an http.Response to a LambdaFunctionURLResponse.
+// Binary responses are base64-encoded so Lambda Function URLs can deliver them correctly.
 func convertHTTPResponseToLambdaFunctionURLResponse(recorder *responseRecorder) events.LambdaFunctionURLResponse {
-	return events.LambdaFunctionURLResponse{
+	resp := events.LambdaFunctionURLResponse{
 		StatusCode: recorder.StatusCode,
 		Headers:    convertHTTPHeaderToMap(recorder.Headers),
-		Body:       recorder.Body.String(),
 	}
+	if isBinaryResponse(recorder) {
+		resp.Body = base64.StdEncoding.EncodeToString(recorder.Body.Bytes())
+		resp.IsBase64Encoded = true
+	} else {
+		resp.Body = recorder.Body.String()
+	}
+	return resp
+}
+
+// isBinaryResponse returns true if the response contains binary data
+// that must be base64-encoded for Lambda delivery. Known textual content
+// types are fast-pathed; otherwise the body is classified as binary if it
+// is not valid UTF-8 or contains a NUL byte. NUL never appears in legitimate
+// text payloads and catches binary formats (e.g. gRPC frames, images,
+// protobuf) whose bytes may otherwise be valid UTF-8 by coincidence.
+func isBinaryResponse(recorder *responseRecorder) bool {
+	contentType := recorder.Headers.Get("Content-Type")
+	if strings.HasPrefix(contentType, "text/") ||
+		strings.HasSuffix(contentType, "+json") ||
+		strings.HasSuffix(contentType, "+xml") {
+		return false
+	}
+	body := recorder.Body.Bytes()
+	return !utf8.Valid(body) || bytes.IndexByte(body, 0) >= 0
 }
 
 // convertHTTPHeaderToMap converts http.Header to a map[string]string.
