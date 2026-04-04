@@ -237,6 +237,31 @@ func TestCaptureRequestData(t *testing.T) {
 			},
 		},
 		{
+			name: "capture defaults to request store when no store specified",
+			resource: config.Resource{
+				BaseResource: config.BaseResource{
+					Capture: map[string]config.Capture{
+						"userName": {
+							CaptureConfig: config.CaptureConfig{
+								PathParam: "userName",
+							},
+							// Store intentionally left empty
+						},
+					},
+				},
+			},
+			setupRequest: func() (*http.Request, *config.RequestMatcher, []byte) {
+				req, _ := http.NewRequest("POST", "/users/alice", nil)
+				return req, &config.RequestMatcher{Path: "/users/{userName}"}, nil
+			},
+			imposterConfig: &config.ImposterConfig{},
+			validate: func(t *testing.T, requestStore *store.Store) {
+				val, exists := requestStore.GetValue("userName")
+				assert.True(t, exists, "value should exist in request store")
+				assert.Equal(t, "alice", val)
+			},
+		},
+		{
 			name: "capture enabled not set",
 			resource: config.Resource{
 				BaseResource: config.BaseResource{
