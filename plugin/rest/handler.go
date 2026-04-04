@@ -121,6 +121,11 @@ func (h *PluginHandler) HandleRequest(
 	// Process the response
 	if best.Resource.Response != nil {
 		h.processResponse(exch, &best.Resource.RequestMatcher, best.Resource.Response, respProc)
+	}
+
+	// If we matched a resource, ensure the request is marked as handled
+	// even if there's no response block (e.g. steps modified response directly)
+	if !responseState.Handled {
 		responseState.HandledWithResource(&best.Resource.BaseResource)
 	}
 }
