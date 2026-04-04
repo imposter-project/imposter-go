@@ -23,7 +23,11 @@ func CaptureRequestData(imposterConfig *config.ImposterConfig, reqMatcher *confi
 		value := getValueFromCaptureConfig(imposterConfig, reqMatcher, exch, capture.CaptureConfig, "")
 
 		if value != "" {
-			s := store.Open(capture.Store, exch.RequestStore)
+			storeName := capture.Store
+			if storeName == "" {
+				storeName = "request"
+			}
+			s := store.Open(storeName, exch.RequestStore)
 			s.StoreValue(itemName, value)
 		}
 	}
