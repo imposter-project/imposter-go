@@ -146,6 +146,14 @@ func applyTransformResult(result shared.TransformResponseResult, rs *exchange.Re
 			rs.Headers[key] = value
 		}
 	}
+	if result.Trailers != nil {
+		if rs.Trailers == nil {
+			rs.Trailers = make(map[string]string, len(result.Trailers))
+		}
+		for key, value := range result.Trailers {
+			rs.Trailers[key] = value
+		}
+	}
 	// If the plugin provided a FileName hint and did not set Content-Type
 	// explicitly, infer it from the file extension.
 	if result.FileName != "" {

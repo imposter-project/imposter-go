@@ -10,6 +10,7 @@ import (
 type ResponseState struct {
 	StatusCode       int
 	Headers          map[string]string
+	Trailers         map[string]string    // HTTP/2 trailers, written after the body
 	Body             []byte
 	Stopped          bool                 // indicates if the response has been stopped (e.g., connection closed)
 	Handled          bool                 // indicates if a handler has handled the request
@@ -41,12 +42,24 @@ func (rs *ResponseState) WriteToResponseWriter(w http.ResponseWriter) {
 		rs.Body = []byte("HTTP server does not support connection hijacking")
 	}
 
+	// Declare any trailers before WriteHeader so they are advertised in the
+	// Trailer response header. net/http will then recognise trailer values
+	// set after the body is written.
+	for key := range rs.Trailers {
+		w.Header().Add("Trailer", key)
+	}
+
 	for key, value := range rs.Headers {
 		w.Header().Set(key, value)
 	}
 	w.WriteHeader(rs.StatusCode)
 	if rs.Body != nil {
 		w.Write(rs.Body)
+	}
+
+	// Write trailer values after the body
+	for key, value := range rs.Trailers {
+		w.Header().Set(key, value)
 	}
 
 	// Execute cleanup functions after response is written
