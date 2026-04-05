@@ -34,7 +34,13 @@ func NewPluginHandler(cfg *config.Config, imposterConfig *config.ImposterConfig)
 			return nil, fmt.Errorf("failed to unmarshal plugin config: %w", err)
 		}
 
-		opts.externalReferenceBaseURL = pluginConfig["externalBaseURL"].(string)
+		if raw, ok := pluginConfig["externalBaseURL"]; ok && raw != nil {
+			baseURL, ok := raw.(string)
+			if !ok {
+				return nil, fmt.Errorf("plugin config externalBaseURL must be a string, got %T", raw)
+			}
+			opts.externalReferenceBaseURL = baseURL
+		}
 	}
 
 	validate := cfg.Validation != nil && (cfg.Validation.IsRequestValidationEnabled() || cfg.Validation.IsResponseValidationEnabled())
