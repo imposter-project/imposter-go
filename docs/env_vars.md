@@ -70,8 +70,6 @@ When TLS is enabled, the default `IMPOSTER_SERVER_URL` scheme becomes `https`, a
 
 ## OpenAPI
 
-External `$ref` resolution: local file references are enabled by default, matching the JVM engine's historical behaviour. Remote (http/https) references are disabled by default and must be opted into explicitly, so mocks do not make unexpected outbound HTTP calls in locked-down environments.
-
 | Variable | Purpose | Default Value | Example |
 |----------|---------|---------------|---------|
 | `IMPOSTER_OPENAPI_VALIDATION_DEFAULT_BEHAVIOUR` | Default validation behavior | Context-dependent | `IMPOSTER_OPENAPI_VALIDATION_DEFAULT_BEHAVIOUR=fail` |
