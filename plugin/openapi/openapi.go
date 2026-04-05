@@ -97,12 +97,12 @@ func newOpenAPIParser(specFile string, validate bool, opts parserOptions) (OpenA
 		docCfg.BasePath = filepath.Dir(specFile)
 		docCfg.SpecFilePath = specFile
 	} else {
-		logger.Infof("OpenAPI file $ref resolution disabled (set %s=true to enable)", flagAllowFileRefs.EnvVar)
+		logger.Debugf("OpenAPI file $ref resolution disabled (set %s=true to enable)", flagAllowFileRefs.EnvVar)
 	}
 	if feature.Bool(flagAllowRemoteRefs) {
 		docCfg.AllowRemoteReferences = true
 	} else {
-		logger.Infof("OpenAPI remote $ref resolution disabled (set %s=true to enable)", flagAllowRemoteRefs.EnvVar)
+		logger.Debugf("OpenAPI remote $ref resolution disabled (set %s=true to enable)", flagAllowRemoteRefs.EnvVar)
 	}
 	if opts.externalReferenceBaseURL != "" {
 		u, err := url.Parse(opts.externalReferenceBaseURL)
