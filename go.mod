@@ -58,7 +58,7 @@ require (
 	github.com/aws/aws-sdk-go v1.55.7
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
-	github.com/outofcoffee/go-wsdl-parser v0.1.1-0.20260405071704-8014079f924a
+	github.com/outofcoffee/go-wsdl-parser v0.2.0
 	github.com/outofcoffee/go-xml-example-generator v0.4.2
 	github.com/satori/go.uuid v1.2.0
 	golang.org/x/net v0.42.0
