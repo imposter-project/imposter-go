@@ -127,8 +127,8 @@ func (o *OIDCServer) Configure(cfg shared.ExternalConfig) (shared.PluginCapabili
 	return shared.PluginCapabilities{HandleRequests: true}, nil
 }
 
-func (o *OIDCServer) GenerateFakeData(_ shared.FakeDataRequest) (shared.FakeDataResponse, error) {
-	return shared.FakeDataResponse{}, nil
+func (o *OIDCServer) GenerateSyntheticData(_ shared.SyntheticDataRequest) (shared.SyntheticDataResponse, error) {
+	return shared.SyntheticDataResponse{}, nil
 }
 
 func (o *OIDCServer) setupJWTKeys() error {

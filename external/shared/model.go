@@ -47,8 +47,8 @@ type PluginCapabilities struct {
 	// via the NormaliseRequest/TransformResponse pipeline.
 	HandleRequests bool
 
-	// GenerateFakeData indicates the plugin can generate fake data.
-	GenerateFakeData bool
+	// GenerateSyntheticData indicates the plugin can generate synthetic data.
+	GenerateSyntheticData bool
 }
 
 // NormaliseResponse is returned by NormaliseRequest.
@@ -105,8 +105,8 @@ type TransformResponseResult struct {
 	FileName string
 }
 
-// FakeDataRequest describes what fake data to generate.
-type FakeDataRequest struct {
+// SyntheticDataRequest describes what synthetic data to generate.
+type SyntheticDataRequest struct {
 	// ExprCategory is the Datafaker-style category, e.g. "Name".
 	// Used for template expressions like ${fake.Name.firstName}.
 	ExprCategory string
@@ -121,9 +121,9 @@ type FakeDataRequest struct {
 	Format string
 }
 
-// FakeDataResponse is the result of a fake data generation request.
-type FakeDataResponse struct {
-	// Value is the generated fake data value.
+// SyntheticDataResponse is the result of a synthetic data generation request.
+type SyntheticDataResponse struct {
+	// Value is the generated synthetic data value.
 	Value string
 
 	// Found indicates whether a generator matched the request.
@@ -146,7 +146,7 @@ type ExternalHandler interface {
 	// the pipeline's response or generate a response from scratch.
 	TransformResponse(args TransformRequest) (TransformResponseResult, error)
 
-	// GenerateFakeData generates fake data based on the request.
-	// Only plugins with the GenerateFakeData capability should implement this.
-	GenerateFakeData(req FakeDataRequest) (FakeDataResponse, error)
+	// GenerateSyntheticData generates synthetic data based on the request.
+	// Only plugins with the GenerateSyntheticData capability should implement this.
+	GenerateSyntheticData(req SyntheticDataRequest) (SyntheticDataResponse, error)
 }

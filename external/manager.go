@@ -64,10 +64,10 @@ func StartExternalPlugins(imposterConfig *config.ImposterConfig, configs []confi
 			return nil, fmt.Errorf("failed to start plugin %s: %v", pluginName, err)
 		}
 
-		// Register fake data providers
-		if caps.GenerateFakeData {
-			logger.Infof("registering fake data provider from plugin: %s", pluginName)
-			registerFakeDataProvider(pluginName)
+		// Register synthetic data providers
+		if caps.GenerateSyntheticData {
+			logger.Infof("registering synthetic data provider from plugin: %s", pluginName)
+			registerSyntheticDataProvider(pluginName)
 		}
 	}
 
@@ -75,31 +75,31 @@ func StartExternalPlugins(imposterConfig *config.ImposterConfig, configs []confi
 	return loaded, nil
 }
 
-// registerFakeDataProvider registers a loaded plugin as a fake data provider.
-func registerFakeDataProvider(pluginName string) {
+// registerSyntheticDataProvider registers a loaded plugin as a synthetic data provider.
+func registerSyntheticDataProvider(pluginName string) {
 	for _, l := range loaded {
 		if l.Name == pluginName {
 			impl := *l.impl
-			fakedata.RegisterProvider(&externalFakeDataProvider{handler: impl})
+			fakedata.RegisterProvider(&externalSyntheticDataProvider{handler: impl})
 			return
 		}
 	}
 }
 
-// externalFakeDataProvider wraps an ExternalHandler to implement fakedata.Provider.
-type externalFakeDataProvider struct {
+// externalSyntheticDataProvider wraps an ExternalHandler to implement fakedata.Provider.
+type externalSyntheticDataProvider struct {
 	handler shared.ExternalHandler
 }
 
-func (p *externalFakeDataProvider) GenerateFakeData(req fakedata.Request) fakedata.Response {
-	resp, err := p.handler.GenerateFakeData(shared.FakeDataRequest{
+func (p *externalSyntheticDataProvider) GenerateFakeData(req fakedata.Request) fakedata.Response {
+	resp, err := p.handler.GenerateSyntheticData(shared.SyntheticDataRequest{
 		ExprCategory: req.ExprCategory,
 		ExprProperty: req.ExprProperty,
 		PropertyName: req.PropertyName,
 		Format:       req.Format,
 	})
 	if err != nil {
-		logger.Errorf("GenerateFakeData failed: %v", err)
+		logger.Errorf("GenerateSyntheticData failed: %v", err)
 		return fakedata.Response{}
 	}
 	return fakedata.Response{
@@ -207,7 +207,7 @@ func start(cfg shared.ExternalConfig, pluginName string, plg *shared.ExternalPlu
 	if err != nil {
 		return shared.PluginCapabilities{}, fmt.Errorf("failed to configure plugin %s: %v", pluginName, err)
 	}
-	logger.Tracef("plugin %s capabilities: handleRequests=%v, generateFakeData=%v", pluginName, caps.HandleRequests, caps.GenerateFakeData)
+	logger.Tracef("plugin %s capabilities: handleRequests=%v, generateSyntheticData=%v", pluginName, caps.HandleRequests, caps.GenerateSyntheticData)
 
 	loaded = append(loaded, LoadedPlugin{
 		Name:   pluginName,

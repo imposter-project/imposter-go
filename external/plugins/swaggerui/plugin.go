@@ -65,8 +65,8 @@ func (s *SwaggerUI) Configure(cfg shared.ExternalConfig) (shared.PluginCapabilit
 	return shared.PluginCapabilities{HandleRequests: true}, nil
 }
 
-func (s *SwaggerUI) GenerateFakeData(_ shared.FakeDataRequest) (shared.FakeDataResponse, error) {
-	return shared.FakeDataResponse{}, nil
+func (s *SwaggerUI) GenerateSyntheticData(_ shared.SyntheticDataRequest) (shared.SyntheticDataResponse, error) {
+	return shared.SyntheticDataResponse{}, nil
 }
 
 func (s *SwaggerUI) NormaliseRequest(args shared.HandlerRequest) (shared.NormaliseResponse, error) {

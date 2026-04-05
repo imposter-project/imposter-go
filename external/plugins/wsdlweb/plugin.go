@@ -62,8 +62,8 @@ func (w *WSDLWeb) Configure(cfg shared.ExternalConfig) (shared.PluginCapabilitie
 	return shared.PluginCapabilities{HandleRequests: true}, nil
 }
 
-func (w *WSDLWeb) GenerateFakeData(_ shared.FakeDataRequest) (shared.FakeDataResponse, error) {
-	return shared.FakeDataResponse{}, nil
+func (w *WSDLWeb) GenerateSyntheticData(_ shared.SyntheticDataRequest) (shared.SyntheticDataResponse, error) {
+	return shared.SyntheticDataResponse{}, nil
 }
 
 func (w *WSDLWeb) NormaliseRequest(args shared.HandlerRequest) (shared.NormaliseResponse, error) {

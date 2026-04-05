@@ -36,11 +36,11 @@ func (s *ExtPluginRPC) TransformResponse(args TransformRequest) (TransformRespon
 	return resp, nil
 }
 
-func (s *ExtPluginRPC) GenerateFakeData(req FakeDataRequest) (FakeDataResponse, error) {
-	var resp FakeDataResponse
-	err := s.client.Call("Plugin.GenerateFakeData", req, &resp)
+func (s *ExtPluginRPC) GenerateSyntheticData(req SyntheticDataRequest) (SyntheticDataResponse, error) {
+	var resp SyntheticDataResponse
+	err := s.client.Call("Plugin.GenerateSyntheticData", req, &resp)
 	if err != nil {
-		return FakeDataResponse{}, fmt.Errorf("plugin.GenerateFakeData: %w", err)
+		return SyntheticDataResponse{}, fmt.Errorf("plugin.GenerateSyntheticData: %w", err)
 	}
 	return resp, nil
 }
@@ -79,10 +79,10 @@ func (s *ExtPluginRPCServer) TransformResponse(args TransformRequest, resp *Tran
 	return nil
 }
 
-func (s *ExtPluginRPCServer) GenerateFakeData(req FakeDataRequest, resp *FakeDataResponse) error {
-	result, err := s.Impl.GenerateFakeData(req)
+func (s *ExtPluginRPCServer) GenerateSyntheticData(req SyntheticDataRequest, resp *SyntheticDataResponse) error {
+	result, err := s.Impl.GenerateSyntheticData(req)
 	if err != nil {
-		return fmt.Errorf("plugin.GenerateFakeData: %w", err)
+		return fmt.Errorf("plugin.GenerateSyntheticData: %w", err)
 	}
 	*resp = result
 	return nil
