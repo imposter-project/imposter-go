@@ -127,8 +127,8 @@ func (o *OIDCServer) Configure(cfg shared.ExternalConfig) (shared.PluginCapabili
 	return shared.PluginCapabilities{HandleRequests: true}, nil
 }
 
-func (o *OIDCServer) GenerateFakeData(_ shared.FakeDataRequest) shared.FakeDataResponse {
-	return shared.FakeDataResponse{}
+func (o *OIDCServer) GenerateSyntheticData(_ shared.SyntheticDataRequest) (shared.SyntheticDataResponse, error) {
+	return shared.SyntheticDataResponse{}, nil
 }
 
 func (o *OIDCServer) setupJWTKeys() error {
@@ -279,29 +279,58 @@ func (o *OIDCServer) CacheDiscoveryDocument() error {
 	return nil
 }
 
-func (o *OIDCServer) Handle(args shared.HandlerRequest) shared.HandlerResponse {
+func (o *OIDCServer) NormaliseRequest(args shared.HandlerRequest) (shared.NormaliseResponse, error) {
 	if !strings.HasPrefix(args.Path, o.pathPrefix+"/") {
-		// Not handled
-		return shared.HandlerResponse{StatusCode: 0}
+		return shared.NormaliseResponse{Skip: true}, nil
 	}
+	return shared.NormaliseResponse{}, nil
+}
+
+func (o *OIDCServer) TransformResponse(args shared.TransformRequest) (shared.TransformResponseResult, error) {
+	if args.Handled {
+		// Pipeline matched a resource — pass through
+		return shared.TransformResponseResult{
+			StatusCode: args.StatusCode,
+			Headers:    args.ResponseHeaders,
+			Body:       args.ResponseBody,
+		}, nil
+	}
+
+	// Pipeline did not match — generate OIDC response
 	o.logger.Debug("handling request", "method", args.Method, "path", args.Path)
 
+	// Build a HandlerRequest for the internal handlers
+	req := shared.HandlerRequest{
+		Method:  args.Method,
+		Path:    args.Path,
+		Query:   args.Query,
+		Headers: args.Headers,
+		Body:    args.Body,
+	}
+
+	var resp shared.HandlerResponse
 	switch args.Path {
 	case o.pathPrefix + "/authorize":
-		return o.handleAuthorize(args)
+		resp = o.handleAuthorize(req)
 	case o.pathPrefix + "/token":
-		return o.handleToken(args)
+		resp = o.handleToken(req)
 	case o.pathPrefix + "/userinfo":
-		return o.handleUserInfo(args)
+		resp = o.handleUserInfo(req)
 	case o.pathPrefix + "/logout":
-		return o.handleLogout(args)
+		resp = o.handleLogout(req)
 	case o.pathPrefix + "/.well-known/jwks.json":
-		return o.handleJWKS(args)
+		resp = o.handleJWKS(req)
 	case o.pathPrefix + "/.well-known/openid-configuration":
-		return o.handleDiscovery(args)
+		resp = o.handleDiscovery(req)
 	default:
-		return shared.HandlerResponse{StatusCode: 404, Body: []byte("Not Found")}
+		resp = shared.HandlerResponse{StatusCode: 404, Body: []byte("Not Found")}
 	}
+
+	return shared.TransformResponseResult{
+		StatusCode: resp.StatusCode,
+		Headers:    resp.Headers,
+		Body:       resp.Body,
+	}, nil
 }
 
 func (o *OIDCServer) handleDiscovery(args shared.HandlerRequest) shared.HandlerResponse {

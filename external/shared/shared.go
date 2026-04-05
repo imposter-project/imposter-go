@@ -18,23 +18,31 @@ func (s *ExtPluginRPC) Configure(cfg ExternalConfig) (PluginCapabilities, error)
 	return resp, nil
 }
 
-func (s *ExtPluginRPC) Handle(args HandlerRequest) HandlerResponse {
-	var resp HandlerResponse
-	err := s.client.Call("Plugin.Handle", args, &resp)
+func (s *ExtPluginRPC) NormaliseRequest(args HandlerRequest) (NormaliseResponse, error) {
+	var resp NormaliseResponse
+	err := s.client.Call("Plugin.NormaliseRequest", args, &resp)
 	if err != nil {
-		// TODO return an error instead of panic
-		panic(err)
+		return NormaliseResponse{}, fmt.Errorf("plugin.NormaliseRequest: %w", err)
 	}
-	return resp
+	return resp, nil
 }
 
-func (s *ExtPluginRPC) GenerateFakeData(req FakeDataRequest) FakeDataResponse {
-	var resp FakeDataResponse
-	err := s.client.Call("Plugin.GenerateFakeData", req, &resp)
+func (s *ExtPluginRPC) TransformResponse(args TransformRequest) (TransformResponseResult, error) {
+	var resp TransformResponseResult
+	err := s.client.Call("Plugin.TransformResponse", args, &resp)
 	if err != nil {
-		return FakeDataResponse{}
+		return TransformResponseResult{}, fmt.Errorf("plugin.TransformResponse: %w", err)
 	}
-	return resp
+	return resp, nil
+}
+
+func (s *ExtPluginRPC) GenerateSyntheticData(req SyntheticDataRequest) (SyntheticDataResponse, error) {
+	var resp SyntheticDataResponse
+	err := s.client.Call("Plugin.GenerateSyntheticData", req, &resp)
+	if err != nil {
+		return SyntheticDataResponse{}, fmt.Errorf("plugin.GenerateSyntheticData: %w", err)
+	}
+	return resp, nil
 }
 
 // ExtPluginRPCServer is the RPC server that ExtPluginRPC talks to, conforming to
@@ -53,13 +61,30 @@ func (s *ExtPluginRPCServer) Configure(cfg ExternalConfig, resp *PluginCapabilit
 	return nil
 }
 
-func (s *ExtPluginRPCServer) Handle(args HandlerRequest, resp *HandlerResponse) error {
-	*resp = s.Impl.Handle(args)
+func (s *ExtPluginRPCServer) NormaliseRequest(args HandlerRequest, resp *NormaliseResponse) error {
+	result, err := s.Impl.NormaliseRequest(args)
+	if err != nil {
+		return fmt.Errorf("plugin.NormaliseRequest: %w", err)
+	}
+	*resp = result
 	return nil
 }
 
-func (s *ExtPluginRPCServer) GenerateFakeData(req FakeDataRequest, resp *FakeDataResponse) error {
-	*resp = s.Impl.GenerateFakeData(req)
+func (s *ExtPluginRPCServer) TransformResponse(args TransformRequest, resp *TransformResponseResult) error {
+	result, err := s.Impl.TransformResponse(args)
+	if err != nil {
+		return fmt.Errorf("plugin.TransformResponse: %w", err)
+	}
+	*resp = result
+	return nil
+}
+
+func (s *ExtPluginRPCServer) GenerateSyntheticData(req SyntheticDataRequest, resp *SyntheticDataResponse) error {
+	result, err := s.Impl.GenerateSyntheticData(req)
+	if err != nil {
+		return fmt.Errorf("plugin.GenerateSyntheticData: %w", err)
+	}
+	*resp = result
 	return nil
 }
 
