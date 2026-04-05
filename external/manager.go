@@ -2,6 +2,13 @@ package external
 
 import (
 	"fmt"
+	"os"
+	"os/exec"
+	"path"
+	"path/filepath"
+	"slices"
+	"strings"
+
 	"github.com/hashicorp/go-hclog"
 	goplugin "github.com/hashicorp/go-plugin"
 	"github.com/imposter-project/imposter-go/external/shared"
@@ -10,12 +17,6 @@ import (
 	"github.com/imposter-project/imposter-go/internal/version"
 	"github.com/imposter-project/imposter-go/pkg/logger"
 	"gopkg.in/yaml.v3"
-	"os"
-	"os/exec"
-	"path"
-	"path/filepath"
-	"slices"
-	"strings"
 )
 
 var pluginMap map[string]goplugin.Plugin
@@ -202,7 +203,7 @@ func start(cfg shared.ExternalConfig, pluginName string, plg *shared.ExternalPlu
 	if err != nil {
 		return shared.PluginCapabilities{}, fmt.Errorf("failed to configure plugin %s: %v", pluginName, err)
 	}
-	logger.Debugf("plugin %s capabilities: handleRequests=%v, generateFakeData=%v", pluginName, caps.HandleRequests, caps.GenerateFakeData)
+	logger.Tracef("plugin %s capabilities: handleRequests=%v, generateFakeData=%v", pluginName, caps.HandleRequests, caps.GenerateFakeData)
 
 	loaded = append(loaded, LoadedPlugin{
 		Name:   pluginName,
