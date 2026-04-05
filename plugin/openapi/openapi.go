@@ -5,11 +5,13 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/exchange"
+	"github.com/imposter-project/imposter-go/pkg/feature"
 	"github.com/imposter-project/imposter-go/pkg/logger"
 	"github.com/pb33f/libopenapi"
 	validator "github.com/pb33f/libopenapi-validator"
@@ -79,20 +81,41 @@ func newOpenAPIParser(specFile string, validate bool, opts parserOptions) (OpenA
 	logger.Tracef("loading OpenAPI spec %s", specFile)
 
 	spec, _ := os.ReadFile(specFile)
-	document, err := libopenapi.NewDocument(spec)
-	if err != nil {
-		return nil, fmt.Errorf("cannot create new document: %e", err)
-	}
 
+	// Build the libopenapi document configuration up front so external
+	// $ref resolution honours the feature flags and any configured
+	// external reference base URL.
+	//
+	// libopenapi drives file-ref resolution from BasePath (set to the
+	// spec file's directory so refs resolve relative to the spec, not
+	// the process cwd) and drives remote-ref resolution from BaseURL.
+	// The AllowRemoteReferences escape hatch forces construction of a
+	// remote filesystem even when no BaseURL has been supplied - this
+	// is what lets users opt into absolute http(s) $refs.
+	docCfg := &datamodel.DocumentConfiguration{}
+	if feature.Bool(flagAllowFileRefs) {
+		docCfg.BasePath = filepath.Dir(specFile)
+		docCfg.SpecFilePath = specFile
+	} else {
+		logger.Infof("OpenAPI file $ref resolution disabled (set %s=true to enable)", flagAllowFileRefs.EnvVar)
+	}
+	if feature.Bool(flagAllowRemoteRefs) {
+		docCfg.AllowRemoteReferences = true
+	} else {
+		logger.Infof("OpenAPI remote $ref resolution disabled (set %s=true to enable)", flagAllowRemoteRefs.EnvVar)
+	}
 	if opts.externalReferenceBaseURL != "" {
 		u, err := url.Parse(opts.externalReferenceBaseURL)
 		if err != nil {
-			return nil, fmt.Errorf("cannot parse external reference URL: %e", err)
+			return nil, fmt.Errorf("cannot parse external reference URL: %w", err)
 		}
-
-		document.SetConfiguration(&datamodel.DocumentConfiguration{BaseURL: u})
-
+		docCfg.BaseURL = u
 		logger.Infof("external base URL set to: %s", u.String())
+	}
+
+	document, err := libopenapi.NewDocumentWithConfiguration(spec, docCfg)
+	if err != nil {
+		return nil, fmt.Errorf("cannot create new document: %w", err)
 	}
 
 	var oasValidator *validator.Validator
