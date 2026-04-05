@@ -42,6 +42,19 @@ func guessSoapVersion(version WSDLVersion) SOAPVersion {
 	}
 }
 
+// namespaceMatchesTarget reports whether a namespace on a SOAP body element
+// matches the WSDL target namespace. An empty body namespace is accepted to
+// tolerate requests that omit default namespace declarations.
+func namespaceMatchesTarget(bodyNs, targetNs string) bool {
+	if bodyNs == "" {
+		return true
+	}
+	if targetNs == "" {
+		return true
+	}
+	return bodyNs == targetNs
+}
+
 // guessEnvNamespace guesses the envelope namespace based on the SOAP version
 func guessEnvNamespace(soapVersion SOAPVersion) string {
 	switch soapVersion {

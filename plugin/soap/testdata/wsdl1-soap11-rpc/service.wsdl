@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions name="PetService" xmlns="http://schemas.xmlsoap.org/wsdl/"
+             xmlns:tns="urn:com:example:petstore"
+             xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+             xmlns:xs="http://www.w3.org/2001/XMLSchema"
+             targetNamespace="urn:com:example:petstore">
+
+    <documentation>
+        Sample WSDL 1.1 document for the pet service. Uses SOAP 1.1 bindings
+        and the RPC style, with message parts referring to XML schema types
+        directly.
+    </documentation>
+
+    <types>
+        <xs:schema targetNamespace="urn:com:example:petstore"
+                   xmlns:tns="urn:com:example:petstore">
+            <xs:complexType name="petType">
+                <xs:all>
+                    <xs:element name="id" type="xs:int"/>
+                    <xs:element name="name" type="xs:string"/>
+                </xs:all>
+            </xs:complexType>
+        </xs:schema>
+    </types>
+
+    <message name="getPetByIdRequest">
+        <part type="xs:int" name="id"/>
+    </message>
+    <message name="getPetByIdResponse">
+        <part type="tns:petType" name="pet"/>
+    </message>
+    <message name="getPetByNameRequest">
+        <part type="xs:string" name="name"/>
+    </message>
+    <message name="getPetByNameResponse">
+        <part type="tns:petType" name="pet"/>
+    </message>
+
+    <portType name="PetPortType">
+        <operation name="getPetById">
+            <input message="tns:getPetByIdRequest" name="getPetByIdRequest"/>
+            <output message="tns:getPetByIdResponse" name="getPetByIdResponse"/>
+        </operation>
+        <operation name="getPetByName">
+            <input message="tns:getPetByNameRequest" name="getPetByNameRequest"/>
+            <output message="tns:getPetByNameResponse" name="getPetByNameResponse"/>
+        </operation>
+    </portType>
+
+    <binding name="SoapBinding" type="tns:PetPortType">
+        <soap:binding style="rpc" transport="http://schemas.xmlsoap.org/soap/http"/>
+
+        <operation name="getPetById">
+            <soap:operation soapAction="getPetById" style="rpc"/>
+            <input name="getPetByIdRequest">
+                <soap:body use="literal"/>
+            </input>
+            <output name="getPetByIdResponse">
+                <soap:body use="literal"/>
+            </output>
+        </operation>
+
+        <operation name="getPetByName">
+            <!-- soap:operation style omitted - falls back to soap:binding style -->
+            <soap:operation soapAction="getPetByName"/>
+            <input name="getPetByNameRequest">
+                <soap:body use="literal"/>
+            </input>
+            <output name="getPetByNameResponse">
+                <soap:body use="literal"/>
+            </output>
+        </operation>
+    </binding>
+
+    <service name="PetService">
+        <port name="SoapEndpoint" binding="tns:SoapBinding">
+            <soap:address location="http://www.example.com/soap/"/>
+        </port>
+    </service>
+</definitions>
