@@ -146,4 +146,9 @@ func applyTransformResult(result shared.TransformResponseResult, rs *exchange.Re
 			rs.Headers[key] = value
 		}
 	}
+	// If the plugin provided a FileName hint and did not set Content-Type
+	// explicitly, infer it from the file extension.
+	if result.FileName != "" {
+		response.SetContentTypeHeader(rs, result.FileName, "", "")
+	}
 }

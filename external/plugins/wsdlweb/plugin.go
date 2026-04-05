@@ -91,6 +91,7 @@ func (w *WSDLWeb) TransformResponse(args shared.TransformRequest) (shared.Transf
 			StatusCode: response.StatusCode,
 			Headers:    response.Headers,
 			Body:       response.Body,
+			FileName:   response.FileName,
 		}, nil
 	}
 	resp := serveStaticContent(args.Path)
@@ -98,5 +99,6 @@ func (w *WSDLWeb) TransformResponse(args shared.TransformRequest) (shared.Transf
 		StatusCode: resp.StatusCode,
 		Headers:    resp.Headers,
 		Body:       resp.Body,
+		FileName:   resp.FileName,
 	}, nil
 }

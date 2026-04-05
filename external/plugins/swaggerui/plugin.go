@@ -95,6 +95,7 @@ func (s *SwaggerUI) TransformResponse(args shared.TransformRequest) (shared.Tran
 			StatusCode: response.StatusCode,
 			Headers:    response.Headers,
 			Body:       response.Body,
+			FileName:   response.FileName,
 		}, nil
 	}
 	resp := serveStaticContent(args.Path)
@@ -102,5 +103,6 @@ func (s *SwaggerUI) TransformResponse(args shared.TransformRequest) (shared.Tran
 		StatusCode: resp.StatusCode,
 		Headers:    resp.Headers,
 		Body:       resp.Body,
+		FileName:   resp.FileName,
 	}, nil
 }

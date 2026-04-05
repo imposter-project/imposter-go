@@ -99,6 +99,10 @@ type TransformResponseResult struct {
 	StatusCode int
 	Headers    map[string]string
 	Body       []byte
+
+	// FileName is the name of the file, not its path. Used as a hint for
+	// Content-Type detection when the plugin has not set one explicitly.
+	FileName string
 }
 
 // FakeDataRequest describes what fake data to generate.
