@@ -157,7 +157,7 @@ func generateFromSyntheticSchema(
 	if schemaDir == "" {
 		// Fall back to a fresh temp directory if no schemas were extracted.
 		var err error
-		schemaDir, err = os.MkdirTemp("", "imposter-rpc-schema-*")
+		schemaDir, err = os.MkdirTemp("", "imposter-synth-schema-*")
 		if err != nil {
 			return "", fmt.Errorf("failed to create temp schema dir: %w", err)
 		}
@@ -165,7 +165,7 @@ func generateFromSyntheticSchema(
 
 	schemaBytes := wsdlmsg.CreateCompositePartSchema(wrapperName, parts, targetNamespace, imports)
 
-	syntheticPath := filepath.Join(schemaDir, fmt.Sprintf("imposter-rpc-%s.xsd", wrapperName))
+	syntheticPath := filepath.Join(schemaDir, fmt.Sprintf("imposter-synth-%s.xsd", wrapperName))
 	if err := os.WriteFile(syntheticPath, schemaBytes, 0644); err != nil {
 		return "", fmt.Errorf("failed to write synthetic schema: %w", err)
 	}
