@@ -1,0 +1,16 @@
+openapi: 3.0.2
+info:
+  title: External file reference test
+  description: Spec whose response schema is loaded from a sibling file.
+  version: 1.0.0
+paths:
+  /users:
+    get:
+      summary: Get all users
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: './user.yaml'
