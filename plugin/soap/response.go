@@ -83,7 +83,7 @@ func (h *PluginHandler) generateSoapFault(body *MessageBodyHolder, resp *config.
 	} else if resp.File != "" {
 		faultResp.File = resp.File
 	} else {
-		faultXml, err := generateExampleXML(op.Fault, h.wsdlParser.GetSchemaSystem())
+		faultXml, err := generateExampleXML(op, op.Fault, h.wsdlParser.GetSchemaSystem(), h.wsdlParser.GetTargetNamespace(), true)
 		if err != nil {
 			logger.Errorf("failed to generate example XML for fault: %v", err)
 		}
@@ -94,7 +94,7 @@ func (h *PluginHandler) generateSoapFault(body *MessageBodyHolder, resp *config.
 
 // replaceExamplePlaceholder replaces example placeholders in a template with a generated example response.
 func (h *PluginHandler) replaceExamplePlaceholder(op *Operation, body *MessageBodyHolder) string {
-	exampleXml, err := generateExampleXML(op.Output, h.wsdlParser.GetSchemaSystem())
+	exampleXml, err := generateExampleXML(op, op.Output, h.wsdlParser.GetSchemaSystem(), h.wsdlParser.GetTargetNamespace(), true)
 	if err != nil {
 		logger.Warnf("failed to generate example XML for operation %s: %v", op.Name, err)
 		return ""

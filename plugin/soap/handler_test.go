@@ -231,6 +231,111 @@ func TestSOAPHandler_HandleRequest(t *testing.T) {
 	}
 }
 
+// TestSOAPHandler_HandleRequest_RPCStyle exercises the RPC/literal path:
+// the request body root is the operation name wrapping the message parts,
+// and the auto-generated response wraps the output parts under an element
+// named after the operation with the "Response" suffix.
+func TestSOAPHandler_HandleRequest_RPCStyle(t *testing.T) {
+	tempDir := t.TempDir()
+	wsdlSource, err := os.ReadFile("testdata/wsdl1-soap11-rpc/service.wsdl")
+	if err != nil {
+		t.Fatal(err)
+	}
+	wsdlPath := filepath.Join(tempDir, "service.wsdl")
+	if err := os.WriteFile(wsdlPath, wsdlSource, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := &config.Config{
+		Plugin:   "soap",
+		WSDLFile: wsdlPath,
+		System: &config.System{
+			XMLNamespaces: map[string]string{
+				"pet": "urn:com:example:petstore",
+			},
+		},
+		Resources: []config.Resource{
+			{
+				BaseResource: config.BaseResource{
+					RequestMatcher: config.RequestMatcher{
+						Path:       "/pets/",
+						Operation:  "getPetById",
+						SOAPAction: "getPetById",
+						RequestBody: config.RequestBody{
+							BodyMatchCondition: &config.BodyMatchCondition{
+								MatchCondition: config.MatchCondition{
+									Value: "3",
+								},
+								XPath: "//pet:id",
+							},
+						},
+					},
+					Response: &config.Response{
+						StatusCode: 200,
+					},
+				},
+			},
+		},
+	}
+
+	handler, err := NewPluginHandler(cfg, &config.ImposterConfig{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// RPC-style request: the SOAP body's root element is the operation
+	// name, and each child element is a message part named after the
+	// corresponding WSDL <part name="...">.
+	envelopeNS := "http://schemas.xmlsoap.org/soap/envelope/"
+	soapRequest := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
+<env:Envelope xmlns:env="%s">
+    <env:Header/>
+    <env:Body>
+        <pet:getPetById xmlns:pet="urn:com:example:petstore">
+            <pet:id>3</pet:id>
+        </pet:getPetById>
+    </env:Body>
+</env:Envelope>`, envelopeNS)
+
+	req := httptest.NewRequest(http.MethodPost, "/pets/", strings.NewReader(soapRequest))
+	req.Header.Set("Content-Type", "text/xml")
+	req.Header.Set("SOAPAction", "getPetById")
+
+	requestStore := store.NewRequestStore()
+	responseState := response.NewResponseState()
+	responseProc := response.NewProcessor(&config.ImposterConfig{}, tempDir)
+	exch := exchange.NewExchange(req, []byte(soapRequest), requestStore, responseState)
+
+	handler.HandleRequest(exch, responseProc)
+
+	if !responseState.Handled {
+		t.Fatal("Expected response to be handled")
+	}
+	if responseState.StatusCode != http.StatusOK {
+		t.Fatalf("Expected status code %d, got %d; body=%s", http.StatusOK, responseState.StatusCode, string(responseState.Body))
+	}
+
+	responseBody := string(responseState.Body)
+	ns := map[string]string{"env": envelopeNS, "pet": "urn:com:example:petstore"}
+
+	// The auto-generated response must be wrapped under the operation
+	// name + "Response" element, with the single <pet> part inside.
+	xpathQueries := []string{
+		"//pet:getPetByIdResponse",
+		"//pet:getPetByIdResponse/pet:pet",
+	}
+	for _, q := range xpathQueries {
+		result, ok := query.XPathQuery(responseState.Body, q, ns)
+		if !ok {
+			t.Errorf("Failed to execute XPath query %q against: %s", q, responseBody)
+			continue
+		}
+		if result == "" {
+			t.Errorf("XPath query %q did not match in response: %s", q, responseBody)
+		}
+	}
+}
+
 func TestSOAPHandler_HandleRequest_InvalidMethod(t *testing.T) {
 	tests := []struct {
 		name     string

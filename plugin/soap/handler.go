@@ -158,13 +158,22 @@ func (h *PluginHandler) determineOperation(soapAction string, bodyHolder *Messag
 					matchedOps = append(matchedOps, op)
 				}
 			case wsdlmsg.TypeMessageType:
-				// Match by type
-				// TODO consider matching on body child element names against part names
-				if bodyRootElementLocal == op.Name {
+				// RPC-style: the SOAP body root element is the operation name
+				// wrapper, and its children are the individual message parts.
+				// Match by the wrapper element's local name against the WSDL
+				// operation name, scoped by the WSDL target namespace when
+				// the request supplies one.
+				if bodyRootElementLocal == op.Name && namespaceMatchesTarget(bodyRootElementNs, h.wsdlParser.GetTargetNamespace()) {
 					matchedOps = append(matchedOps, op)
 				}
 			case wsdlmsg.CompositeMessageType:
-				if inputMsg.(*wsdlmsg.CompositeMessage).MessageName == bodyRootElementLocal {
+				// A composite input may come from an RPC-style operation
+				// (wrapper named after the operation) or a document-style
+				// message with multiple parts (wrapper named after the
+				// message). Accept either.
+				compositeMsg := inputMsg.(*wsdlmsg.CompositeMessage)
+				if (compositeMsg.MessageName == bodyRootElementLocal || op.Name == bodyRootElementLocal) &&
+					namespaceMatchesTarget(bodyRootElementNs, h.wsdlParser.GetTargetNamespace()) {
 					matchedOps = append(matchedOps, op)
 				}
 			}

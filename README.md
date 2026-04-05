@@ -16,7 +16,6 @@ A Go implementation of the [Imposter Mock Engine](https://www.imposter.sh). This
 ## ⚠️ Limitations
 
 - No support for Groovy [scripting](https://docs.imposter.sh/scripting/)
-- No support (yet) for some SOAP styles (https://github.com/imposter-project/imposter-go/issues/7)
 
 ## Getting Started
 
