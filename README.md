@@ -9,6 +9,7 @@ A Go implementation of the [Imposter Mock Engine](https://www.imposter.sh). This
 - ✅ [REST/HTTP API mock](https://docs.imposter.sh/rest_plugin/) support
 - ✅ [SOAP/WSDL mock](https://docs.imposter.sh/soap_plugin/) support
 - ✅ [OpenAPI/Swagger mock](https://docs.imposter.sh/openapi_plugin/) support
+- ✅ gRPC/Protobuf mock support (via external plugin; see [examples/grpc](./examples/grpc))
 - ✅ JavaScript [scripting](https://docs.imposter.sh/scripting/)
 - ✅ Support for [steps](https://docs.imposter.sh/steps/)
 - ✅ Support for [simulated delays](https://docs.imposter.sh/performance_simulation/), [simulated errors](https://docs.imposter.sh/failure_simulation/) and [rate limiting](./docs/rate_limiting.md)

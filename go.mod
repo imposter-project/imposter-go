@@ -7,6 +7,7 @@ require gopkg.in/yaml.v3 v3.0.1
 require (
 	github.com/antchfx/xmlquery v1.5.1
 	github.com/brianvoe/gofakeit/v7 v7.14.0
+	github.com/bufbuild/protocompile v0.4.0
 	github.com/dlclark/regexp2 v1.11.5
 	github.com/dop251/goja v0.0.0-20250531102226-cb187b08699c
 	github.com/golang-jwt/jwt/v5 v5.3.0
@@ -18,6 +19,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/crypto v0.41.0
 	golang.org/x/exp v0.0.0-20250606033433-dcc06ee1d476
+	google.golang.org/protobuf v1.36.1
 )
 
 require (
@@ -45,10 +47,10 @@ require (
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/speakeasy-api/jsonpath v0.6.2 // indirect
 	github.com/wk8/go-ordered-map/v2 v2.1.9-0.20240815153524-6ea36470d1bd // indirect
+	golang.org/x/sync v0.16.0 // indirect
 	golang.org/x/sys v0.35.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230711160842-782d3b101e98 // indirect
 	google.golang.org/grpc v1.58.3 // indirect
-	google.golang.org/protobuf v1.36.1 // indirect
 )
 
 require (

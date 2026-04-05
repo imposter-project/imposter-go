@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package store;
+
+service PetStore {
+  // GetPet returns a single pet by ID.
+  rpc GetPet (GetPetRequest) returns (GetPetResponse);
+
+  // ListPets returns all pets.
+  rpc ListPets (ListPetsRequest) returns (ListPetsResponse);
+}
+
+message GetPetRequest {
+  int32 id = 1;
+}
+
+message GetPetResponse {
+  int32 id = 1;
+  string name = 2;
+  string species = 3;
+}
+
+message ListPetsRequest {}
+
+message ListPetsResponse {
+  repeated GetPetResponse pets = 1;
+}

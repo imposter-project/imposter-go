@@ -98,7 +98,10 @@ type TransformResponseResult struct {
 	// If 0, the plugin did not produce a response (request falls through).
 	StatusCode int
 	Headers    map[string]string
-	Body       []byte
+	// Trailers are HTTP/2 trailers, written after the response body.
+	// Used by protocols such as gRPC that carry status metadata in trailers.
+	Trailers map[string]string
+	Body     []byte
 
 	// FileName is the name of the file, not its path. Used as a hint for
 	// Content-Type detection when the plugin has not set one explicitly.

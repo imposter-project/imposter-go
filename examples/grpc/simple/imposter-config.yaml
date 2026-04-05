@@ -1,0 +1,30 @@
+# Example gRPC plugin configuration
+# Mocks a PetStore gRPC service using a .proto file and JSON response files.
+#
+# The gRPC plugin uses the core pipeline, so standard features like
+# request matching, interceptors, capture, steps, scripting, and
+# response templating all work with gRPC resources.
+
+plugin: grpc
+
+config:
+  protoFiles:
+    - "petstore.proto"
+
+resources:
+  # when id=1, return a specific response
+  - path: "/store.PetStore/GetPet"
+    requestBody:
+      jsonPath: $.id
+      value: 1
+    response:
+      file: "get-pet-response.json"
+
+  # define a default response for this RPC
+  - path: "/store.PetStore/GetPet"
+    response:
+      statusCode: 5  # gRPC NOT_FOUND
+
+  - path: "/store.PetStore/ListPets"
+    response:
+      file: "list-pets-response.json"
