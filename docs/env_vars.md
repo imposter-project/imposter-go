@@ -68,11 +68,13 @@ When TLS is enabled, the default `IMPOSTER_SERVER_URL` scheme becomes `https`, a
 |----------|---------|---------------|---------|
 | `IMPOSTER_RATE_LIMITER_TTL` | Rate limiter data TTL (seconds) | `300` (5 minutes) | `IMPOSTER_RATE_LIMITER_TTL=600` |
 
-## OpenAPI Validation
+## OpenAPI
 
 | Variable | Purpose | Default Value | Example |
 |----------|---------|---------------|---------|
 | `IMPOSTER_OPENAPI_VALIDATION_DEFAULT_BEHAVIOUR` | Default validation behavior | Context-dependent | `IMPOSTER_OPENAPI_VALIDATION_DEFAULT_BEHAVIOUR=fail` |
+| `IMPOSTER_OPENAPI_ALLOW_FILE_REFS` | Allow OpenAPI `$ref` to resolve local file references (relative to the spec file). | `true` | `IMPOSTER_OPENAPI_ALLOW_FILE_REFS=false` |
+| `IMPOSTER_OPENAPI_ALLOW_REMOTE_REFS` | Allow OpenAPI `$ref` to resolve remote (http/https) references. | `false` | `IMPOSTER_OPENAPI_ALLOW_REMOTE_REFS=true` |
 
 ## AWS Integration
 
