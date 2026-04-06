@@ -10,7 +10,7 @@ import (
 type ResponseState struct {
 	StatusCode       int
 	Headers          map[string]string
-	Trailers         map[string]string    // HTTP/2 trailers, written after the body
+	Trailers         map[string]string // HTTP/2 trailers, written after the body
 	Body             []byte
 	Stopped          bool                 // indicates if the response has been stopped (e.g., connection closed)
 	Handled          bool                 // indicates if a handler has handled the request
