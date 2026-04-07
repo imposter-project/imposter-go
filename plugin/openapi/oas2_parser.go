@@ -20,14 +20,9 @@ type openAPI2Parser struct {
 // newOpenAPI2Parser creates a new OpenAPIParser for OpenAPI 2 documents
 func newOpenAPI2Parser(document libopenapi.Document, validator *validator.Validator, opts parserOptions) (*openAPI2Parser, error) {
 	logger.Debugf("creating OpenAPI 2 parser")
-	v2Model, errors := document.BuildV2Model()
-
-	if len(errors) > 0 {
-		var errorMessages string
-		for i := range errors {
-			errorMessages += fmt.Sprintf("error: %e\n", errors[i])
-		}
-		return nil, fmt.Errorf("cannot create v2 model from document: %d errors reported: %v", len(errors), errorMessages)
+	v2Model, err := document.BuildV2Model()
+	if err != nil {
+		return nil, fmt.Errorf("cannot create v2 model from document: %w", err)
 	}
 
 	parser := &openAPI2Parser{

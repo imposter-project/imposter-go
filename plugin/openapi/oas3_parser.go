@@ -22,14 +22,9 @@ type openAPI3Parser struct {
 // newOpenAPI3Parser creates a new OpenAPIParser for OpenAPI 3 documents
 func newOpenAPI3Parser(document libopenapi.Document, validator *validator.Validator, opts parserOptions) (*openAPI3Parser, error) {
 	logger.Debugf("creating OpenAPI 3 parser")
-	v3Model, errors := document.BuildV3Model()
-
-	if len(errors) > 0 {
-		var errorMessages string
-		for i := range errors {
-			errorMessages += fmt.Sprintf("error: %e\n", errors[i])
-		}
-		return nil, fmt.Errorf("cannot create v3 model from document: %d errors reported: %v", len(errors), errorMessages)
+	v3Model, err := document.BuildV3Model()
+	if err != nil {
+		return nil, fmt.Errorf("cannot create v3 model from document: %w", err)
 	}
 
 	var version OpenAPIVersion
