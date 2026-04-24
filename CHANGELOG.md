@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.17.2] - 2026-04-24
+### Changed
+- build(deps): bump golang in /distro/all in the docker-images group (#39)
+- build(deps): bump golang in /distro/core in the docker-images group (#41)
+- build(deps): bump the go-minor-and-patch group across 1 directory with 12 updates (#61)
+- build(deps): update Go dependencies and Docker base images
+- ci: push docker images and publish plugins before creating release
+- ci: update Go version to 1.25 in CI workflow
+
 ## [5.17.1] - 2026-04-06
 ### Changed
 - docs: link to gRPC documentation
