@@ -3,6 +3,7 @@ package capture
 import (
 	"bytes"
 	"github.com/imposter-project/imposter-go/internal/exchange"
+	"mime/multipart"
 	"net/http"
 	"strings"
 	"testing"
@@ -129,6 +130,40 @@ func TestCaptureRequestData(t *testing.T) {
 				req, _ := http.NewRequest("POST", "/", body)
 				req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 				return req, &config.RequestMatcher{}, []byte("field=form-data")
+			},
+			imposterConfig: &config.ImposterConfig{},
+			validate: func(t *testing.T, requestStore *store.Store) {
+				val, _ := requestStore.GetValue("formValue")
+				assert.Equal(t, "form-data", val)
+			},
+		},
+		{
+			name: "capture multipart form parameter",
+			resource: config.Resource{
+				BaseResource: config.BaseResource{
+					Capture: map[string]config.Capture{
+						"test": {
+							Enabled: boolPtr(true),
+							Key: config.CaptureConfig{
+								Const: "formValue",
+							},
+							CaptureConfig: config.CaptureConfig{
+								FormParam: "field",
+							},
+							Store: "request",
+						},
+					},
+				},
+			},
+			setupRequest: func() (*http.Request, *config.RequestMatcher, []byte) {
+				var buf bytes.Buffer
+				w := multipart.NewWriter(&buf)
+				_ = w.WriteField("field", "form-data")
+				_ = w.Close()
+				body := buf.Bytes()
+				req, _ := http.NewRequest("POST", "/", bytes.NewReader(body))
+				req.Header.Set("Content-Type", w.FormDataContentType())
+				return req, &config.RequestMatcher{}, body
 			},
 			imposterConfig: &config.ImposterConfig{},
 			validate: func(t *testing.T, requestStore *store.Store) {

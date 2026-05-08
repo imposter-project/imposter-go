@@ -38,16 +38,7 @@ func buildContext(exch *exchange.Exchange, reqMatcher *config.RequestMatcher) ma
 	}
 	reqContext["pathParams"] = pathParams
 
-	// Parse and convert form parameters to a simple map
-	formParams := make(map[string]string)
-	if err := exch.Request.Request.ParseForm(); err == nil {
-		for k, v := range exch.Request.Request.PostForm {
-			if len(v) > 0 {
-				formParams[k] = v[0]
-			}
-		}
-	}
-	reqContext["formParams"] = formParams
+	reqContext["formParams"] = utils.GetFormParams(exch.Request.Request)
 
 	// Set up context object
 	context := make(map[string]interface{})

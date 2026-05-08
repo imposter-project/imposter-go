@@ -1,6 +1,8 @@
 package script
 
 import (
+	"bytes"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"regexp"
@@ -134,6 +136,40 @@ func TestExecuteScriptStep(t *testing.T) {
 			},
 			reqMatcher: &config.RequestMatcher{
 				Path: "/{path-param}",
+			},
+		},
+		{
+			name: "inline script accessing multipart form params",
+			step: config.Step{
+				Type: config.ScriptStepType,
+				Lang: "javascript",
+				Code: `
+					if (context.request.formParams.key1 !== "value1") {
+						throw new Error("Expected key1=value1 form param, got: " + context.request.formParams.key1);
+					}
+					if (context.request.formParams.key2 !== "value2") {
+						throw new Error("Expected key2=value2 form param, got: " + context.request.formParams.key2);
+					}
+				`,
+			},
+			setupExch: func() *exchange.Exchange {
+				var buf bytes.Buffer
+				w := multipart.NewWriter(&buf)
+				_ = w.WriteField("key1", "value1")
+				_ = w.WriteField("key2", "value2")
+				_ = w.Close()
+				body := buf.Bytes()
+				req, _ := http.NewRequest("POST", "/test", bytes.NewReader(body))
+				req.Header.Set("Content-Type", w.FormDataContentType())
+				return &exchange.Exchange{
+					Request: &exchange.RequestContext{
+						Request: req,
+						Body:    body,
+					},
+				}
+			},
+			reqMatcher: &config.RequestMatcher{
+				Path: "/test",
 			},
 		},
 		{
