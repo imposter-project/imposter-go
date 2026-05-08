@@ -40,9 +40,7 @@ func getValueFromCaptureConfig(imposterConfig *config.ImposterConfig, reqMatcher
 	} else if key.QueryParam != "" {
 		return exch.Request.Request.URL.Query().Get(key.QueryParam)
 	} else if key.FormParam != "" {
-		if err := exch.Request.Request.ParseForm(); err == nil {
-			return exch.Request.Request.FormValue(key.FormParam)
-		}
+		return utils.GetFormValue(exch.Request.Request, key.FormParam)
 	} else if key.RequestHeader != "" {
 		return exch.Request.Request.Header.Get(key.RequestHeader)
 	} else if key.Expression != "" {
