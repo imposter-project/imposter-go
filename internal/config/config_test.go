@@ -220,6 +220,61 @@ resources:
 	require.Equal(t, "/api/v1", resource.Response.Headers["X-Test"])
 }
 
+func TestLoadConfig_WithConfigVars(t *testing.T) {
+	tempDir := t.TempDir()
+	imposterConfig := &ImposterConfig{}
+
+	configContent := `plugin: rest
+vars:
+  api_base_path: /api/v2
+  default_host: example.com
+resources:
+  - path: ${var.api_base_path}/users
+    response:
+      content: '{"host": "${var.default_host}", "fallback": "${var.missing:-defaultValue}"}'
+      statusCode: 200
+      headers:
+        X-Host: ${var.default_host}`
+
+	err := os.WriteFile(filepath.Join(tempDir, "test-config.yaml"), []byte(configContent), 0644)
+	require.NoError(t, err)
+
+	configs := LoadConfig(tempDir, imposterConfig)
+	require.Len(t, configs, 1)
+
+	cfg := configs[0]
+	require.Equal(t, "/api/v2", cfg.Vars["api_base_path"])
+	require.Len(t, cfg.Resources, 1)
+
+	resource := cfg.Resources[0]
+	require.Equal(t, "/api/v2/users", resource.Path)
+	require.Equal(t, `{"host": "example.com", "fallback": "defaultValue"}`, resource.Response.Content)
+	require.Equal(t, "example.com", resource.Response.Headers["X-Host"])
+}
+
+func TestLoadConfig_WithUndefinedConfigVar(t *testing.T) {
+	tempDir := t.TempDir()
+	imposterConfig := &ImposterConfig{}
+
+	configContent := `plugin: rest
+vars:
+  known: value
+resources:
+  - path: /test
+    response:
+      content: ${var.known} and ${var.unknown}
+      statusCode: 200`
+
+	err := os.WriteFile(filepath.Join(tempDir, "test-config.yaml"), []byte(configContent), 0644)
+	require.NoError(t, err)
+
+	configs := LoadConfig(tempDir, imposterConfig)
+	require.Len(t, configs, 1)
+
+	// Defined var is substituted; undefined reference is left intact
+	require.Equal(t, "value and ${var.unknown}", configs[0].Resources[0].Response.Content)
+}
+
 func TestLoadConfig_WithAutoBasePath(t *testing.T) {
 	// Set up auto base path and recursive scanning environment variables
 	os.Setenv("IMPOSTER_AUTO_BASE_PATH", "true")

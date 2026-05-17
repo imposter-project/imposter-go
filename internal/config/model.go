@@ -391,13 +391,14 @@ func getDefaultValidationBehaviour() ValidationBehaviour {
 
 // Config represents the configuration for an Imposter mock server
 type Config struct {
-	Plugin       string          `yaml:"plugin"`
-	BasePath     string          `yaml:"basePath,omitempty"`
-	Resources    []Resource      `yaml:"resources,omitempty"`
-	Interceptors []Interceptor   `yaml:"interceptors"`
-	System       *System         `yaml:"system,omitempty"`
-	Security     *SecurityConfig `yaml:"security"`
-	Cors         *CorsConfig     `yaml:"cors,omitempty"`
+	Plugin       string            `yaml:"plugin"`
+	BasePath     string            `yaml:"basePath,omitempty"`
+	Vars         map[string]string `yaml:"vars,omitempty"`
+	Resources    []Resource        `yaml:"resources,omitempty"`
+	Interceptors []Interceptor     `yaml:"interceptors"`
+	System       *System           `yaml:"system,omitempty"`
+	Security     *SecurityConfig   `yaml:"security"`
+	Cors         *CorsConfig       `yaml:"cors,omitempty"`
 
 	// SOAP-specific fields
 	WSDLFile string `yaml:"wsdlFile,omitempty"`
