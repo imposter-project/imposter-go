@@ -105,6 +105,39 @@ database:
 | `${env.VAR_NAME}` | Substitute environment variable | `${env.DATABASE_URL}` |
 | `${env.VAR_NAME:-default}` | Substitute with default if not set | `${env.PORT:-8080}` |
 
+## Config-level Variables
+
+For values that are shared across a configuration file but don't need to come
+from the environment, define a top-level `vars` section and reference entries
+using the `${var.NAME}` syntax. Variables are resolved at config parse time and
+work in any string-valued field (paths, response content/file, headers, etc.)
+across all plugins.
+
+```yaml
+plugin: rest
+vars:
+  api_base_path: /api/v2
+  default_host: example.com
+
+resources:
+  - path: ${var.api_base_path}/users
+    response:
+      content: '{"host": "${var.default_host}"}'
+
+  - path: ${var.api_base_path}/items
+    response:
+      content: '{"host": "${var.default_host}"}'
+```
+
+| Syntax | Purpose | Example |
+|--------|---------|---------|
+| `${var.NAME}` | Substitute config-level variable | `${var.api_base_path}` |
+| `${var.NAME:-default}` | Substitute with default if not defined | `${var.region:-us-east-1}` |
+
+Environment variables are substituted before config variables, so a variable
+value may itself contain an `${env.VAR_NAME}` reference. Undefined variable
+references without a default are left intact and a warning is logged at startup.
+
 ## Usage Examples
 
 ### Basic Setup

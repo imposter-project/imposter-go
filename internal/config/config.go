@@ -244,6 +244,9 @@ func parseConfig(path string, imposterConfig *ImposterConfig) ([]Config, error) 
 	// Substitute environment variables
 	data = []byte(substituteEnvVars(string(data)))
 
+	// Substitute config-level variables defined in the top-level `vars` section
+	data = []byte(substituteConfigVars(string(data), path))
+
 	var configs []Config
 
 	// Transform legacy config if legacy support is enabled
@@ -294,6 +297,51 @@ func parseMultipleYAMLDocuments(data []byte) ([]Config, error) {
 	}
 
 	return configs, nil
+}
+
+var configVarRefRegex = regexp.MustCompile(`\$\{var\.([A-Za-z0-9_]+)(:-([^}]*))?\}`)
+
+// extractConfigVars reads the top-level `vars` section from every YAML document
+// in the file and merges them into a single key-value map. Later documents take
+// precedence over earlier ones for overlapping keys.
+func extractConfigVars(data []byte) map[string]string {
+	vars := make(map[string]string)
+
+	type varsOnly struct {
+		Vars map[string]string `yaml:"vars"`
+	}
+
+	decoder := yaml.NewDecoder(strings.NewReader(string(data)))
+	for {
+		var doc varsOnly
+		if err := decoder.Decode(&doc); err != nil {
+			break
+		}
+		for k, v := range doc.Vars {
+			vars[k] = v
+		}
+	}
+	return vars
+}
+
+// substituteConfigVars replaces ${var.NAME} and ${var.NAME:-default} references
+// with values from the top-level `vars` section, resolved at config parse time.
+// Undefined references without a default are left intact and a warning is logged.
+func substituteConfigVars(content string, path string) string {
+	vars := extractConfigVars([]byte(content))
+
+	return configVarRefRegex.ReplaceAllStringFunc(content, func(match string) string {
+		groups := configVarRefRegex.FindStringSubmatch(match)
+		name := groups[1]
+		if value, exists := vars[name]; exists {
+			return value
+		}
+		if groups[2] != "" {
+			return groups[3]
+		}
+		logger.Warnf("undefined config variable ${var.%s} referenced in %s", name, path)
+		return match
+	})
 }
 
 // substituteEnvVars replaces ${env.VAR} and ${env.VAR:-default} with environment variable values
