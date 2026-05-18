@@ -110,6 +110,7 @@ func newOpenAPIParser(specFile string, validate bool, opts parserOptions) (OpenA
 			return nil, fmt.Errorf("cannot parse external reference URL: %w", err)
 		}
 		docCfg.BaseURL = u
+		docCfg.AllowRemoteReferences = true
 		logger.Infof("external base URL set to: %s", u.String())
 	}
 
