@@ -39,7 +39,7 @@ jobs:
       run: go test -v ./...
 
   release:
-    needs: [docker, publish-plugins]
+    needs: [docker-manifest, publish-plugins]
     runs-on: ubuntu-latest-l
     timeout-minutes: 15
     if: startsWith(github.ref, 'refs/tags/v')
@@ -62,10 +62,10 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  dry-run:
+  goreleaser-snapshot:
     needs: build
     runs-on: ubuntu-latest-l
-    timeout-minutes: 20
+    timeout-minutes: 10
     if: github.ref == 'refs/heads/main'
     steps:
     - uses: actions/checkout@v6
@@ -84,28 +84,34 @@ jobs:
         version: latest
         args: release --snapshot --clean
 
+  docker-dry-run:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [linux/amd64, linux/arm64]
+        image: [core, all]
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    steps:
+    - uses: actions/checkout@v6
+
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v4
 
-    - name: Build Docker image - core (dry run)
+    - name: Build Docker image (dry run)
       uses: docker/build-push-action@v7
       with:
         context: .
-        file: ./distro/core/Dockerfile
-        platforms: linux/amd64,linux/arm64
+        file: ./distro/${{ matrix.image }}/Dockerfile
+        platforms: ${{ matrix.platform }}
         push: false
-        tags: outofcoffee/imposter:5-beta
-        build-args: |
-          VERSION=dev
-
-    - name: Build Docker image - all (dry run)
-      uses: docker/build-push-action@v7
-      with:
-        context: .
-        file: ./distro/all/Dockerfile
-        platforms: linux/amd64,linux/arm64
-        push: false
-        tags: outofcoffee/imposter-all:5-beta
         build-args: |
           VERSION=dev
 
@@ -162,11 +168,25 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.PLUGIN_REPO_TOKEN }}
 
-  docker:
+  docker-build:
     needs: build
-    runs-on: ubuntu-latest-l
-    timeout-minutes: 20
     if: startsWith(github.ref, 'refs/tags/v')
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [linux/amd64, linux/arm64]
+        image: [core, all]
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+          - image: core
+            repo: outofcoffee/imposter
+          - image: all
+            repo: outofcoffee/imposter-all
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
     steps:
     - uses: actions/checkout@v6
       with:
@@ -185,28 +205,75 @@ jobs:
       id: version
       run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
-    - name: Build and push Docker image - core
+    - name: Build and push by digest
+      id: build
       uses: docker/build-push-action@v7
       with:
         context: .
-        file: ./distro/core/Dockerfile
-        platforms: linux/amd64,linux/arm64
-        push: true
-        tags: |
-          outofcoffee/imposter:5-beta
-          outofcoffee/imposter:${{ steps.version.outputs.VERSION }}-beta
+        file: ./distro/${{ matrix.image }}/Dockerfile
+        platforms: ${{ matrix.platform }}
+        outputs: type=image,name=${{ matrix.repo }},push-by-digest=true,name-canonical=true,push=true
         build-args: |
           VERSION=${{ steps.version.outputs.VERSION }}
 
-    - name: Build and push Docker image - all
-      uses: docker/build-push-action@v7
+    - name: Export digest
+      run: |
+        mkdir -p /tmp/digests
+        digest="${{ steps.build.outputs.digest }}"
+        touch "/tmp/digests/${digest#sha256:}"
+
+    - name: Sanitise platform for artifact name
+      id: platform
+      run: echo "slug=${PLATFORM//\//-}" >> $GITHUB_OUTPUT
+      env:
+        PLATFORM: ${{ matrix.platform }}
+
+    - name: Upload digest
+      uses: actions/upload-artifact@v4
       with:
-        context: .
-        file: ./distro/all/Dockerfile
-        platforms: linux/amd64,linux/arm64
-        push: true
-        tags: |
-          outofcoffee/imposter-all:5-beta
-          outofcoffee/imposter-all:${{ steps.version.outputs.VERSION }}-beta
-        build-args: |
-          VERSION=${{ steps.version.outputs.VERSION }}
+        name: digests-${{ matrix.image }}-${{ steps.platform.outputs.slug }}
+        path: /tmp/digests/*
+        if-no-files-found: error
+        retention-days: 1
+
+  docker-manifest:
+    needs: docker-build
+    if: startsWith(github.ref, 'refs/tags/v')
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: core
+            repo: outofcoffee/imposter
+          - image: all
+            repo: outofcoffee/imposter-all
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+    - name: Download digests
+      uses: actions/download-artifact@v4
+      with:
+        path: /tmp/digests
+        pattern: digests-${{ matrix.image }}-*
+        merge-multiple: true
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v4
+
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v4
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Extract version
+      id: version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+    - name: Create manifest list and push
+      working-directory: /tmp/digests
+      run: |
+        docker buildx imagetools create \
+          -t ${{ matrix.repo }}:5-beta \
+          -t ${{ matrix.repo }}:${{ steps.version.outputs.VERSION }}-beta \
+          $(printf '${{ matrix.repo }}@sha256:%s ' *)
