@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.18.0] - 2026-05-21
+### Added
+- feat: add config-level variables under 'vars' section (#69)
+
+### Changed
+- build(deps): bump go-minor-and-patch group
+- build(deps): bump pyyaml and jsonschema in validate_config tool
+- ci: use native ARM runners for multi-arch Docker builds (#60)
+
 ## [5.17.2] - 2026-04-24
 ### Changed
 - build(deps): bump golang in /distro/all in the docker-images group (#39)
