@@ -431,6 +431,45 @@ resources:
 	require.True(t, metrics.Continue)
 }
 
+func TestLoadConfig_InterceptorsWithBasePath(t *testing.T) {
+	tempDir := t.TempDir()
+
+	imposterConfig := &ImposterConfig{}
+
+	configContent := `plugin: rest
+basePath: /api/v1
+interceptors:
+  - path: /auth
+    method: POST
+    continue: false
+  - method: GET
+    continue: true
+resources:
+  - path: /test
+    response:
+      content: test response
+      statusCode: 200`
+
+	err := os.WriteFile(filepath.Join(tempDir, "test-config.yaml"), []byte(configContent), 0644)
+	require.NoError(t, err)
+
+	configs := LoadConfig(tempDir, imposterConfig)
+	require.Len(t, configs, 1)
+
+	cfg := configs[0]
+	require.Equal(t, "/api/v1", cfg.BasePath)
+	require.Len(t, cfg.Interceptors, 2)
+
+	// Interceptor with a path should be prefixed with the basePath
+	require.Equal(t, "/api/v1/auth", cfg.Interceptors[0].Path)
+
+	// Interceptor without a path matches all requests and must not be prefixed
+	require.Equal(t, "", cfg.Interceptors[1].Path)
+
+	// Resource paths should also be prefixed, as before
+	require.Equal(t, "/api/v1/test", cfg.Resources[0].Path)
+}
+
 func TestLoadConfig_WithSystem(t *testing.T) {
 	// Create a temporary directory for test files
 	tempDir := t.TempDir()
