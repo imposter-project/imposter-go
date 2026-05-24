@@ -26,6 +26,9 @@ type Plugin interface {
 func LoadPlugins(configs []config.Config, imposterConfig *config.ImposterConfig, externalPlugins []external.LoadedPlugin) ([]Plugin, error) {
 	var plugins []Plugin
 	for _, cfg := range configs {
+		if err := config.Validate(&cfg); err != nil {
+			return nil, fmt.Errorf("invalid configuration for plugin '%s': %w", cfg.Plugin, err)
+		}
 		plg, err := loadPlugin(&cfg, imposterConfig, externalPlugins)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load plugin '%s': %w", cfg.Plugin, err)

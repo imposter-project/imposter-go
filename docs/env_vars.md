@@ -68,6 +68,15 @@ When TLS is enabled, the default `IMPOSTER_SERVER_URL` scheme becomes `https`, a
 |----------|---------|---------------|---------|
 | `IMPOSTER_RATE_LIMITER_TTL` | Rate limiter data TTL (seconds) | `300` (5 minutes) | `IMPOSTER_RATE_LIMITER_TTL=600` |
 
+## Passthrough / Upstream Proxy
+
+See [passthrough.md](./passthrough.md) for details on the feature.
+
+| Variable | Purpose | Default Value | Example |
+|----------|---------|---------------|---------|
+| `IMPOSTER_PASSTHROUGH_TIMEOUT` | Timeout for requests forwarded to an upstream (Go duration syntax) | `30s` | `IMPOSTER_PASSTHROUGH_TIMEOUT=5s` |
+| `IMPOSTER_PASSTHROUGH_FORWARDED_HEADERS` | Inject `X-Forwarded-For`, `X-Forwarded-Host`, `X-Forwarded-Proto` and `Via` headers into forwarded requests | `false` | `IMPOSTER_PASSTHROUGH_FORWARDED_HEADERS=true` |
+
 ## OpenAPI
 
 | Variable | Purpose | Default Value | Example |
