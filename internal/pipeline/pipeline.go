@@ -8,6 +8,7 @@ import (
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/exchange"
 	"github.com/imposter-project/imposter-go/internal/matcher"
+	"github.com/imposter-project/imposter-go/internal/passthrough"
 	"github.com/imposter-project/imposter-go/internal/response"
 	"github.com/imposter-project/imposter-go/internal/steps"
 	"github.com/imposter-project/imposter-go/pkg/logger"
@@ -155,6 +156,26 @@ func RunPipeline(
 		if shouldLimit {
 			return
 		}
+	}
+
+	// Forward to an upstream if the matched resource declares a passthrough.
+	// This is mutually exclusive with steps, captures, and response processing.
+	if best.Resource.Passthrough != "" {
+		upstream, ok := cfg.Upstreams[best.Resource.Passthrough]
+		if !ok {
+			logger.Errorf("resource references unknown upstream %q", best.Resource.Passthrough)
+			responseState.StatusCode = http.StatusInternalServerError
+			responseState.Body = []byte("Unknown upstream: " + best.Resource.Passthrough)
+			responseState.HandledWithResource(&best.Resource.BaseResource)
+			return
+		}
+		if err := passthrough.Proxy(exch, upstream); err != nil {
+			logger.Errorf("passthrough to %q failed: %v", best.Resource.Passthrough, err)
+			responseState.StatusCode = http.StatusBadGateway
+			responseState.Body = []byte("Upstream request failed")
+		}
+		responseState.HandledWithResource(&best.Resource.BaseResource)
+		return
 	}
 
 	// Capture request data

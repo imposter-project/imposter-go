@@ -27,6 +27,12 @@ type Response struct {
 	ExampleName string `yaml:"exampleName"`
 }
 
+// Upstream defines a named upstream service that requests can be proxied to
+// when a resource declares a matching `passthrough` value.
+type Upstream struct {
+	URL string `yaml:"url"`
+}
+
 // Delay represents the delay configuration for a response
 type Delay struct {
 	Exact int `yaml:"exact"`
@@ -227,6 +233,7 @@ type BaseResource struct {
 	Response         *Response          `yaml:"response,omitempty"`
 	Concurrency      []ConcurrencyLimit `yaml:"concurrency,omitempty"`
 	Log              string             `yaml:"log,omitempty"`
+	Passthrough      string             `yaml:"passthrough,omitempty"`
 	RuntimeGenerated bool               `yaml:"-"`
 
 	// ResourceID is computed at startup
@@ -391,14 +398,15 @@ func getDefaultValidationBehaviour() ValidationBehaviour {
 
 // Config represents the configuration for an Imposter mock server
 type Config struct {
-	Plugin       string            `yaml:"plugin"`
-	BasePath     string            `yaml:"basePath,omitempty"`
-	Vars         map[string]string `yaml:"vars,omitempty"`
-	Resources    []Resource        `yaml:"resources,omitempty"`
-	Interceptors []Interceptor     `yaml:"interceptors"`
-	System       *System           `yaml:"system,omitempty"`
-	Security     *SecurityConfig   `yaml:"security"`
-	Cors         *CorsConfig       `yaml:"cors,omitempty"`
+	Plugin       string              `yaml:"plugin"`
+	BasePath     string              `yaml:"basePath,omitempty"`
+	Vars         map[string]string   `yaml:"vars,omitempty"`
+	Resources    []Resource          `yaml:"resources,omitempty"`
+	Interceptors []Interceptor       `yaml:"interceptors"`
+	Upstreams    map[string]Upstream `yaml:"upstreams,omitempty"`
+	System       *System             `yaml:"system,omitempty"`
+	Security     *SecurityConfig     `yaml:"security"`
+	Cors         *CorsConfig         `yaml:"cors,omitempty"`
 
 	// SOAP-specific fields
 	WSDLFile string `yaml:"wsdlFile,omitempty"`

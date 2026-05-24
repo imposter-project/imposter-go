@@ -13,6 +13,7 @@ A Go implementation of the [Imposter Mock Engine](https://www.imposter.sh). This
 - ✅ JavaScript [scripting](https://docs.imposter.sh/scripting/)
 - ✅ Support for [steps](https://docs.imposter.sh/steps/)
 - ✅ Support for [simulated delays](https://docs.imposter.sh/performance_simulation/), [simulated errors](https://docs.imposter.sh/failure_simulation/) and [rate limiting](./docs/rate_limiting.md)
+- ✅ Support for [passthrough/proxy to upstream services](./docs/passthrough.md)
 
 ## ⚠️ Limitations
 
