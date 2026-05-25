@@ -6,7 +6,7 @@ require gopkg.in/yaml.v3 v3.0.1
 
 require (
 	github.com/antchfx/xmlquery v1.5.1
-	github.com/brianvoe/gofakeit/v7 v7.14.1
+	github.com/brianvoe/gofakeit/v7 v7.15.0
 	github.com/bufbuild/protocompile v0.14.1
 	github.com/dlclark/regexp2 v1.12.0
 	github.com/dop251/goja v0.0.0-20250531102226-cb187b08699c
@@ -14,11 +14,11 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-plugin v1.8.0
-	github.com/pb33f/libopenapi v0.36.3
+	github.com/pb33f/libopenapi v0.36.6
 	github.com/pb33f/libopenapi-validator v0.13.7
 	github.com/stretchr/testify v1.11.1
 	go.yaml.in/yaml/v4 v4.0.0-rc.4
-	golang.org/x/crypto v0.50.0
+	golang.org/x/crypto v0.52.0
 	golang.org/x/exp v0.0.0-20250606033433-dcc06ee1d476
 	google.golang.org/protobuf v1.36.11
 )
@@ -50,7 +50,7 @@ require (
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
-	golang.org/x/sys v0.43.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20231106174013-bbf56f31fb17 // indirect
 	google.golang.org/grpc v1.61.0 // indirect
 )
@@ -65,6 +65,6 @@ require (
 	github.com/outofcoffee/go-wsdl-parser v0.2.0
 	github.com/outofcoffee/go-xml-example-generator v0.4.2
 	github.com/satori/go.uuid v1.2.0
-	golang.org/x/net v0.52.0
-	golang.org/x/text v0.36.0 // indirect
+	golang.org/x/net v0.54.0
+	golang.org/x/text v0.37.0 // indirect
 )
