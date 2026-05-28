@@ -1,0 +1,33 @@
+plugin: rest
+
+upstreams:
+  # Public test API used here to make the example self-contained.
+  jsonplaceholder:
+    url: "https://jsonplaceholder.typicode.com"
+
+resources:
+  # Mocked locally — overrides the upstream for a single user. The exact path
+  # outscores the wildcard below, so /users/1 returns this fixture.
+  - method: GET
+    path: /users/1
+    response:
+      content: |
+        {
+          "id": 1,
+          "name": "Locally Mocked User",
+          "email": "mock@example.com"
+        }
+      statusCode: 200
+      headers:
+        Content-Type: application/json
+
+  # Anything else under /users is forwarded to the real upstream verbatim.
+  - method: GET
+    path: /users/*
+    passthrough: jsonplaceholder
+
+  # All posts are forwarded — useful when you only care about mocking part of
+  # the surface area and want the rest to behave like the real service.
+  - method: GET
+    path: /posts/*
+    passthrough: jsonplaceholder
