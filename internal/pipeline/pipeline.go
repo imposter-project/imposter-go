@@ -169,7 +169,7 @@ func RunPipeline(
 			responseState.HandledWithResource(&best.Resource.BaseResource)
 			return
 		}
-		if err := passthrough.Proxy(exch, upstream); err != nil {
+		if err := passthrough.Proxy(exch, best.Resource.Passthrough, upstream); err != nil {
 			logger.Errorf("passthrough to %q failed: %v", best.Resource.Passthrough, err)
 			responseState.StatusCode = http.StatusBadGateway
 			responseState.Body = []byte("Upstream request failed")

@@ -65,10 +65,13 @@ func forwardedHeadersEnabled() bool {
 // writes the upstream response (status, headers, body) into exch.ResponseState.
 // Normal response processing (templates, scripts, captures) is bypassed.
 //
+// upstreamName is the configured key (e.g. "myBackend") and is used only for
+// log output; it has no semantic effect.
+//
 // A non-nil error indicates a transport-level failure reaching the upstream;
 // the caller is responsible for translating that into a 502 response. A 4xx or
 // 5xx status returned by the upstream is forwarded verbatim and is not an error.
-func Proxy(exch *exchange.Exchange, upstream config.Upstream) error {
+func Proxy(exch *exchange.Exchange, upstreamName string, upstream config.Upstream) error {
 	srcReq := exch.Request.Request
 
 	targetURL, err := JoinURL(upstream.URL, srcReq.URL.Path, srcReq.URL.RawQuery)
@@ -86,7 +89,8 @@ func Proxy(exch *exchange.Exchange, upstream config.Upstream) error {
 		addForwardedHeaders(srcReq, outReq)
 	}
 
-	logger.Debugf("forwarding request to upstream %s", targetURL)
+	logger.Infof("forwarding to upstream %q - method:%s, url:%s", upstreamName, srcReq.Method, targetURL)
+	start := time.Now()
 	resp, err := getClient().Do(outReq)
 	if err != nil {
 		return fmt.Errorf("failed to forward request to upstream %s: %w", targetURL, err)
@@ -97,6 +101,8 @@ func Proxy(exch *exchange.Exchange, upstream config.Upstream) error {
 	if err != nil {
 		return fmt.Errorf("failed to read upstream response from %s: %w", targetURL, err)
 	}
+
+	logger.Infof("upstream %q responded - status:%d, length:%d, took:%s", upstreamName, resp.StatusCode, len(body), time.Since(start).Round(time.Millisecond))
 
 	rs := exch.ResponseState
 	rs.StatusCode = resp.StatusCode
