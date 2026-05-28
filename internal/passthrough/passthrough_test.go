@@ -42,7 +42,7 @@ func TestProxyForwardsRequestAndReturnsResponse(t *testing.T) {
 	req.Header.Set("Accept-Encoding", "br") // hop-by-hop, must be stripped
 
 	exch := newExchange(req, body)
-	if err := Proxy(exch, config.Upstream{URL: upstream.URL + "/base"}); err != nil {
+	if err := Proxy(exch, "test", config.Upstream{URL: upstream.URL + "/base"}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -89,7 +89,7 @@ func TestProxyForwardsUpstreamErrorStatusVerbatim(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "http://mock.local/thing", nil)
 	exch := newExchange(req, nil)
 
-	if err := Proxy(exch, config.Upstream{URL: upstream.URL}); err != nil {
+	if err := Proxy(exch, "test", config.Upstream{URL: upstream.URL}); err != nil {
 		t.Fatalf("an upstream 5xx must not be a transport error, got: %v", err)
 	}
 	if exch.ResponseState.StatusCode != http.StatusInternalServerError {
@@ -105,7 +105,7 @@ func TestProxyTransportFailureReturnsError(t *testing.T) {
 	exch := newExchange(req, nil)
 
 	// Port 1 is not listening; the dial should fail.
-	if err := Proxy(exch, config.Upstream{URL: "http://127.0.0.1:1"}); err == nil {
+	if err := Proxy(exch, "test", config.Upstream{URL: "http://127.0.0.1:1"}); err == nil {
 		t.Fatal("expected a transport error, got nil")
 	}
 }
@@ -124,7 +124,7 @@ func TestProxyForwardedHeaders(t *testing.T) {
 
 	// Disabled by default.
 	t.Setenv("IMPOSTER_PASSTHROUGH_FORWARDED_HEADERS", "")
-	if err := Proxy(newExchange(req, nil), config.Upstream{URL: upstream.URL}); err != nil {
+	if err := Proxy(newExchange(req, nil), "test", config.Upstream{URL: upstream.URL}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if captured.Get("X-Forwarded-For") != "" {
@@ -133,7 +133,7 @@ func TestProxyForwardedHeaders(t *testing.T) {
 
 	// Enabled via env var.
 	t.Setenv("IMPOSTER_PASSTHROUGH_FORWARDED_HEADERS", "true")
-	if err := Proxy(newExchange(req, nil), config.Upstream{URL: upstream.URL}); err != nil {
+	if err := Proxy(newExchange(req, nil), "test", config.Upstream{URL: upstream.URL}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if got := captured.Get("X-Forwarded-For"); got != "203.0.113.7" {
