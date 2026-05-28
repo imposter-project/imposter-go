@@ -162,6 +162,17 @@ func LoadConfig(configDir string, imposterConfig *ImposterConfig) []Config {
 					}
 				}
 
+				// Prefix interceptor paths with basePath, mirroring resources.
+				// An interceptor without a path matches all requests, so only
+				// prefix the base path when a path is actually configured.
+				if fileConfig.BasePath != "" {
+					for i := range fileConfig.Interceptors {
+						if fileConfig.Interceptors[i].Path != "" {
+							fileConfig.Interceptors[i].Path = urlpath.Join(fileConfig.BasePath, fileConfig.Interceptors[i].Path)
+						}
+					}
+				}
+
 				if fileConfig.Plugin == "openapi" {
 					// Resolve OpenAPI spec path relative to config file
 					if fileConfig.SpecFile != "" && !filepath.IsAbs(fileConfig.SpecFile) {
