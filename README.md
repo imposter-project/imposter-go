@@ -134,6 +134,7 @@ The repository includes several examples demonstrating different features:
 - [Simple REST API](examples/rest/simple) - Basic REST API mocking
 - [SOAP Web Service](examples/soap/simple) - SOAP/WSDL-based service mocking
 - [OpenAPI HTTP API](examples/openapi/v30) - OpenAPI-based service mocking
+- [gRPC/Protobuf API](examples/grpc/simple) - gRPC/Protobuf API mocking
 - [AWS Lambda](examples/lambda) - Running Imposter in AWS Lambda
 
 ---
