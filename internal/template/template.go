@@ -147,8 +147,7 @@ func handleRequestReplacement(field string, reqMatcher *config.RequestMatcher, e
 		return params[key]
 	case strings.HasPrefix(field, "formParams."):
 		key := strings.TrimPrefix(field, "formParams.")
-		_ = exch.Request.Request.ParseForm()
-		return exch.Request.Request.FormValue(key)
+		return utils.GetFormValue(exch.Request.Request, key)
 	default:
 		return ""
 	}

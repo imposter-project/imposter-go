@@ -3,6 +3,7 @@ package template
 import (
 	"bytes"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"strings"
 	"testing"
@@ -76,6 +77,22 @@ func TestProcessTemplate(t *testing.T) {
 				req, _ := http.NewRequest("POST", "/", nil)
 				req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 				return req, body, &config.RequestMatcher{}
+			},
+			imposterConfig: &config.ImposterConfig{ServerPort: "8080"},
+			requestStore:   store.NewRequestStore(),
+			want:           "Form value: value",
+		},
+		{
+			name:     "multipart form parameters",
+			template: "Form value: ${context.request.formParams.key}",
+			setupRequest: func() (*http.Request, string, *config.RequestMatcher) {
+				var buf bytes.Buffer
+				w := multipart.NewWriter(&buf)
+				_ = w.WriteField("key", "value")
+				_ = w.Close()
+				req, _ := http.NewRequest("POST", "/", nil)
+				req.Header.Set("Content-Type", w.FormDataContentType())
+				return req, buf.String(), &config.RequestMatcher{}
 			},
 			imposterConfig: &config.ImposterConfig{ServerPort: "8080"},
 			requestStore:   store.NewRequestStore(),
