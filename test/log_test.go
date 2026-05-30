@@ -157,6 +157,65 @@ func TestInterceptorLog(t *testing.T) {
 	assert.Contains(t, logString, "Authenticated request from agent: Some-User-Agent")
 }
 
+func TestInterceptorLogWithContinue(t *testing.T) {
+	// An interceptor that continues does not become the handling resource,
+	// but its log message must still be emitted.
+	matcher := config.MatchCondition{
+		Value:    "Some-User-Agent",
+		Operator: "EqualTo",
+	}
+
+	interceptor := testutils.NewInterceptorWithLog("GET", "/secured", map[string]config.MatcherUnmarshaler{
+		"User-Agent": {Matcher: matcher},
+	}, nil, true, "Continuing request from agent: ${context.request.headers.User-Agent}")
+
+	configs := []config.Config{
+		{
+			Plugin: "rest",
+			Resources: []config.Resource{
+				testutils.NewResource("GET", "/secured", &config.Response{
+					StatusCode: 200,
+					Content:    "Protected content",
+				}),
+			},
+			Interceptors: []config.Interceptor{interceptor},
+		},
+	}
+
+	imposterConfig := &config.ImposterConfig{
+		ServerPort: "8080",
+	}
+	plugins, err := plugin.LoadPlugins(configs, imposterConfig, nil)
+	require.NoError(t, err)
+
+	// Capture log output
+	var logOutput bytes.Buffer
+	originalOutput, originalError := logger.GetSinks()
+	logger.SetOutputSink(&logOutput)
+	logger.SetErrorSink(&logOutput)
+	defer func() {
+		logger.SetOutputSink(originalOutput)
+		logger.SetErrorSink(originalError)
+	}()
+
+	req, err := http.NewRequest("GET", "/secured", new(strings.Reader))
+	require.NoError(t, err)
+	req.Header.Set("User-Agent", "Some-User-Agent")
+
+	rec := httptest.NewRecorder()
+	handler.HandleRequest(imposterConfig, rec, req, plugins)
+
+	// The downstream resource should handle the request
+	assert.Equal(t, http.StatusOK, rec.Code)
+	responseBody, err := io.ReadAll(rec.Body)
+	require.NoError(t, err)
+	assert.Equal(t, "Protected content", string(responseBody))
+
+	// The continuing interceptor's log message should still be emitted
+	logString := logOutput.String()
+	assert.Contains(t, logString, "Continuing request from agent: Some-User-Agent")
+}
+
 func TestComplexLogTemplates(t *testing.T) {
 	// Test complex template combinations in log messages
 

@@ -11,6 +11,7 @@ import (
 	"github.com/imposter-project/imposter-go/internal/passthrough"
 	"github.com/imposter-project/imposter-go/internal/response"
 	"github.com/imposter-project/imposter-go/internal/steps"
+	"github.com/imposter-project/imposter-go/internal/template"
 	"github.com/imposter-project/imposter-go/pkg/logger"
 )
 
@@ -117,6 +118,14 @@ func RunPipeline(
 			if !interceptorCfg.Continue {
 				responseState.HandledWithResource(&interceptorCfg.BaseResource)
 				return
+			}
+
+			// When the interceptor continues, it will not become the handling
+			// resource, so the main handler will never log it. Emit its log
+			// message here instead, after captures and steps have run so the
+			// template can reference any data they produced.
+			if interceptorCfg.Log != "" {
+				logger.Infoln(template.ProcessTemplate(interceptorCfg.Log, exch, imposterConfig, &interceptorCfg.RequestMatcher))
 			}
 		}
 	}
