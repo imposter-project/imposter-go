@@ -14,8 +14,8 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-plugin v1.8.0
-	github.com/pb33f/libopenapi v0.36.6
-	github.com/pb33f/libopenapi-validator v0.13.7
+	github.com/pb33f/libopenapi v0.37.2
+	github.com/pb33f/libopenapi-validator v0.13.8
 	github.com/stretchr/testify v1.11.1
 	go.yaml.in/yaml/v4 v4.0.0-rc.4
 	golang.org/x/crypto v0.52.0
@@ -65,6 +65,6 @@ require (
 	github.com/outofcoffee/go-wsdl-parser v0.2.0
 	github.com/outofcoffee/go-xml-example-generator v0.4.2
 	github.com/satori/go.uuid v1.2.0
-	golang.org/x/net v0.54.0
+	golang.org/x/net v0.55.0
 	golang.org/x/text v0.37.0 // indirect
 )
