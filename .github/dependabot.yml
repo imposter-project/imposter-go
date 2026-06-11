@@ -18,19 +18,6 @@ updates:
         update-types:
           - "major"
 
-  - package-ecosystem: "pip"
-    directory: "/tools/validate_config"
-    target-branch: "develop"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "09:00"
-      timezone: "Etc/UTC"
-    groups:
-      python-dependencies:
-        patterns:
-          - "*"
-
   - package-ecosystem: "docker"
     directory: "/distro/all"
     target-branch: "develop"
