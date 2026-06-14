@@ -356,7 +356,7 @@ func TestDynamoDBStore_LargeDataSet(t *testing.T) {
 	assert.Len(t, values, count)
 
 	for i := 0; i < count; i++ {
-		key := fmt.Sprintf("%03d", i)
+		key := fmt.Sprintf("item.%03d", i)
 		assert.Equal(t, fmt.Sprintf("value-%d", i), values[key])
 	}
 }
