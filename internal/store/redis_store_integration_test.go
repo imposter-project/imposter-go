@@ -26,7 +26,7 @@ func startRedisContainer(t *testing.T) *redis.RedisContainer {
 	return container
 }
 
-func setupRedisIntegration(t *testing.T, container *redis.RedisContainer) *RedisStoreProvider {
+func setupRedisProvider(t *testing.T, container *redis.RedisContainer) *RedisStoreProvider {
 	t.Helper()
 	ctx := context.Background()
 	endpoint, err := container.Endpoint(ctx, "")
@@ -41,9 +41,9 @@ func setupRedisIntegration(t *testing.T, container *redis.RedisContainer) *Redis
 	return provider
 }
 
-func TestRedisIntegration_BasicCRUD(t *testing.T) {
+func TestRedisStore_BasicCRUD(t *testing.T) {
 	container := startRedisContainer(t)
-	provider := setupRedisIntegration(t, container)
+	provider := setupRedisProvider(t, container)
 
 	t.Run("StoreAndGetValue", func(t *testing.T) {
 		provider.StoreValue("test", "key1", "value1")
@@ -87,9 +87,9 @@ func TestRedisIntegration_BasicCRUD(t *testing.T) {
 	})
 }
 
-func TestRedisIntegration_ComplexValues(t *testing.T) {
+func TestRedisStore_ComplexValues(t *testing.T) {
 	container := startRedisContainer(t)
-	provider := setupRedisIntegration(t, container)
+	provider := setupRedisProvider(t, container)
 
 	t.Run("MapValue", func(t *testing.T) {
 		v := map[string]interface{}{
@@ -143,9 +143,9 @@ func TestRedisIntegration_ComplexValues(t *testing.T) {
 	})
 }
 
-func TestRedisIntegration_GetAllValues(t *testing.T) {
+func TestRedisStore_GetAllValues(t *testing.T) {
 	container := startRedisContainer(t)
-	provider := setupRedisIntegration(t, container)
+	provider := setupRedisProvider(t, container)
 
 	provider.StoreValue("test", "prefix.key1", "value1")
 	provider.StoreValue("test", "prefix.key2", "value2")
@@ -178,9 +178,9 @@ func TestRedisIntegration_GetAllValues(t *testing.T) {
 	})
 }
 
-func TestRedisIntegration_Expiration(t *testing.T) {
+func TestRedisStore_Expiration(t *testing.T) {
 	container := startRedisContainer(t)
-	provider := setupRedisIntegration(t, container)
+	provider := setupRedisProvider(t, container)
 
 	t.Setenv("IMPOSTER_STORE_REDIS_EXPIRY", "1s")
 
@@ -195,9 +195,9 @@ func TestRedisIntegration_Expiration(t *testing.T) {
 	assert.False(t, found, "value should have expired")
 }
 
-func TestRedisIntegration_AtomicOperations(t *testing.T) {
+func TestRedisStore_AtomicOperations(t *testing.T) {
 	container := startRedisContainer(t)
-	provider := setupRedisIntegration(t, container)
+	provider := setupRedisProvider(t, container)
 
 	t.Run("Increment", func(t *testing.T) {
 		val, err := provider.AtomicIncrement("test", "counter", 1)
@@ -246,11 +246,11 @@ func TestRedisIntegration_AtomicOperations(t *testing.T) {
 	})
 }
 
-func TestRedisIntegration_KeyPrefix(t *testing.T) {
+func TestRedisStore_KeyPrefix(t *testing.T) {
 	container := startRedisContainer(t)
 
 	t.Setenv("IMPOSTER_STORE_KEY_PREFIX", "myprefix")
-	provider := setupRedisIntegration(t, container)
+	provider := setupRedisProvider(t, container)
 
 	provider.StoreValue("test", "key1", "value1")
 	val, found := provider.GetValue("test", "key1")
@@ -263,9 +263,9 @@ func TestRedisIntegration_KeyPrefix(t *testing.T) {
 	os.Unsetenv("IMPOSTER_STORE_KEY_PREFIX")
 }
 
-func TestRedisIntegration_StoreIsolation(t *testing.T) {
+func TestRedisStore_StoreIsolation(t *testing.T) {
 	container := startRedisContainer(t)
-	provider := setupRedisIntegration(t, container)
+	provider := setupRedisProvider(t, container)
 
 	provider.StoreValue("store1", "key", "value-from-store1")
 	provider.StoreValue("store2", "key", "value-from-store2")
@@ -285,4 +285,15 @@ func TestRedisIntegration_StoreIsolation(t *testing.T) {
 	val2, found = provider.GetValue("store2", "key")
 	assert.True(t, found, "store2 should be unaffected")
 	assert.Equal(t, "value-from-store2", val2)
+}
+
+func TestRedisStore_InvalidConnection(t *testing.T) {
+	t.Setenv("REDIS_ADDR", "localhost:1")
+
+	provider := &RedisStoreProvider{}
+	provider.InitStores()
+
+	provider.StoreValue("test", "key", "value")
+	_, found := provider.GetValue("test", "key")
+	assert.False(t, found, "expected operation to fail with invalid connection")
 }

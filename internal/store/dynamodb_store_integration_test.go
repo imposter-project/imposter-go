@@ -64,7 +64,7 @@ func createTestTable(t *testing.T, endpoint string) {
 	require.NoError(t, err, "failed to create test table")
 }
 
-func setupDynamoDBIntegration(t *testing.T, container testcontainers.Container) *DynamoDBStoreProvider {
+func setupDynamoDBProvider(t *testing.T, container testcontainers.Container) *DynamoDBStoreProvider {
 	t.Helper()
 	ctx := context.Background()
 	endpoint, err := container.Endpoint(ctx, "http")
@@ -84,9 +84,9 @@ func setupDynamoDBIntegration(t *testing.T, container testcontainers.Container) 
 	return provider
 }
 
-func TestDynamoDBIntegration_BasicCRUD(t *testing.T) {
+func TestDynamoDBStore_BasicCRUD(t *testing.T) {
 	container := startDynamoDBContainer(t)
-	provider := setupDynamoDBIntegration(t, container)
+	provider := setupDynamoDBProvider(t, container)
 
 	t.Run("StoreAndGetValue", func(t *testing.T) {
 		provider.StoreValue("test", "key1", "value1")
@@ -120,9 +120,9 @@ func TestDynamoDBIntegration_BasicCRUD(t *testing.T) {
 	})
 }
 
-func TestDynamoDBIntegration_ComplexValues(t *testing.T) {
+func TestDynamoDBStore_ComplexValues(t *testing.T) {
 	container := startDynamoDBContainer(t)
-	provider := setupDynamoDBIntegration(t, container)
+	provider := setupDynamoDBProvider(t, container)
 
 	t.Run("MapValue", func(t *testing.T) {
 		v := map[string]interface{}{
@@ -176,9 +176,9 @@ func TestDynamoDBIntegration_ComplexValues(t *testing.T) {
 	})
 }
 
-func TestDynamoDBIntegration_GetAllValues(t *testing.T) {
+func TestDynamoDBStore_GetAllValues(t *testing.T) {
 	container := startDynamoDBContainer(t)
-	provider := setupDynamoDBIntegration(t, container)
+	provider := setupDynamoDBProvider(t, container)
 
 	provider.StoreValue("test", "prefix.key1", "value1")
 	provider.StoreValue("test", "prefix.key2", "value2")
@@ -206,9 +206,9 @@ func TestDynamoDBIntegration_GetAllValues(t *testing.T) {
 	})
 }
 
-func TestDynamoDBIntegration_TTL(t *testing.T) {
+func TestDynamoDBStore_TTL(t *testing.T) {
 	container := startDynamoDBContainer(t)
-	provider := setupDynamoDBIntegration(t, container)
+	provider := setupDynamoDBProvider(t, container)
 
 	t.Setenv("IMPOSTER_STORE_DYNAMODB_TTL", "3600")
 
@@ -225,9 +225,9 @@ func TestDynamoDBIntegration_TTL(t *testing.T) {
 	assert.NotNil(t, result.Item["ttl"], "TTL attribute should be set")
 }
 
-func TestDynamoDBIntegration_CustomTTLAttribute(t *testing.T) {
+func TestDynamoDBStore_CustomTTLAttribute(t *testing.T) {
 	container := startDynamoDBContainer(t)
-	provider := setupDynamoDBIntegration(t, container)
+	provider := setupDynamoDBProvider(t, container)
 
 	t.Setenv("IMPOSTER_STORE_DYNAMODB_TTL", "3600")
 	t.Setenv("IMPOSTER_STORE_DYNAMODB_TTL_ATTRIBUTE", "expiresAt")
@@ -246,9 +246,9 @@ func TestDynamoDBIntegration_CustomTTLAttribute(t *testing.T) {
 	assert.Nil(t, result.Item["ttl"], "default TTL attribute should not be set")
 }
 
-func TestDynamoDBIntegration_AtomicOperations(t *testing.T) {
+func TestDynamoDBStore_AtomicOperations(t *testing.T) {
 	container := startDynamoDBContainer(t)
-	provider := setupDynamoDBIntegration(t, container)
+	provider := setupDynamoDBProvider(t, container)
 
 	t.Run("Increment", func(t *testing.T) {
 		val, err := provider.AtomicIncrement("test", "counter", 1)
@@ -293,11 +293,11 @@ func TestDynamoDBIntegration_AtomicOperations(t *testing.T) {
 	})
 }
 
-func TestDynamoDBIntegration_KeyPrefix(t *testing.T) {
+func TestDynamoDBStore_KeyPrefix(t *testing.T) {
 	container := startDynamoDBContainer(t)
 
 	t.Setenv("IMPOSTER_STORE_KEY_PREFIX", "myprefix")
-	provider := setupDynamoDBIntegration(t, container)
+	provider := setupDynamoDBProvider(t, container)
 
 	provider.StoreValue("test", "key1", "value1")
 	val, found := provider.GetValue("test", "key1")
@@ -317,9 +317,9 @@ func TestDynamoDBIntegration_KeyPrefix(t *testing.T) {
 	os.Unsetenv("IMPOSTER_STORE_KEY_PREFIX")
 }
 
-func TestDynamoDBIntegration_StoreIsolation(t *testing.T) {
+func TestDynamoDBStore_StoreIsolation(t *testing.T) {
 	container := startDynamoDBContainer(t)
-	provider := setupDynamoDBIntegration(t, container)
+	provider := setupDynamoDBProvider(t, container)
 
 	provider.StoreValue("store1", "key", "value-from-store1")
 	provider.StoreValue("store2", "key", "value-from-store2")
@@ -333,9 +333,9 @@ func TestDynamoDBIntegration_StoreIsolation(t *testing.T) {
 	assert.Equal(t, "value-from-store2", val2)
 }
 
-func TestDynamoDBIntegration_LargeDataSet(t *testing.T) {
+func TestDynamoDBStore_LargeDataSet(t *testing.T) {
 	container := startDynamoDBContainer(t)
-	provider := setupDynamoDBIntegration(t, container)
+	provider := setupDynamoDBProvider(t, container)
 
 	const count = 100
 	for i := 0; i < count; i++ {
@@ -349,4 +349,31 @@ func TestDynamoDBIntegration_LargeDataSet(t *testing.T) {
 		key := fmt.Sprintf("%03d", i)
 		assert.Equal(t, fmt.Sprintf("value-%d", i), values[key])
 	}
+}
+
+func TestDynamoDBStore_InvalidCredentials(t *testing.T) {
+	t.Setenv("AWS_REGION", "us-east-1")
+	t.Setenv("AWS_ACCESS_KEY_ID", "invalid-key")
+	t.Setenv("AWS_SECRET_ACCESS_KEY", "invalid-secret")
+	t.Setenv("IMPOSTER_STORE_DYNAMODB_TABLE", "nonexistent")
+	t.Setenv("IMPOSTER_STORE_DYNAMODB_REGION", "us-east-1")
+
+	provider := &DynamoDBStoreProvider{}
+	provider.InitStores()
+
+	provider.StoreValue("test", "key", "value")
+	_, found := provider.GetValue("test", "key")
+	assert.False(t, found, "expected operation to fail with invalid credentials")
+}
+
+func TestDynamoDBStore_TTLAttributeName(t *testing.T) {
+	t.Run("CustomTTLAttribute", func(t *testing.T) {
+		t.Setenv("IMPOSTER_STORE_DYNAMODB_TTL_ATTRIBUTE", "customTTL")
+		assert.Equal(t, "customTTL", getTTLAttributeName())
+	})
+
+	t.Run("DefaultTTLAttribute", func(t *testing.T) {
+		t.Setenv("IMPOSTER_STORE_DYNAMODB_TTL_ATTRIBUTE", "")
+		assert.Equal(t, "ttl", getTTLAttributeName())
+	})
 }
