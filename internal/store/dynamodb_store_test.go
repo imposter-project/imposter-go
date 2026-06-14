@@ -1,194 +1,389 @@
+//go:build integration
+
 package store
 
 import (
+	"context"
+	"fmt"
 	"os"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-func setupDynamoDBTest(t *testing.T) *DynamoDBStoreProvider {
-	// Skip if DynamoDB configuration is not available
-	tableName := os.Getenv("IMPOSTER_STORE_DYNAMODB_TABLE")
-	if tableName == "" {
-		t.Skip("Skipping DynamoDB tests: IMPOSTER_STORE_DYNAMODB_TABLE not set")
+const testTableName = "imposter-store-test"
+
+func startDynamoDBContainer(t *testing.T) testcontainers.Container {
+	t.Helper()
+	ctx := context.Background()
+	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: testcontainers.ContainerRequest{
+			Image:        "amazon/dynamodb-local:latest",
+			ExposedPorts: []string{"8000/tcp"},
+			Cmd:          []string{"-jar", "DynamoDBLocal.jar", "-inMemory"},
+			WaitingFor:   wait.ForListeningPort("8000/tcp"),
+		},
+		Started: true,
+	})
+	require.NoError(t, err, "failed to start DynamoDB Local container")
+	t.Cleanup(func() {
+		require.NoError(t, container.Terminate(ctx))
+	})
+	return container
+}
+
+func createTestTable(t *testing.T, endpoint string) {
+	t.Helper()
+	sess := session.Must(session.NewSession(&aws.Config{
+		Region:      aws.String("us-east-1"),
+		Endpoint:    aws.String(endpoint),
+		Credentials: credentials.NewStaticCredentials("dummy", "dummy", ""),
+	}))
+	ddb := dynamodb.New(sess)
+
+	input := &dynamodb.CreateTableInput{
+		TableName: aws.String(testTableName),
+		AttributeDefinitions: []*dynamodb.AttributeDefinition{
+			{AttributeName: aws.String("StoreName"), AttributeType: aws.String("S")},
+			{AttributeName: aws.String("Key"), AttributeType: aws.String("S")},
+		},
+		KeySchema: []*dynamodb.KeySchemaElement{
+			{AttributeName: aws.String("StoreName"), KeyType: aws.String("HASH")},
+			{AttributeName: aws.String("Key"), KeyType: aws.String("RANGE")},
+		},
+		BillingMode: aws.String("PAY_PER_REQUEST"),
 	}
+
+	var err error
+	for attempt := 0; attempt < 5; attempt++ {
+		_, err = ddb.CreateTable(input)
+		if err == nil {
+			return
+		}
+		time.Sleep(time.Duration(attempt+1) * 500 * time.Millisecond)
+	}
+	require.NoError(t, err, "failed to create test table after retries")
+}
+
+func setupDynamoDBProvider(t *testing.T, container testcontainers.Container) *DynamoDBStoreProvider {
+	t.Helper()
+	ctx := context.Background()
+	endpoint, err := container.Endpoint(ctx, "http")
+	require.NoError(t, err)
+
+	createTestTable(t, endpoint)
+
+	t.Setenv("AWS_ENDPOINT_URL", endpoint)
+	t.Setenv("AWS_REGION", "us-east-1")
+	t.Setenv("AWS_ACCESS_KEY_ID", "dummy")
+	t.Setenv("AWS_SECRET_ACCESS_KEY", "dummy")
+	t.Setenv("IMPOSTER_STORE_DYNAMODB_TABLE", testTableName)
+	t.Setenv("IMPOSTER_STORE_DYNAMODB_REGION", "us-east-1")
 
 	provider := &DynamoDBStoreProvider{}
 	provider.InitStores()
-
-	// Clear test data
-	clearDynamoDBTable(t, provider)
-
 	return provider
 }
 
-func clearDynamoDBTable(t *testing.T, provider *DynamoDBStoreProvider) {
-	// Scan for all items
-	input := &dynamodb.ScanInput{
-		TableName: aws.String(provider.tableName),
-	}
-
-	result, err := provider.ddb.Scan(input)
-	if err != nil {
-		t.Fatalf("Failed to scan table: %v", err)
-	}
-
-	// Delete all items
-	for _, item := range result.Items {
-		_, err := provider.ddb.DeleteItem(&dynamodb.DeleteItemInput{
-			TableName: aws.String(provider.tableName),
-			Key: map[string]*dynamodb.AttributeValue{
-				"StoreName": item["StoreName"],
-				"Key":       item["Key"],
-			},
-		})
-		if err != nil {
-			t.Fatalf("Failed to delete item: %v", err)
-		}
-	}
-}
-
-func TestDynamoDBStore(t *testing.T) {
-	provider := setupDynamoDBTest(t)
+func TestDynamoDBStore_BasicCRUD(t *testing.T) {
+	container := startDynamoDBContainer(t)
+	provider := setupDynamoDBProvider(t, container)
 
 	t.Run("StoreAndGetValue", func(t *testing.T) {
 		provider.StoreValue("test", "key1", "value1")
 		val, found := provider.GetValue("test", "key1")
-		if !found {
-			t.Error("Expected to find value but got not found")
-		}
-		if val != "value1" {
-			t.Errorf("Expected value1 but got %v", val)
-		}
+		assert.True(t, found)
+		assert.Equal(t, "value1", val)
 	})
 
 	t.Run("GetNonExistentValue", func(t *testing.T) {
 		_, found := provider.GetValue("test", "nonexistent")
-		if found {
-			t.Error("Expected not found for nonexistent key")
-		}
+		assert.False(t, found)
 	})
 
-	t.Run("GetAllValues", func(t *testing.T) {
-		provider.StoreValue("test", "prefix.key1", "value1")
-		provider.StoreValue("test", "prefix.key2", "value2")
-		provider.StoreValue("test", "other.key3", "value3")
-
-		values := provider.GetAllValues("test", "prefix")
-		if len(values) != 2 {
-			t.Errorf("Expected 2 values but got %d", len(values))
-		}
-		if values["key1"] != "value1" || values["key2"] != "value2" {
-			t.Error("Got unexpected values")
-		}
+	t.Run("OverwriteValue", func(t *testing.T) {
+		provider.StoreValue("test", "overwrite", "first")
+		provider.StoreValue("test", "overwrite", "second")
+		val, found := provider.GetValue("test", "overwrite")
+		assert.True(t, found)
+		assert.Equal(t, "second", val)
 	})
 
 	t.Run("DeleteValue", func(t *testing.T) {
-		provider.StoreValue("test", "key1", "value1")
-		provider.DeleteValue("test", "key1")
-		_, found := provider.GetValue("test", "key1")
-		if found {
-			t.Error("Value should have been deleted")
-		}
+		provider.StoreValue("test", "todelete", "value")
+		provider.DeleteValue("test", "todelete")
+		_, found := provider.GetValue("test", "todelete")
+		assert.False(t, found)
 	})
 
-	t.Run("StoreComplexValue", func(t *testing.T) {
-		complexValue := map[string]interface{}{
+	t.Run("DeleteNonExistentValue", func(t *testing.T) {
+		provider.DeleteValue("test", "never-existed")
+	})
+}
+
+func TestDynamoDBStore_ComplexValues(t *testing.T) {
+	container := startDynamoDBContainer(t)
+	provider := setupDynamoDBProvider(t, container)
+
+	t.Run("MapValue", func(t *testing.T) {
+		v := map[string]interface{}{
 			"name": "test",
-			"age":  30,
+			"age":  float64(30),
 			"nested": map[string]interface{}{
 				"key": "value",
 			},
 		}
-		provider.StoreValue("test", "complex", complexValue)
+		provider.StoreValue("test", "complex", v)
 		val, found := provider.GetValue("test", "complex")
-		if !found {
-			t.Error("Expected to find complex value")
-		}
-		mapVal, ok := val.(map[string]interface{})
-		if !ok {
-			t.Error("Expected map type for complex value")
-		}
-		if mapVal["name"] != "test" || mapVal["age"] != 30 {
-			t.Error("Complex value not stored correctly")
-		}
+		require.True(t, found)
+		m, ok := val.(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, "test", m["name"])
+		assert.Equal(t, float64(30), m["age"])
+		nested, ok := m["nested"].(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, "value", nested["key"])
 	})
 
-	t.Run("TTL", func(t *testing.T) {
-		// Set a TTL for testing
-		os.Setenv("IMPOSTER_STORE_DYNAMODB_TTL", "1")
-		defer os.Unsetenv("IMPOSTER_STORE_DYNAMODB_TTL")
-
-		provider.StoreValue("test", "expiring", "value")
-
-		// Note: We can't effectively test TTL expiration in DynamoDB
-		// as it's eventually consistent and can take up to 48 hours
-		// Instead, we'll verify the TTL attribute was set
-		input := &dynamodb.GetItemInput{
-			TableName: aws.String(provider.tableName),
-			Key: map[string]*dynamodb.AttributeValue{
-				"StoreName": {S: aws.String("test")},
-				"Key":       {S: aws.String("expiring")},
-			},
-		}
-
-		result, err := provider.ddb.GetItem(input)
-		if err != nil {
-			t.Fatalf("Failed to get item: %v", err)
-		}
-
-		if result.Item["ttl"] == nil {
-			t.Error("TTL attribute not set")
-		}
+	t.Run("ArrayValue", func(t *testing.T) {
+		v := []interface{}{"a", "b", "c"}
+		provider.StoreValue("test", "arr", v)
+		val, found := provider.GetValue("test", "arr")
+		require.True(t, found)
+		arr, ok := val.([]interface{})
+		require.True(t, ok)
+		assert.Equal(t, []interface{}{"a", "b", "c"}, arr)
 	})
-}
 
-func TestDynamoDBConnection(t *testing.T) {
-	t.Run("InvalidCredentials", func(t *testing.T) {
-		// Save current AWS config
-		origRegion := os.Getenv("AWS_REGION")
-		origKey := os.Getenv("AWS_ACCESS_KEY_ID")
-		origSecret := os.Getenv("AWS_SECRET_ACCESS_KEY")
+	t.Run("NumericValue", func(t *testing.T) {
+		provider.StoreValue("test", "num", 42.5)
+		val, found := provider.GetValue("test", "num")
+		require.True(t, found)
+		assert.Equal(t, 42.5, val)
+	})
 
-		// Set invalid credentials
-		os.Setenv("AWS_REGION", "invalid-region")
-		os.Setenv("AWS_ACCESS_KEY_ID", "invalid-key")
-		os.Setenv("AWS_SECRET_ACCESS_KEY", "invalid-secret")
-		defer func() {
-			// Restore AWS config
-			os.Setenv("AWS_REGION", origRegion)
-			os.Setenv("AWS_ACCESS_KEY_ID", origKey)
-			os.Setenv("AWS_SECRET_ACCESS_KEY", origSecret)
-		}()
+	t.Run("BooleanValue", func(t *testing.T) {
+		provider.StoreValue("test", "flag", true)
+		val, found := provider.GetValue("test", "flag")
+		require.True(t, found)
+		assert.Equal(t, true, val)
+	})
 
-		provider := &DynamoDBStoreProvider{}
-		provider.InitStores()
-
-		// Operations should fail gracefully
-		provider.StoreValue("test", "key", "value")
-		_, found := provider.GetValue("test", "key")
-		if found {
-			t.Error("Expected operation to fail with invalid credentials")
-		}
+	t.Run("NullValue", func(t *testing.T) {
+		provider.StoreValue("test", "null", nil)
+		val, found := provider.GetValue("test", "null")
+		require.True(t, found)
+		assert.Nil(t, val)
 	})
 }
 
-func TestDynamoDBTTLAttribute(t *testing.T) {
+func TestDynamoDBStore_GetAllValues(t *testing.T) {
+	container := startDynamoDBContainer(t)
+	provider := setupDynamoDBProvider(t, container)
+
+	provider.StoreValue("test", "prefix.key1", "value1")
+	provider.StoreValue("test", "prefix.key2", "value2")
+	provider.StoreValue("test", "other.key3", "value3")
+
+	t.Run("WithMatchingPrefix", func(t *testing.T) {
+		values := provider.GetAllValues("test", "prefix")
+		assert.Len(t, values, 2)
+		assert.Equal(t, "value1", values["prefix.key1"])
+		assert.Equal(t, "value2", values["prefix.key2"])
+	})
+
+	t.Run("WithNoMatchingPrefix", func(t *testing.T) {
+		values := provider.GetAllValues("test", "nomatch")
+		assert.Empty(t, values)
+	})
+
+	t.Run("AcrossStores", func(t *testing.T) {
+		provider.StoreValue("store-a", "shared.k", "from-a")
+		provider.StoreValue("store-b", "shared.k", "from-b")
+		valA := provider.GetAllValues("store-a", "shared")
+		valB := provider.GetAllValues("store-b", "shared")
+		assert.Equal(t, "from-a", valA["shared.k"])
+		assert.Equal(t, "from-b", valB["shared.k"])
+	})
+}
+
+func TestDynamoDBStore_TTL(t *testing.T) {
+	container := startDynamoDBContainer(t)
+	provider := setupDynamoDBProvider(t, container)
+
+	t.Setenv("IMPOSTER_STORE_DYNAMODB_TTL", "3600")
+
+	provider.StoreValue("test", "with-ttl", "value")
+
+	result, err := provider.ddb.GetItem(&dynamodb.GetItemInput{
+		TableName: aws.String(provider.tableName),
+		Key: map[string]*dynamodb.AttributeValue{
+			"StoreName": {S: aws.String("test")},
+			"Key":       {S: aws.String("with-ttl")},
+		},
+	})
+	require.NoError(t, err)
+	assert.NotNil(t, result.Item["ttl"], "TTL attribute should be set")
+}
+
+func TestDynamoDBStore_CustomTTLAttribute(t *testing.T) {
+	container := startDynamoDBContainer(t)
+	provider := setupDynamoDBProvider(t, container)
+
+	t.Setenv("IMPOSTER_STORE_DYNAMODB_TTL", "3600")
+	t.Setenv("IMPOSTER_STORE_DYNAMODB_TTL_ATTRIBUTE", "expiresAt")
+
+	provider.StoreValue("test", "custom-ttl", "value")
+
+	result, err := provider.ddb.GetItem(&dynamodb.GetItemInput{
+		TableName: aws.String(provider.tableName),
+		Key: map[string]*dynamodb.AttributeValue{
+			"StoreName": {S: aws.String("test")},
+			"Key":       {S: aws.String("custom-ttl")},
+		},
+	})
+	require.NoError(t, err)
+	assert.NotNil(t, result.Item["expiresAt"], "custom TTL attribute should be set")
+	assert.Nil(t, result.Item["ttl"], "default TTL attribute should not be set")
+}
+
+func TestDynamoDBStore_AtomicOperations(t *testing.T) {
+	container := startDynamoDBContainer(t)
+	provider := setupDynamoDBProvider(t, container)
+
+	t.Run("Increment", func(t *testing.T) {
+		val, err := provider.AtomicIncrement("test", "counter", 1)
+		require.NoError(t, err)
+		assert.Equal(t, int64(1), val)
+
+		val, err = provider.AtomicIncrement("test", "counter", 5)
+		require.NoError(t, err)
+		assert.Equal(t, int64(6), val)
+	})
+
+	t.Run("Decrement", func(t *testing.T) {
+		val, err := provider.AtomicIncrement("test", "dec-counter", 10)
+		require.NoError(t, err)
+		assert.Equal(t, int64(10), val)
+
+		val, err = provider.AtomicDecrement("test", "dec-counter", 3)
+		require.NoError(t, err)
+		assert.Equal(t, int64(7), val)
+	})
+
+	t.Run("ConcurrentIncrements", func(t *testing.T) {
+		const goroutines = 50
+		const incrementsPerGoroutine = 20
+		var wg sync.WaitGroup
+		wg.Add(goroutines)
+
+		for i := 0; i < goroutines; i++ {
+			go func() {
+				defer wg.Done()
+				for j := 0; j < incrementsPerGoroutine; j++ {
+					_, err := provider.AtomicIncrement("test", "concurrent", 1)
+					assert.NoError(t, err)
+				}
+			}()
+		}
+		wg.Wait()
+
+		val, err := provider.AtomicIncrement("test", "concurrent", 0)
+		require.NoError(t, err)
+		assert.Equal(t, int64(goroutines*incrementsPerGoroutine), val)
+	})
+}
+
+func TestDynamoDBStore_KeyPrefix(t *testing.T) {
+	container := startDynamoDBContainer(t)
+
+	t.Setenv("IMPOSTER_STORE_KEY_PREFIX", "myprefix")
+	provider := setupDynamoDBProvider(t, container)
+
+	provider.StoreValue("test", "key1", "value1")
+	val, found := provider.GetValue("test", "key1")
+	assert.True(t, found)
+	assert.Equal(t, "value1", val)
+
+	result, err := provider.ddb.GetItem(&dynamodb.GetItemInput{
+		TableName: aws.String(provider.tableName),
+		Key: map[string]*dynamodb.AttributeValue{
+			"StoreName": {S: aws.String("test")},
+			"Key":       {S: aws.String("myprefix.key1")},
+		},
+	})
+	require.NoError(t, err)
+	assert.NotNil(t, result.Item, "key should be stored with prefix in DynamoDB")
+
+	os.Unsetenv("IMPOSTER_STORE_KEY_PREFIX")
+}
+
+func TestDynamoDBStore_StoreIsolation(t *testing.T) {
+	container := startDynamoDBContainer(t)
+	provider := setupDynamoDBProvider(t, container)
+
+	provider.StoreValue("store1", "key", "value-from-store1")
+	provider.StoreValue("store2", "key", "value-from-store2")
+
+	val1, found := provider.GetValue("store1", "key")
+	assert.True(t, found)
+	assert.Equal(t, "value-from-store1", val1)
+
+	val2, found := provider.GetValue("store2", "key")
+	assert.True(t, found)
+	assert.Equal(t, "value-from-store2", val2)
+}
+
+func TestDynamoDBStore_LargeDataSet(t *testing.T) {
+	container := startDynamoDBContainer(t)
+	provider := setupDynamoDBProvider(t, container)
+
+	const count = 100
+	for i := 0; i < count; i++ {
+		provider.StoreValue("bulk", fmt.Sprintf("item.%03d", i), fmt.Sprintf("value-%d", i))
+	}
+
+	values := provider.GetAllValues("bulk", "item")
+	assert.Len(t, values, count)
+
+	for i := 0; i < count; i++ {
+		key := fmt.Sprintf("item.%03d", i)
+		assert.Equal(t, fmt.Sprintf("value-%d", i), values[key])
+	}
+}
+
+func TestDynamoDBStore_InvalidCredentials(t *testing.T) {
+	t.Setenv("AWS_REGION", "us-east-1")
+	t.Setenv("AWS_ACCESS_KEY_ID", "invalid-key")
+	t.Setenv("AWS_SECRET_ACCESS_KEY", "invalid-secret")
+	t.Setenv("IMPOSTER_STORE_DYNAMODB_TABLE", "nonexistent")
+	t.Setenv("IMPOSTER_STORE_DYNAMODB_REGION", "us-east-1")
+
+	provider := &DynamoDBStoreProvider{}
+	provider.InitStores()
+
+	provider.StoreValue("test", "key", "value")
+	_, found := provider.GetValue("test", "key")
+	assert.False(t, found, "expected operation to fail with invalid credentials")
+}
+
+func TestDynamoDBStore_TTLAttributeName(t *testing.T) {
 	t.Run("CustomTTLAttribute", func(t *testing.T) {
-		os.Setenv("IMPOSTER_STORE_DYNAMODB_TTL_ATTRIBUTE", "customTTL")
-		defer os.Unsetenv("IMPOSTER_STORE_DYNAMODB_TTL_ATTRIBUTE")
-
-		if getTTLAttributeName() != "customTTL" {
-			t.Error("Expected custom TTL attribute name")
-		}
+		t.Setenv("IMPOSTER_STORE_DYNAMODB_TTL_ATTRIBUTE", "customTTL")
+		assert.Equal(t, "customTTL", getTTLAttributeName())
 	})
 
 	t.Run("DefaultTTLAttribute", func(t *testing.T) {
-		os.Unsetenv("IMPOSTER_STORE_DYNAMODB_TTL_ATTRIBUTE")
-		if getTTLAttributeName() != "ttl" {
-			t.Error("Expected default TTL attribute name")
-		}
+		t.Setenv("IMPOSTER_STORE_DYNAMODB_TTL_ATTRIBUTE", "")
+		assert.Equal(t, "ttl", getTTLAttributeName())
 	})
 }

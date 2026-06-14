@@ -23,9 +23,13 @@ func (p *DynamoDBStoreProvider) InitStores() {
 	if region == "" {
 		region = os.Getenv("AWS_REGION")
 	}
-	sess := session.Must(session.NewSession(&aws.Config{
+	cfg := &aws.Config{
 		Region: aws.String(region),
-	}))
+	}
+	if endpoint := os.Getenv("AWS_ENDPOINT_URL"); endpoint != "" {
+		cfg.Endpoint = aws.String(endpoint)
+	}
+	sess := session.Must(session.NewSession(cfg))
 	p.ddb = dynamodb.New(sess)
 	p.tableName = os.Getenv("IMPOSTER_STORE_DYNAMODB_TABLE")
 }

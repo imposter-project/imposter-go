@@ -1,132 +1,299 @@
+//go:build integration
+
 package store
 
 import (
+	"context"
+	"fmt"
 	"os"
+	"sync"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go/modules/redis"
 )
 
-func setupRedisTest(t *testing.T) *RedisStoreProvider {
-	// Skip if Redis is not available
-	redisAddr := os.Getenv("REDIS_ADDR")
-	if redisAddr == "" {
-		t.Skip("Skipping Redis tests: REDIS_ADDR not set")
-	}
+func startRedisContainer(t *testing.T) *redis.RedisContainer {
+	t.Helper()
+	ctx := context.Background()
+	container, err := redis.Run(ctx, "redis:7-alpine")
+	require.NoError(t, err, "failed to start Redis container")
+	t.Cleanup(func() {
+		require.NoError(t, container.Terminate(ctx))
+	})
+	return container
+}
+
+func setupRedisProvider(t *testing.T, container *redis.RedisContainer) *RedisStoreProvider {
+	t.Helper()
+	ctx := context.Background()
+	endpoint, err := container.Endpoint(ctx, "")
+	require.NoError(t, err)
+
+	t.Setenv("REDIS_ADDR", endpoint)
+	t.Setenv("REDIS_PASSWORD", "")
 
 	provider := &RedisStoreProvider{}
 	provider.InitStores()
-
-	// Clear test data
 	provider.client.FlushDB(provider.ctx)
-
 	return provider
 }
 
-func TestRedisStore(t *testing.T) {
-	provider := setupRedisTest(t)
+func TestRedisStore_BasicCRUD(t *testing.T) {
+	container := startRedisContainer(t)
+	provider := setupRedisProvider(t, container)
 
 	t.Run("StoreAndGetValue", func(t *testing.T) {
 		provider.StoreValue("test", "key1", "value1")
 		val, found := provider.GetValue("test", "key1")
-		if !found {
-			t.Error("Expected to find value but got not found")
-		}
-		if val != "value1" {
-			t.Errorf("Expected value1 but got %v", val)
-		}
+		assert.True(t, found)
+		assert.Equal(t, "value1", val)
 	})
 
 	t.Run("GetNonExistentValue", func(t *testing.T) {
 		_, found := provider.GetValue("test", "nonexistent")
-		if found {
-			t.Error("Expected not found for nonexistent key")
-		}
+		assert.False(t, found)
 	})
 
-	t.Run("GetAllValues", func(t *testing.T) {
-		provider.StoreValue("test", "prefix.key1", "value1")
-		provider.StoreValue("test", "prefix.key2", "value2")
-		provider.StoreValue("test", "other.key3", "value3")
-
-		values := provider.GetAllValues("test", "prefix")
-		if len(values) != 2 {
-			t.Errorf("Expected 2 values but got %d", len(values))
-		}
-		if values["key1"] != "value1" || values["key2"] != "value2" {
-			t.Error("Got unexpected values")
-		}
+	t.Run("OverwriteValue", func(t *testing.T) {
+		provider.StoreValue("test", "overwrite", "first")
+		provider.StoreValue("test", "overwrite", "second")
+		val, found := provider.GetValue("test", "overwrite")
+		assert.True(t, found)
+		assert.Equal(t, "second", val)
 	})
 
 	t.Run("DeleteValue", func(t *testing.T) {
-		provider.StoreValue("test", "key1", "value1")
-		provider.DeleteValue("test", "key1")
-		_, found := provider.GetValue("test", "key1")
-		if found {
-			t.Error("Value should have been deleted")
-		}
+		provider.StoreValue("test", "todelete", "value")
+		provider.DeleteValue("test", "todelete")
+		_, found := provider.GetValue("test", "todelete")
+		assert.False(t, found)
+	})
+
+	t.Run("DeleteNonExistentValue", func(t *testing.T) {
+		provider.DeleteValue("test", "never-existed")
 	})
 
 	t.Run("DeleteStore", func(t *testing.T) {
-		provider.StoreValue("test", "key1", "value1")
-		provider.DeleteStore("test")
-		_, found := provider.GetValue("test", "key1")
-		if found {
-			t.Error("Store should have been deleted")
-		}
+		provider.StoreValue("delstore", "k1", "v1")
+		provider.StoreValue("delstore", "k2", "v2")
+		provider.DeleteStore("delstore")
+		_, found1 := provider.GetValue("delstore", "k1")
+		_, found2 := provider.GetValue("delstore", "k2")
+		assert.False(t, found1)
+		assert.False(t, found2)
 	})
+}
 
-	t.Run("StoreComplexValue", func(t *testing.T) {
-		complexValue := map[string]interface{}{
+func TestRedisStore_ComplexValues(t *testing.T) {
+	container := startRedisContainer(t)
+	provider := setupRedisProvider(t, container)
+
+	t.Run("MapValue", func(t *testing.T) {
+		v := map[string]interface{}{
 			"name": "test",
-			"age":  30,
+			"age":  float64(30),
 			"nested": map[string]interface{}{
 				"key": "value",
 			},
 		}
-		provider.StoreValue("test", "complex", complexValue)
+		provider.StoreValue("test", "complex", v)
 		val, found := provider.GetValue("test", "complex")
-		if !found {
-			t.Error("Expected to find complex value")
-		}
-		mapVal, ok := val.(map[string]interface{})
-		if !ok {
-			t.Error("Expected map type for complex value")
-		}
-		if mapVal["name"] != "test" || mapVal["age"] != 30 {
-			t.Error("Complex value not stored correctly")
-		}
+		require.True(t, found)
+		m, ok := val.(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, "test", m["name"])
+		assert.Equal(t, float64(30), m["age"])
+		nested, ok := m["nested"].(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, "value", nested["key"])
 	})
 
-	t.Run("Expiration", func(t *testing.T) {
-		// Set a short expiration for testing
-		os.Setenv("IMPOSTER_STORE_REDIS_EXPIRY", "1s")
-		defer os.Unsetenv("IMPOSTER_STORE_REDIS_EXPIRY")
+	t.Run("ArrayValue", func(t *testing.T) {
+		v := []interface{}{"a", "b", "c"}
+		provider.StoreValue("test", "arr", v)
+		val, found := provider.GetValue("test", "arr")
+		require.True(t, found)
+		arr, ok := val.([]interface{})
+		require.True(t, ok)
+		assert.Equal(t, []interface{}{"a", "b", "c"}, arr)
+	})
 
-		provider.StoreValue("test", "expiring", "value")
+	t.Run("NumericValue", func(t *testing.T) {
+		provider.StoreValue("test", "num", 42.5)
+		val, found := provider.GetValue("test", "num")
+		require.True(t, found)
+		assert.Equal(t, 42.5, val)
+	})
 
-		// Wait for expiration
-		time.Sleep(2 * time.Second)
+	t.Run("BooleanValue", func(t *testing.T) {
+		provider.StoreValue("test", "flag", true)
+		val, found := provider.GetValue("test", "flag")
+		require.True(t, found)
+		assert.Equal(t, true, val)
+	})
 
-		_, found := provider.GetValue("test", "expiring")
-		if found {
-			t.Error("Value should have expired")
-		}
+	t.Run("NullValue", func(t *testing.T) {
+		provider.StoreValue("test", "null", nil)
+		val, found := provider.GetValue("test", "null")
+		require.True(t, found)
+		assert.Nil(t, val)
 	})
 }
 
-func TestRedisConnection(t *testing.T) {
-	t.Run("InvalidConnection", func(t *testing.T) {
-		os.Setenv("REDIS_ADDR", "localhost:1") // Invalid port
-		defer os.Unsetenv("REDIS_ADDR")
+func TestRedisStore_GetAllValues(t *testing.T) {
+	container := startRedisContainer(t)
+	provider := setupRedisProvider(t, container)
 
-		provider := &RedisStoreProvider{}
-		provider.InitStores()
+	provider.StoreValue("test", "prefix.key1", "value1")
+	provider.StoreValue("test", "prefix.key2", "value2")
+	provider.StoreValue("test", "other.key3", "value3")
 
-		// Operations should fail gracefully
-		provider.StoreValue("test", "key", "value")
-		_, found := provider.GetValue("test", "key")
-		if found {
-			t.Error("Expected operation to fail with invalid connection")
-		}
+	t.Run("WithMatchingPrefix", func(t *testing.T) {
+		values := provider.GetAllValues("test", "prefix")
+		assert.Len(t, values, 2)
+		assert.Equal(t, "value1", values["prefix.key1"])
+		assert.Equal(t, "value2", values["prefix.key2"])
 	})
+
+	t.Run("WithNoMatchingPrefix", func(t *testing.T) {
+		values := provider.GetAllValues("test", "nomatch")
+		assert.Empty(t, values)
+	})
+
+	t.Run("EmptyPrefix", func(t *testing.T) {
+		values := provider.GetAllValues("test", "")
+		assert.Len(t, values, 3)
+	})
+
+	t.Run("AcrossStores", func(t *testing.T) {
+		provider.StoreValue("store-a", "shared.k", "from-a")
+		provider.StoreValue("store-b", "shared.k", "from-b")
+		valA := provider.GetAllValues("store-a", "shared")
+		valB := provider.GetAllValues("store-b", "shared")
+		assert.Equal(t, "from-a", valA["shared.k"])
+		assert.Equal(t, "from-b", valB["shared.k"])
+	})
+}
+
+func TestRedisStore_Expiration(t *testing.T) {
+	container := startRedisContainer(t)
+	provider := setupRedisProvider(t, container)
+
+	t.Setenv("IMPOSTER_STORE_REDIS_EXPIRY", "1s")
+
+	provider.StoreValue("test", "expiring", "value")
+	val, found := provider.GetValue("test", "expiring")
+	require.True(t, found)
+	assert.Equal(t, "value", val)
+
+	time.Sleep(2 * time.Second)
+
+	_, found = provider.GetValue("test", "expiring")
+	assert.False(t, found, "value should have expired")
+}
+
+func TestRedisStore_AtomicOperations(t *testing.T) {
+	container := startRedisContainer(t)
+	provider := setupRedisProvider(t, container)
+
+	t.Run("Increment", func(t *testing.T) {
+		val, err := provider.AtomicIncrement("test", "counter", 1)
+		require.NoError(t, err)
+		assert.Equal(t, int64(1), val)
+
+		val, err = provider.AtomicIncrement("test", "counter", 5)
+		require.NoError(t, err)
+		assert.Equal(t, int64(6), val)
+	})
+
+	t.Run("Decrement", func(t *testing.T) {
+		provider.client.FlushDB(provider.ctx)
+
+		_, err := provider.AtomicIncrement("test", "counter", 10)
+		require.NoError(t, err)
+
+		val, err := provider.AtomicDecrement("test", "counter", 3)
+		require.NoError(t, err)
+		assert.Equal(t, int64(7), val)
+	})
+
+	t.Run("ConcurrentIncrements", func(t *testing.T) {
+		provider.client.FlushDB(provider.ctx)
+
+		const goroutines = 50
+		const incrementsPerGoroutine = 20
+		var wg sync.WaitGroup
+		wg.Add(goroutines)
+
+		for i := 0; i < goroutines; i++ {
+			go func() {
+				defer wg.Done()
+				for j := 0; j < incrementsPerGoroutine; j++ {
+					_, err := provider.AtomicIncrement("test", "concurrent", 1)
+					assert.NoError(t, err)
+				}
+			}()
+		}
+		wg.Wait()
+
+		val, found := provider.GetValue("test", "concurrent")
+		require.True(t, found)
+		expected := fmt.Sprintf("%d", goroutines*incrementsPerGoroutine)
+		assert.Equal(t, expected, fmt.Sprintf("%v", val))
+	})
+}
+
+func TestRedisStore_KeyPrefix(t *testing.T) {
+	container := startRedisContainer(t)
+
+	t.Setenv("IMPOSTER_STORE_KEY_PREFIX", "myprefix")
+	provider := setupRedisProvider(t, container)
+
+	provider.StoreValue("test", "key1", "value1")
+	val, found := provider.GetValue("test", "key1")
+	assert.True(t, found)
+	assert.Equal(t, "value1", val)
+
+	rawVal := provider.client.Get(provider.ctx, "test:myprefix.key1").Val()
+	assert.NotEmpty(t, rawVal, "key should be stored with prefix in Redis")
+
+	os.Unsetenv("IMPOSTER_STORE_KEY_PREFIX")
+}
+
+func TestRedisStore_StoreIsolation(t *testing.T) {
+	container := startRedisContainer(t)
+	provider := setupRedisProvider(t, container)
+
+	provider.StoreValue("store1", "key", "value-from-store1")
+	provider.StoreValue("store2", "key", "value-from-store2")
+
+	val1, found := provider.GetValue("store1", "key")
+	assert.True(t, found)
+	assert.Equal(t, "value-from-store1", val1)
+
+	val2, found := provider.GetValue("store2", "key")
+	assert.True(t, found)
+	assert.Equal(t, "value-from-store2", val2)
+
+	provider.DeleteStore("store1")
+	_, found = provider.GetValue("store1", "key")
+	assert.False(t, found, "store1 should be deleted")
+
+	val2, found = provider.GetValue("store2", "key")
+	assert.True(t, found, "store2 should be unaffected")
+	assert.Equal(t, "value-from-store2", val2)
+}
+
+func TestRedisStore_InvalidConnection(t *testing.T) {
+	t.Setenv("REDIS_ADDR", "localhost:1")
+
+	provider := &RedisStoreProvider{}
+	provider.InitStores()
+
+	provider.StoreValue("test", "key", "value")
+	_, found := provider.GetValue("test", "key")
+	assert.False(t, found, "expected operation to fail with invalid connection")
 }
