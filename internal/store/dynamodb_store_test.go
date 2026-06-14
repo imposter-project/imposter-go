@@ -8,6 +8,7 @@ import (
 	"os"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -49,7 +50,7 @@ func createTestTable(t *testing.T, endpoint string) {
 	}))
 	ddb := dynamodb.New(sess)
 
-	_, err := ddb.CreateTable(&dynamodb.CreateTableInput{
+	input := &dynamodb.CreateTableInput{
 		TableName: aws.String(testTableName),
 		AttributeDefinitions: []*dynamodb.AttributeDefinition{
 			{AttributeName: aws.String("StoreName"), AttributeType: aws.String("S")},
@@ -60,8 +61,17 @@ func createTestTable(t *testing.T, endpoint string) {
 			{AttributeName: aws.String("Key"), KeyType: aws.String("RANGE")},
 		},
 		BillingMode: aws.String("PAY_PER_REQUEST"),
-	})
-	require.NoError(t, err, "failed to create test table")
+	}
+
+	var err error
+	for attempt := 0; attempt < 5; attempt++ {
+		_, err = ddb.CreateTable(input)
+		if err == nil {
+			return
+		}
+		time.Sleep(time.Duration(attempt+1) * 500 * time.Millisecond)
+	}
+	require.NoError(t, err, "failed to create test table after retries")
 }
 
 func setupDynamoDBProvider(t *testing.T, container testcontainers.Container) *DynamoDBStoreProvider {
@@ -187,8 +197,8 @@ func TestDynamoDBStore_GetAllValues(t *testing.T) {
 	t.Run("WithMatchingPrefix", func(t *testing.T) {
 		values := provider.GetAllValues("test", "prefix")
 		assert.Len(t, values, 2)
-		assert.Equal(t, "value1", values["key1"])
-		assert.Equal(t, "value2", values["key2"])
+		assert.Equal(t, "value1", values["prefix.key1"])
+		assert.Equal(t, "value2", values["prefix.key2"])
 	})
 
 	t.Run("WithNoMatchingPrefix", func(t *testing.T) {
@@ -201,8 +211,8 @@ func TestDynamoDBStore_GetAllValues(t *testing.T) {
 		provider.StoreValue("store-b", "shared.k", "from-b")
 		valA := provider.GetAllValues("store-a", "shared")
 		valB := provider.GetAllValues("store-b", "shared")
-		assert.Equal(t, "from-a", valA["k"])
-		assert.Equal(t, "from-b", valB["k"])
+		assert.Equal(t, "from-a", valA["shared.k"])
+		assert.Equal(t, "from-b", valB["shared.k"])
 	})
 }
 

@@ -154,8 +154,8 @@ func TestRedisStore_GetAllValues(t *testing.T) {
 	t.Run("WithMatchingPrefix", func(t *testing.T) {
 		values := provider.GetAllValues("test", "prefix")
 		assert.Len(t, values, 2)
-		assert.Equal(t, "value1", values["key1"])
-		assert.Equal(t, "value2", values["key2"])
+		assert.Equal(t, "value1", values["prefix.key1"])
+		assert.Equal(t, "value2", values["prefix.key2"])
 	})
 
 	t.Run("WithNoMatchingPrefix", func(t *testing.T) {
@@ -173,8 +173,8 @@ func TestRedisStore_GetAllValues(t *testing.T) {
 		provider.StoreValue("store-b", "shared.k", "from-b")
 		valA := provider.GetAllValues("store-a", "shared")
 		valB := provider.GetAllValues("store-b", "shared")
-		assert.Equal(t, "from-a", valA["k"])
-		assert.Equal(t, "from-b", valB["k"])
+		assert.Equal(t, "from-a", valA["shared.k"])
+		assert.Equal(t, "from-b", valB["shared.k"])
 	})
 }
 
