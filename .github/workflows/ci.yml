@@ -38,6 +38,21 @@ jobs:
     - name: Test
       run: go test -v ./...
 
+  integration-test:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Set up Go
+      uses: actions/setup-go@v6
+      with:
+        go-version: '1.25'
+
+    - name: Integration tests
+      run: go test -tags integration -v -timeout 120s ./internal/store/
+
   release:
     needs: [docker-manifest, publish-plugins]
     runs-on: ubuntu-latest-l
