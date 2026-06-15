@@ -1,6 +1,6 @@
 module github.com/imposter-project/imposter-go
 
-go 1.25.0
+go 1.25.7
 
 require gopkg.in/yaml.v3 v3.0.1
 
@@ -14,10 +14,10 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-plugin v1.8.0
-	github.com/pb33f/libopenapi v0.37.3
+	github.com/pb33f/libopenapi v0.38.0
 	github.com/pb33f/libopenapi-validator v0.13.8
 	github.com/stretchr/testify v1.11.1
-	go.yaml.in/yaml/v4 v4.0.0-rc.4
+	go.yaml.in/yaml/v4 v4.0.0-rc.5
 	golang.org/x/crypto v0.53.0
 	golang.org/x/exp v0.0.0-20250606033433-dcc06ee1d476
 	google.golang.org/protobuf v1.36.11
