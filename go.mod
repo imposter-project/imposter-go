@@ -17,7 +17,7 @@ require (
 	github.com/pb33f/libopenapi v0.38.1
 	github.com/pb33f/libopenapi-validator v0.13.10
 	github.com/stretchr/testify v1.11.1
-	go.yaml.in/yaml/v4 v4.0.0-rc.5
+	go.yaml.in/yaml/v4 v4.0.0-rc.6
 	golang.org/x/crypto v0.53.0
 	golang.org/x/exp v0.0.0-20250606033433-dcc06ee1d476
 	google.golang.org/protobuf v1.36.11
