@@ -14,8 +14,8 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-plugin v1.8.0
-	github.com/pb33f/libopenapi v0.38.1
-	github.com/pb33f/libopenapi-validator v0.13.10
+	github.com/pb33f/libopenapi v0.38.4
+	github.com/pb33f/libopenapi-validator v0.13.13
 	github.com/stretchr/testify v1.11.1
 	github.com/testcontainers/testcontainers-go v0.42.0
 	github.com/testcontainers/testcontainers-go/modules/redis v0.42.0
