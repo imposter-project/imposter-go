@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"net/url"
 	"strings"
 	"testing"
@@ -553,6 +554,50 @@ func TestOIDCServer_HandleIntegration(t *testing.T) {
 		}
 		if !strings.Contains(body, "https://custom-server.com/oidc/logout") {
 			t.Error("Discovery document should contain correct end_session_endpoint")
+		}
+	})
+}
+
+// The issuer field must exactly match the URL a client would fetch the
+// discovery document from:
+// https://datatracker.ietf.org/doc/html/rfc8414#section-3.3
+// This was previously hardcoded to serverURL alone, omitting pathPrefix,
+// while every other endpoint in the same document correctly included it.
+func TestOIDCServer_CacheDiscoveryDocument_IssuerIncludesPathPrefix(t *testing.T) {
+	t.Run("default path prefix", func(t *testing.T) {
+		server := createTestOIDCServerForPlugin()
+		server.serverURL = "http://localhost:8080"
+		if err := server.CacheDiscoveryDocument(); err != nil {
+			t.Fatalf("Failed to cache discovery document: %v", err)
+		}
+
+		var discovery map[string]interface{}
+		if err := json.Unmarshal(server.cachedDiscovery, &discovery); err != nil {
+			t.Fatalf("Failed to parse discovery document: %v", err)
+		}
+
+		expectedIssuer := "http://localhost:8080/oidc"
+		if discovery["issuer"] != expectedIssuer {
+			t.Errorf("Expected issuer %q, got %q", expectedIssuer, discovery["issuer"])
+		}
+	})
+
+	t.Run("custom path prefix", func(t *testing.T) {
+		server := createTestOIDCServerForPlugin()
+		server.serverURL = "https://custom-server.com"
+		server.pathPrefix = "/custom-oidc"
+		if err := server.CacheDiscoveryDocument(); err != nil {
+			t.Fatalf("Failed to cache discovery document: %v", err)
+		}
+
+		var discovery map[string]interface{}
+		if err := json.Unmarshal(server.cachedDiscovery, &discovery); err != nil {
+			t.Fatalf("Failed to parse discovery document: %v", err)
+		}
+
+		expectedIssuer := "https://custom-server.com/custom-oidc"
+		if discovery["issuer"] != expectedIssuer {
+			t.Errorf("Expected issuer %q, got %q", expectedIssuer, discovery["issuer"])
 		}
 	})
 }
