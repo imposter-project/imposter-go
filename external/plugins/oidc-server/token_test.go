@@ -427,8 +427,8 @@ func TestOIDCServer_generateIDToken(t *testing.T) {
 				}
 
 				claims := token.Claims.(jwt.MapClaims)
-				if claims["iss"] != "https://example.com" {
-					t.Errorf("Expected iss 'https://example.com', got '%s'", claims["iss"])
+				if claims["iss"] != "https://example.com/oidc" {
+					t.Errorf("Expected iss 'https://example.com/oidc', got '%s'", claims["iss"])
 				}
 				if claims["sub"] != "testuser" {
 					t.Errorf("Expected sub 'testuser', got '%s'", claims["sub"])

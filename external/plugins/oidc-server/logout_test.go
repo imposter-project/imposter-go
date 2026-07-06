@@ -82,7 +82,7 @@ func generateTestIDToken(server *OIDCServer, sub, aud string, expired bool) stri
 	}
 
 	claims := jwt.MapClaims{
-		"iss": server.serverURL,
+		"iss": server.serverURL + server.pathPrefix,
 		"sub": sub,
 		"aud": aud,
 		"iat": now.Unix(),
@@ -249,7 +249,7 @@ func TestOIDCServer_handleLogout_IDTokenHint(t *testing.T) {
 	t.Run("invalid signature shows confirmation instead of error", func(t *testing.T) {
 		// Token signed with wrong key
 		claims := jwt.MapClaims{
-			"iss": server.serverURL,
+			"iss": server.serverURL + server.pathPrefix,
 			"sub": "alice",
 			"aud": "test-client",
 			"exp": time.Now().Add(1 * time.Hour).Unix(),
@@ -509,7 +509,7 @@ func TestOIDCServer_parseIDTokenHint(t *testing.T) {
 
 	t.Run("wrong key returns error", func(t *testing.T) {
 		claims := jwt.MapClaims{
-			"iss": server.serverURL,
+			"iss": server.serverURL + server.pathPrefix,
 			"sub": "alice",
 			"aud": "test-client",
 			"exp": time.Now().Add(1 * time.Hour).Unix(),

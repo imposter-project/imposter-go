@@ -100,8 +100,9 @@ func (o *OIDCServer) parseIDTokenHint(tokenString string) (clientID, sub string,
 
 	// Verify issuer matches this server
 	iss, _ := claims["iss"].(string)
-	if iss != o.serverURL {
-		return "", "", fmt.Errorf("issuer mismatch: expected %s, got %s", o.serverURL, iss)
+	expectedIssuer := o.serverURL + o.pathPrefix
+	if iss != expectedIssuer {
+		return "", "", fmt.Errorf("issuer mismatch: expected %s, got %s", expectedIssuer, iss)
 	}
 
 	// Extract audience (client ID) and subject (user ID)

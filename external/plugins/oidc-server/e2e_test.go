@@ -217,7 +217,7 @@ func TestOIDCServer_EndToEndFlow(t *testing.T) {
 		requiredClaims := map[string]string{
 			"sub":   "alice",
 			"aud":   "test-client",
-			"iss":   "http://localhost:8080",
+			"iss":   "http://localhost:8080/oidc",
 			"nonce": "e2e-test-nonce-67890",
 		}
 

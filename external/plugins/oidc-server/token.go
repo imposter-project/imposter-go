@@ -189,7 +189,7 @@ func (o *OIDCServer) handleToken(args shared.HandlerRequest) shared.HandlerRespo
 func (o *OIDCServer) generateIDToken(user *User, clientID, nonce string, scopes []string, issuedAt time.Time, expiresIn int) (string, error) {
 	// Create JWT claims
 	claims := jwt.MapClaims{
-		"iss": o.serverURL,                                                 // issuer (use configured server URL)
+		"iss": o.serverURL + o.pathPrefix,                                  // issuer (must match discovery document's issuer)
 		"sub": user.Username,                                               // subject
 		"aud": clientID,                                                    // audience
 		"exp": issuedAt.Add(time.Duration(expiresIn) * time.Second).Unix(), // expiration

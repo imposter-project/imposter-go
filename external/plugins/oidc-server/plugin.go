@@ -241,7 +241,7 @@ func (o *OIDCServer) cacheJWKS() error {
 func (o *OIDCServer) CacheDiscoveryDocument() error {
 	// Build discovery document as a map
 	discovery := map[string]interface{}{
-		"issuer":                                o.serverURL,
+		"issuer":                                o.serverURL + o.pathPrefix,
 		"authorization_endpoint":                o.serverURL + o.pathPrefix + "/authorize",
 		"token_endpoint":                        o.serverURL + o.pathPrefix + "/token",
 		"userinfo_endpoint":                     o.serverURL + o.pathPrefix + "/userinfo",
