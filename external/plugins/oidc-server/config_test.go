@@ -1,8 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"reflect"
 	"testing"
+
+	"github.com/hashicorp/go-hclog"
 )
 
 func TestValidateConfig(t *testing.T) {
@@ -382,5 +385,85 @@ users:
 				tt.validate(t, config)
 			}
 		})
+	}
+}
+
+func TestNormalizePathPrefix(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{"empty falls back to default", "", "/oidc"},
+		{"already canonical", "/oidc", "/oidc"},
+		{"missing leading slash", "oidc", "/oidc"},
+		{"trailing slash stripped", "/oidc/", "/oidc"},
+		{"missing leading and trailing", "oidc/", "/oidc"},
+		{"custom prefix normalised", "custom-oidc/", "/custom-oidc"},
+		{"surrounding whitespace trimmed", "  /oidc  ", "/oidc"},
+		{"nested path preserved", "/auth/oidc/", "/auth/oidc"},
+		{"duplicate edge slashes collapsed", "//oidc//", "/oidc"},
+		{"slash only falls back to default", "/", "/oidc"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := normalizePathPrefix(tt.input); got != tt.want {
+				t.Errorf("normalizePathPrefix(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestLoadOIDCConfig_NormalizesPathPrefix asserts that a messy path_prefix from
+// user YAML is normalised end-to-end, and that the resulting server builds a
+// well-formed discovery document from it (correct issuer, no double slashes).
+func TestLoadOIDCConfig_NormalizesPathPrefix(t *testing.T) {
+	configYAML := `
+path_prefix: "custom-oidc/"
+users:
+  - username: "alice"
+    password: "password"
+    claims:
+      sub: "alice"
+clients:
+  - client_id: "test-client"
+    client_secret: "test-secret"
+    redirect_uris:
+      - "https://issuer.example.com/callback"
+`
+	config, err := loadOIDCConfig([]byte(configYAML))
+	if err != nil {
+		t.Fatalf("loadOIDCConfig returned error: %v", err)
+	}
+	if config.PathPrefix != "/custom-oidc" {
+		t.Fatalf("Expected normalised path prefix '/custom-oidc', got %q", config.PathPrefix)
+	}
+
+	server := &OIDCServer{
+		logger:     hclog.NewNullLogger(),
+		config:     config,
+		serverURL:  "https://issuer.example.com",
+		pathPrefix: normalizePathPrefix(config.PathPrefix),
+		sessions:   make(map[string]*AuthSession),
+		codes:      make(map[string]*AuthCode),
+		tokens:     make(map[string]*AccessToken),
+	}
+	if err := server.setupJWTKeys(); err != nil {
+		t.Fatalf("Failed to setup JWT keys: %v", err)
+	}
+	if err := server.CacheDiscoveryDocument(); err != nil {
+		t.Fatalf("Failed to cache discovery document: %v", err)
+	}
+
+	var discovery map[string]interface{}
+	if err := json.Unmarshal(server.cachedDiscovery, &discovery); err != nil {
+		t.Fatalf("Failed to parse discovery document: %v", err)
+	}
+	if discovery["issuer"] != "https://issuer.example.com/custom-oidc" {
+		t.Errorf("Expected issuer 'https://issuer.example.com/custom-oidc', got %q", discovery["issuer"])
+	}
+	if discovery["authorization_endpoint"] != "https://issuer.example.com/custom-oidc/authorize" {
+		t.Errorf("Unexpected authorization_endpoint %q", discovery["authorization_endpoint"])
 	}
 }

@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/hashicorp/go-hclog"
 	"github.com/imposter-project/imposter-go/external/shared"
 )
@@ -600,4 +601,96 @@ func TestOIDCServer_CacheDiscoveryDocument_IssuerIncludesPathPrefix(t *testing.T
 			t.Errorf("Expected issuer %q, got %q", expectedIssuer, discovery["issuer"])
 		}
 	})
+}
+
+// TestOIDCServer_IssuerConsistency_AcrossComponents locks the three issuer
+// surfaces together so they can never silently drift apart again:
+//  1. the discovery document's "issuer" (plugin.go)
+//  2. the "iss" claim minted into ID tokens (token.go)
+//  3. the issuer the RP-initiated logout flow validates against (logout.go)
+//
+// The original bug (see TestOIDCServer_CacheDiscoveryDocument_IssuerIncludesPathPrefix)
+// slipped past every existing test because each surface independently used the
+// same wrong value, so they stayed internally consistent with one another while
+// collectively disagreeing with the URL clients actually use. Asserting each
+// value against a hardcoded literal in isolation would not have caught it. This
+// test instead asserts the relationships between the surfaces, under a
+// non-default path prefix, so changing any single one of them breaks it.
+func TestOIDCServer_IssuerConsistency_AcrossComponents(t *testing.T) {
+	config := &OIDCConfig{
+		PathPrefix: "/custom-oidc",
+		Users: []User{
+			{Username: "alice", Password: "password", Claims: map[string]string{"sub": "alice"}},
+		},
+		Clients: []Client{
+			{
+				ClientID:               "test-client",
+				ClientSecret:           "test-secret",
+				RedirectURIs:           []string{"https://issuer.example.com/callback"},
+				PostLogoutRedirectURIs: []string{"https://issuer.example.com/logged-out"},
+			},
+		},
+		JWTConfig: &JWTConfig{Algorithm: "RS256"},
+	}
+
+	server := &OIDCServer{
+		logger:     hclog.NewNullLogger(),
+		config:     config,
+		serverURL:  "https://issuer.example.com",
+		pathPrefix: config.PathPrefix,
+		sessions:   make(map[string]*AuthSession),
+		codes:      make(map[string]*AuthCode),
+		tokens:     make(map[string]*AccessToken),
+	}
+	if err := server.setupJWTKeys(); err != nil {
+		t.Fatalf("Failed to setup JWT keys: %v", err)
+	}
+	if err := server.CacheDiscoveryDocument(); err != nil {
+		t.Fatalf("Failed to cache discovery document: %v", err)
+	}
+
+	// 1. Issuer advertised by the discovery document.
+	var discovery map[string]interface{}
+	if err := json.Unmarshal(server.cachedDiscovery, &discovery); err != nil {
+		t.Fatalf("Failed to parse discovery document: %v", err)
+	}
+	discoveryIssuer, _ := discovery["issuer"].(string)
+
+	// It must include the configured path prefix — the location the discovery
+	// document is actually served from.
+	wantIssuer := "https://issuer.example.com/custom-oidc"
+	if discoveryIssuer != wantIssuer {
+		t.Errorf("discovery issuer = %q, want %q", discoveryIssuer, wantIssuer)
+	}
+
+	// 2. The iss claim minted into an ID token must equal the discovery issuer.
+	user := config.Users[0]
+	idToken, err := server.generateIDToken(&user, "test-client", "nonce-123", []string{"openid"}, time.Now(), 3600)
+	if err != nil {
+		t.Fatalf("Failed to generate ID token: %v", err)
+	}
+	parsed, err := jwt.Parse(idToken, func(token *jwt.Token) (interface{}, error) {
+		return server.publicKey, nil
+	})
+	if err != nil {
+		t.Fatalf("Failed to parse ID token: %v", err)
+	}
+	tokenIss, _ := parsed.Claims.(jwt.MapClaims)["iss"].(string)
+	if tokenIss != discoveryIssuer {
+		t.Errorf("ID token iss = %q, but discovery issuer = %q; they must be identical", tokenIss, discoveryIssuer)
+	}
+
+	// 3. The RP-initiated logout flow must accept a token this same server minted.
+	//    A stale issuer check here would reject genuine tokens with an "issuer
+	//    mismatch" error.
+	clientID, sub, err := server.parseIDTokenHint(idToken)
+	if err != nil {
+		t.Fatalf("logout rejected a token minted by this server: %v", err)
+	}
+	if clientID != "test-client" {
+		t.Errorf("parseIDTokenHint clientID = %q, want %q", clientID, "test-client")
+	}
+	if sub != "alice" {
+		t.Errorf("parseIDTokenHint sub = %q, want %q", sub, "alice")
+	}
 }

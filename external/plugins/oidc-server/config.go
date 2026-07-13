@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/pem"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"gopkg.in/yaml.v3"
@@ -42,6 +43,24 @@ type Client struct {
 
 const defaultPathPrefix = "/oidc"
 
+// normalizePathPrefix cleans a user-supplied path prefix into the canonical
+// form the rest of the plugin assumes: a single leading slash and no trailing
+// slash (e.g. "oidc", "/oidc/", "  /oidc  " all become "/oidc"). Every issuer
+// and endpoint URL is built by concatenating serverURL + pathPrefix, and
+// routing matches against pathPrefix+"/", so a missing leading slash or a
+// stray trailing slash would otherwise produce a malformed issuer
+// ("https://hostoidc") or double slashes and break request matching.
+//
+// An empty or slash-only prefix falls back to the default rather than serving
+// the endpoints at the server root, preserving existing behaviour.
+func normalizePathPrefix(prefix string) string {
+	trimmed := strings.Trim(strings.TrimSpace(prefix), "/")
+	if trimmed == "" {
+		return defaultPathPrefix
+	}
+	return "/" + trimmed
+}
+
 // loadOIDCConfig loads OIDC configuration from raw YAML bytes
 // as provided by the main config system's plugin config block
 func loadOIDCConfig(pluginConfigBytes []byte) (*OIDCConfig, error) {
@@ -55,10 +74,9 @@ func loadOIDCConfig(pluginConfigBytes []byte) (*OIDCConfig, error) {
 		return nil, fmt.Errorf("failed to unmarshal plugin config: %w", err)
 	}
 
-	// Set default path prefix if not provided
-	if config.PathPrefix == "" {
-		config.PathPrefix = defaultPathPrefix
-	}
+	// Normalise the path prefix (adds leading slash, strips trailing slash,
+	// falls back to the default when empty)
+	config.PathPrefix = normalizePathPrefix(config.PathPrefix)
 
 	// Validate configuration
 	if err := validateConfig(&config); err != nil {
