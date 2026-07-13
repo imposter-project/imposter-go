@@ -149,6 +149,17 @@ jobs:
       id: version
       run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
+    # Mint a short-lived installation token scoped to the plugins repo, in place
+    # of a long-lived PAT.
+    - name: Generate token for imposter-go-plugins repo
+      id: plugin-repo-token
+      uses: actions/create-github-app-token@v3
+      with:
+        client-id: ${{ secrets.PLUGIN_RELEASE_APP_CLIENT_ID }}
+        private-key: ${{ secrets.PLUGIN_RELEASE_APP_PRIVATE_KEY }}
+        owner: imposter-project
+        repositories: imposter-go-plugins
+
     - name: Create draft release in imposter-go-plugins repo
       id: create_release
       run: |
@@ -158,7 +169,7 @@ jobs:
           --notes "External plugins for imposter-go ${{ steps.version.outputs.VERSION }}" \
           --draft
       env:
-        GITHUB_TOKEN: ${{ secrets.PLUGIN_REPO_TOKEN }}
+        GITHUB_TOKEN: ${{ steps.plugin-repo-token.outputs.token }}
 
     - name: Build plugins for multiple platforms
       run: ./scripts/build-plugins.sh ${{ steps.version.outputs.VERSION }} dist
@@ -173,7 +184,7 @@ jobs:
           fi
         done
       env:
-        GITHUB_TOKEN: ${{ secrets.PLUGIN_REPO_TOKEN }}
+        GITHUB_TOKEN: ${{ steps.plugin-repo-token.outputs.token }}
 
     - name: Publish release
       run: |
@@ -181,7 +192,7 @@ jobs:
           --repo imposter-project/imposter-go-plugins \
           --draft=false
       env:
-        GITHUB_TOKEN: ${{ secrets.PLUGIN_REPO_TOKEN }}
+        GITHUB_TOKEN: ${{ steps.plugin-repo-token.outputs.token }}
 
   docker-build:
     needs: build
