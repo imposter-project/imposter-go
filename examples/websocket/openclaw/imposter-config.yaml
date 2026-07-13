@@ -1,0 +1,63 @@
+# Simulates a subset of the OpenClaw Gateway WebSocket API:
+# - on connect, the server sends a connect.challenge event and starts a periodic tick
+# - a 'connect' request is answered with hello-ok, echoing the request ID
+# - an 'agent' request is answered with a res frame followed by streamed events
+plugin: websocket
+
+resources:
+  # Connection opened: send the challenge and start the keepalive tick
+  - path: /gateway
+    on: open
+    response:
+      content: '{"type":"event","event":"connect.challenge","payload":{"nonce":"${random.uuid()}","ts":"${datetime.now.millis}"}}'
+      template: true
+    schedule:
+      - every: 15s
+        response:
+          content: '{"type":"event","event":"tick","payload":{"timestamp":"${datetime.now.millis}"}}'
+          template: true
+
+  # Handshake request: reply with hello-ok, echoing the request ID
+  - path: /gateway
+    requestBody:
+      allOf:
+        - jsonPath: $.type
+          value: req
+        - jsonPath: $.method
+          value: connect
+    capture:
+      reqId:
+        requestBody:
+          jsonPath: $.id
+    response:
+      file: hello-ok.json
+      template: true
+
+  # Agent request: acknowledge, then stream agent/chat events
+  - path: /gateway
+    requestBody:
+      allOf:
+        - jsonPath: $.type
+          value: req
+        - jsonPath: $.method
+          value: agent
+    capture:
+      reqId:
+        requestBody:
+          jsonPath: $.id
+    responses:
+      - content: '{"type":"res","id":"${stores.request.reqId}","ok":true,"payload":{"accepted":true}}'
+        template: true
+      - file: agent-event-thinking.json
+        delay:
+          exact: 300
+        template: true
+      - file: chat-event-delta.json
+        delay:
+          min: 200
+          max: 600
+        template: true
+      - file: chat-event-final.json
+        delay:
+          exact: 400
+        template: true

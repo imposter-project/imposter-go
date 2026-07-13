@@ -12,6 +12,7 @@ import (
 	"github.com/imposter-project/imposter-go/internal/adapter"
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/handler"
+	"github.com/imposter-project/imposter-go/internal/scheduler"
 	"github.com/imposter-project/imposter-go/pkg/logger"
 	"github.com/imposter-project/imposter-go/plugin"
 )
@@ -32,10 +33,17 @@ func (a *HTTPAdapter) Start() {
 		configDirArg = os.Args[1]
 	}
 
-	imposterConfig, configs := adapter.InitialiseImposter(configDirArg)
+	imposterConfig, plugins := adapter.InitialiseImposter(configDirArg)
+
+	// Start engine-lifetime scheduled jobs declared in the loaded configs
+	var configs []*config.Config
+	for _, plg := range plugins {
+		configs = append(configs, plg.GetConfig())
+	}
+	scheduler.Start(configs, imposterConfig)
 
 	// Initialise and start the server with multiple configs
-	srv := newServer(imposterConfig, configs)
+	srv := newServer(imposterConfig, plugins)
 	logger.Infof("startup completed in %v", time.Since(startTime))
 	srv.start(imposterConfig)
 }

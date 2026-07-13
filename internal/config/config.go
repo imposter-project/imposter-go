@@ -137,30 +137,22 @@ func LoadConfig(configDir string, imposterConfig *ImposterConfig) []Config {
 				}
 
 				for i := range fileConfig.Resources {
-					if fileConfig.Resources[i].Response != nil {
-						// Resolve response file path relative to config file
-						if fileConfig.Resources[i].Response.File != "" && relDir != "." {
-							fileConfig.Resources[i].Response.File = filepath.Join(relDir, fileConfig.Resources[i].Response.File)
-						}
-						// Resolve response dir path relative to config file
-						if fileConfig.Resources[i].Response.Dir != "" && relDir != "." {
-							fileConfig.Resources[i].Response.Dir = filepath.Join(relDir, fileConfig.Resources[i].Response.Dir)
-						}
+					res := &fileConfig.Resources[i]
+					prefixResponseFiles(res.Response, relDir)
+					for j := range res.Responses {
+						prefixResponseFiles(&res.Responses[j], relDir)
 					}
 					// Prefix paths with basePath
 					if fileConfig.BasePath != "" {
-						fileConfig.Resources[i].Path = urlpath.Join(fileConfig.BasePath, fileConfig.Resources[i].Path)
+						res.Path = urlpath.Join(fileConfig.BasePath, res.Path)
 					}
 
-					// Prefix step script files with relative directory
-					if fileConfig.Resources[i].Steps != nil {
-						for j := range fileConfig.Resources[i].Steps {
-							if fileConfig.Resources[i].Steps[j].File != "" {
-								fileConfig.Resources[i].Steps[j].File = filepath.Join(relDir, fileConfig.Resources[i].Steps[j].File)
-							}
-						}
-					}
+					prefixStepFiles(res.Steps, relDir)
+					prefixScheduleFiles(res.Schedule, relDir)
 				}
+
+				// Prefix files referenced by top-level schedules
+				prefixScheduleFiles(fileConfig.Schedules, relDir)
 
 				// Prefix interceptor paths with basePath, mirroring resources.
 				// An interceptor without a path matches all requests, so only
@@ -206,6 +198,45 @@ func LoadConfig(configDir string, imposterConfig *ImposterConfig) []Config {
 	}
 
 	return configs
+}
+
+// prefixResponseFiles resolves response file and dir paths relative to the
+// config file's directory.
+func prefixResponseFiles(resp *Response, relDir string) {
+	if resp == nil || relDir == "." {
+		return
+	}
+	if resp.File != "" {
+		resp.File = filepath.Join(relDir, resp.File)
+	}
+	if resp.Dir != "" {
+		resp.Dir = filepath.Join(relDir, resp.Dir)
+	}
+}
+
+// prefixStepFiles resolves step script file paths relative to the config
+// file's directory.
+func prefixStepFiles(steps []Step, relDir string) {
+	if relDir == "." {
+		return
+	}
+	for i := range steps {
+		if steps[i].File != "" {
+			steps[i].File = filepath.Join(relDir, steps[i].File)
+		}
+	}
+}
+
+// prefixScheduleFiles resolves file paths referenced by schedule entries
+// (responses and step scripts) relative to the config file's directory.
+func prefixScheduleFiles(schedules []Schedule, relDir string) {
+	for i := range schedules {
+		prefixResponseFiles(schedules[i].Response, relDir)
+		for j := range schedules[i].Responses {
+			prefixResponseFiles(&schedules[i].Responses[j], relDir)
+		}
+		prefixStepFiles(schedules[i].Steps, relDir)
+	}
 }
 
 // loadIgnorePaths loads ignore paths from .imposterignore file or uses default ignore paths

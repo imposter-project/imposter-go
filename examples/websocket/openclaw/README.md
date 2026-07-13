@@ -1,0 +1,35 @@
+# WebSocket example: OpenClaw Gateway simulation
+
+Simulates a subset of the [OpenClaw Gateway WebSocket protocol](https://docs.openclaw.ai/gateway/protocol):
+
+1. On connection, the server immediately sends a `connect.challenge` event and starts a periodic `tick` keepalive every 15 seconds.
+2. A `connect` request frame is answered with a `hello-ok` response, echoing the request's `id`.
+3. An `agent` request frame is acknowledged with a `res` frame, followed by a stream of `agent` and `chat` events with realistic delays.
+
+## Run
+
+```bash
+imposter ./examples/websocket/openclaw
+```
+
+## Try it
+
+Using [websocat](https://github.com/vi/websocat):
+
+```bash
+websocat ws://localhost:8080/gateway
+```
+
+You'll receive the challenge event immediately. Then paste:
+
+```json
+{"type":"req","id":"req-1","method":"connect","params":{}}
+```
+
+to receive `hello-ok`, and:
+
+```json
+{"type":"req","id":"req-2","method":"agent","params":{"message":"hello"}}
+```
+
+to receive an acknowledgement followed by streamed agent/chat events. Leave the connection open to observe the periodic `tick` events.

@@ -1,0 +1,10 @@
+{
+  "type": "event",
+  "event": "agent",
+  "payload": {
+    "requestId": "${stores.request.reqId}",
+    "stage": "thinking",
+    "detail": "Analysing request"
+  },
+  "seq": 1
+}

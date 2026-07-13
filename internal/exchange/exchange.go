@@ -12,6 +12,11 @@ type Exchange struct {
 	RequestStore  *store.Store
 	Response      *ResponseContext
 	ResponseState *ResponseState
+
+	// ResponseWriter is the underlying writer for the exchange, set only when
+	// handling a live HTTP request. Plugins that take over the connection
+	// (e.g. websocket upgrade) use it and set ResponseState.Hijacked.
+	ResponseWriter http.ResponseWriter
 }
 
 // RequestContext holds request-related data

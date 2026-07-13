@@ -78,7 +78,8 @@ func isEmptyMatcher(matcher *RequestMatcher) bool {
 		len(matcher.AllOf) == 0 &&
 		len(matcher.AnyOf) == 0 &&
 		matcher.SOAPAction == "" &&
-		matcher.Binding == ""
+		matcher.Binding == "" &&
+		matcher.On == ""
 }
 
 // generateMatcherHash creates a deterministic hash of the matcher's criteria
@@ -165,6 +166,11 @@ func generateMatcherHash(matcher *RequestMatcher) string {
 	}
 	if matcher.Binding != "" {
 		parts = append(parts, fmt.Sprintf("binding=%s", matcher.Binding))
+	}
+
+	// WebSocket-specific fields
+	if matcher.On != "" {
+		parts = append(parts, fmt.Sprintf("on=%s", matcher.On))
 	}
 
 	// Sort all parts to ensure deterministic order

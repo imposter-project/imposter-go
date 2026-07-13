@@ -1,0 +1,21 @@
+{
+  "type": "res",
+  "id": "${stores.request.reqId}",
+  "ok": true,
+  "payload": {
+    "type": "hello-ok",
+    "protocol": 4,
+    "server": {
+      "version": "mock",
+      "connId": "${random.uuid()}"
+    },
+    "auth": {
+      "role": "operator",
+      "scopes": ["operator.read", "operator.write"]
+    },
+    "policy": {
+      "maxPayload": 26214400,
+      "tickIntervalMs": 15000
+    }
+  }
+}

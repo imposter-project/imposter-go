@@ -1,0 +1,10 @@
+{
+  "type": "event",
+  "event": "chat",
+  "payload": {
+    "requestId": "${stores.request.reqId}",
+    "message": "Here's a first part of the reply, and here is the rest.",
+    "replace": true
+  },
+  "seq": 3
+}

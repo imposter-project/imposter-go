@@ -10,6 +10,7 @@ import (
 	"github.com/imposter-project/imposter-go/internal/adapter"
 	"github.com/imposter-project/imposter-go/internal/adapter/awslambda"
 	"github.com/imposter-project/imposter-go/internal/adapter/httpserver"
+	"github.com/imposter-project/imposter-go/internal/scheduler"
 	"github.com/imposter-project/imposter-go/internal/version"
 )
 
@@ -42,5 +43,6 @@ func main() {
 }
 
 func cleanup() {
+	scheduler.Stop()
 	external.StopExternalPlugins()
 }

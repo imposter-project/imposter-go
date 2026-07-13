@@ -57,6 +57,18 @@ func init() {
 
 	// Load configuration once during cold start
 	imposterConfig, plugins = adapter.InitialiseImposter("")
+
+	// Schedules and websocket connections require a long-lived process, which
+	// the Lambda execution model does not provide.
+	for _, plg := range plugins {
+		cfg := plg.GetConfig()
+		if len(cfg.Schedules) > 0 {
+			logger.Warnf("schedules are not supported in Lambda and will not run")
+		}
+		if cfg.Plugin == "websocket" {
+			logger.Warnf("the websocket plugin is not supported in Lambda")
+		}
+	}
 }
 
 // HandleLambdaRequest handles incoming Lambda requests and routes them to the appropriate handler.

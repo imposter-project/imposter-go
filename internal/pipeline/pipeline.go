@@ -202,9 +202,11 @@ func RunPipeline(
 		}
 	}
 
-	// Process the response if a response block is configured
-	if best.Resource.Response != nil {
-		processResp(exch, &best.Resource.RequestMatcher, best.Resource.Response, respProc)
+	// Process the response(s) if configured. A singular 'response' block is
+	// equivalent to a 'responses' list with one element.
+	resps := best.Resource.EffectiveResponses()
+	for i := range resps {
+		processResp(exch, &best.Resource.RequestMatcher, &resps[i], respProc)
 	}
 
 	// If we matched a resource, ensure the request is marked as handled
