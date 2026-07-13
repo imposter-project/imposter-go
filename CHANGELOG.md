@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.19.3] - 2026-07-13
+### Changed
+- build(deps): bump the go-minor-and-patch group across 1 directory with 6 updates
+- ci: mint plugin-repo token via github app instead of pat
+
+### Fixed
+- fix(oidc): normalise path prefix and guard issuer consistency (#90)
+
 ## [5.19.2] - 2026-07-13
 ### Changed
 - build(deps): bump actions/checkout in the github-actions group
