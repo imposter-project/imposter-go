@@ -151,7 +151,16 @@ func (c *wsConn) runEventPipeline(event string, body []byte) *exchange.ResponseS
 			if reqMatcher.NormalisedOn() != event {
 				return matcher.NegativeMatchScore, false
 			}
-			return matcher.CalculateMatchScore(exch, reqMatcher, systemNamespaces, imposterConfig)
+			score, isWildcard := matcher.CalculateMatchScore(exch, reqMatcher, systemNamespaces, imposterConfig)
+			if score < 0 {
+				return score, isWildcard
+			}
+			// The 'on' trigger is a matched criterion in its own right; count it
+			// towards the score so resources distinguished only by 'on' (with no
+			// path, or a wildcard path that scores zero) still match. Without
+			// this, such a resource would upgrade the connection but never match
+			// an event, silently sending nothing.
+			return score + 1, isWildcard
 		},
 		OnStepError: func(rs *exchange.ResponseState, msg string) {
 			logger.Errorf("websocket %s handler steps failed - path:%s: %s", event, c.upgrade.URL.Path, msg)

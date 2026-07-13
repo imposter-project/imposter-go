@@ -6,6 +6,8 @@ Simulates a subset of the [OpenClaw Gateway WebSocket protocol](https://docs.ope
 2. A `connect` request frame is answered with a `hello-ok` response, echoing the request's `id`.
 3. An `agent` request frame is acknowledged with a `res` frame, followed by a stream of `agent` and `chat` events with realistic delays.
 
+The resources use a wildcard path (`path: /*`), so the mock accepts a WebSocket connection on any path — mirroring the real OpenClaw gateway, which multiplexes on a single port and routes the upgrade by the `Upgrade: websocket` header rather than a specific URL path. Connect on whatever path your client uses (e.g. `/ws`).
+
 ## Run
 
 ```bash

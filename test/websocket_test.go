@@ -297,3 +297,24 @@ resources:
 	_, _, err = conn.ReadMessage()
 	require.Error(t, err, "expected no further ticks after the limit was reached")
 }
+
+func TestWebSocket_WildcardPathAcceptsAnyPath(t *testing.T) {
+	// A resource distinguished only by 'on' and a wildcard path must still
+	// match: the connection upgrades AND the open event is handled. Mirrors
+	// the real OpenClaw gateway, which accepts the upgrade on any path.
+	configContent := `plugin: websocket
+resources:
+  - path: /*
+    on: open
+    response:
+      content: '{"event":"welcome"}'
+`
+	server := startWebSocketServer(t, configContent)
+
+	for _, path := range []string{"/ws", "/gateway", "/anything/else"} {
+		conn, _, err := websocket.DefaultDialer.Dial(wsURL(server, path), nil)
+		require.NoErrorf(t, err, "dialing %s", path)
+		require.JSONEq(t, `{"event":"welcome"}`, readTextMessage(t, conn))
+		conn.Close()
+	}
+}
