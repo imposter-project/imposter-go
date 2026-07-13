@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.19.1] - 2026-07-13
+### Changed
+- build(deps): bump actions/checkout in the github-actions group
+- build(deps): bump github.com/pb33f/libopenapi and libopenapi-validator
+- build(deps): bump github.com/pb33f/libopenapi from 0.38.4 to 0.38.5 in the go-minor-and-patch group
+- build(deps): bump go.yaml.in/yaml/v4 from 4.0.0-rc.5 to 4.0.0-rc.6
+- build(deps): bump the go-minor-and-patch group across 1 directory with 2 updates
+- build(deps): bump the go-minor-and-patch group across 1 directory with 3 updates
+- build(deps): bump the go-minor-and-patch group with 2 updates
+- ci: target dependabot PRs at develop branch
+- test: add integration tests for DynamoDB and Redis stores (#79)
+
 ## [5.19.0] - 2026-06-04
 ### Added
 - feat: add passthrough/proxy support to upstream services
