@@ -17,7 +17,7 @@ imposter ./examples/websocket/openclaw
 Using [websocat](https://github.com/vi/websocat):
 
 ```bash
-websocat ws://localhost:8080/gateway
+websocat ws://localhost:8080/ws
 ```
 
 You'll receive the challenge event immediately. Then paste:

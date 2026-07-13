@@ -6,7 +6,7 @@ plugin: websocket
 
 resources:
   # Connection opened: send the challenge and start the keepalive tick
-  - path: /gateway
+  - path: /ws
     on: open
     response:
       content: '{"type":"event","event":"connect.challenge","payload":{"nonce":"${random.uuid()}","ts":"${datetime.now.millis}"}}'
@@ -18,7 +18,7 @@ resources:
           template: true
 
   # Handshake request: reply with hello-ok, echoing the request ID
-  - path: /gateway
+  - path: /ws
     requestBody:
       allOf:
         - jsonPath: $.type
@@ -34,7 +34,7 @@ resources:
       template: true
 
   # Agent request: acknowledge, then stream agent/chat events
-  - path: /gateway
+  - path: /ws
     requestBody:
       allOf:
         - jsonPath: $.type
