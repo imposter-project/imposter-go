@@ -24,7 +24,8 @@ func startPassthroughServer(t *testing.T, configContent string) *httptest.Server
 	require.NoError(t, os.WriteFile(filepath.Join(tempDir, "test-config.yaml"), []byte(configContent), 0644))
 
 	imposterConfig := config.LoadImposterConfig()
-	configs := config.LoadConfig(tempDir, imposterConfig)
+	configs, err := config.LoadConfig(tempDir, imposterConfig)
+	require.NoError(t, err)
 	plugins, err := plugin.LoadPlugins(configs, imposterConfig, nil)
 	require.NoError(t, err)
 
@@ -134,7 +135,8 @@ resources:
 	require.NoError(t, os.WriteFile(filepath.Join(tempDir, "test-config.yaml"), []byte(cfg), 0644))
 
 	imposterConfig := config.LoadImposterConfig()
-	configs := config.LoadConfig(tempDir, imposterConfig)
-	_, err := plugin.LoadPlugins(configs, imposterConfig, nil)
+	configs, err := config.LoadConfig(tempDir, imposterConfig)
+	require.NoError(t, err)
+	_, err = plugin.LoadPlugins(configs, imposterConfig, nil)
 	require.Error(t, err)
 }

@@ -1,10 +1,8 @@
 package adapter
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/imposter-project/imposter-go/internal/config"
@@ -40,12 +38,12 @@ system:
 	require.NoError(t, err)
 
 	tests := []struct {
-		name          string
-		configDirArg  string
-		envConfigDir  string
-		envPort       string
-		wantPanic     bool
-		panicContains string
+		name         string
+		configDirArg string
+		envConfigDir string
+		envPort      string
+		wantErr      bool
+		errContains  string
 	}{
 		{
 			name:         "config dir from argument",
@@ -58,15 +56,15 @@ system:
 			envPort:      "9090",
 		},
 		{
-			name:          "missing config dir",
-			wantPanic:     true,
-			panicContains: "Config directory path must be provided either as an argument or via IMPOSTER_CONFIG_DIR environment variable",
+			name:        "missing config dir",
+			wantErr:     true,
+			errContains: "config directory path must be provided either as an argument or via the IMPOSTER_CONFIG_DIR environment variable",
 		},
 		{
-			name:          "invalid config dir",
-			configDirArg:  "/nonexistent/path",
-			wantPanic:     true,
-			panicContains: "specified config dir '/nonexistent/path' is not a valid directory",
+			name:         "invalid config dir",
+			configDirArg: "/nonexistent/path",
+			wantErr:      true,
+			errContains:  "specified config dir '/nonexistent/path' is not a valid directory",
 		},
 		{
 			name:         "default port",
@@ -88,15 +86,16 @@ system:
 				t.Setenv("IMPOSTER_PORT", "")
 			}
 
-			if tt.wantPanic {
-				assertPanicContains(t, tt.panicContains, func() {
-					InitialiseImposter(tt.configDirArg)
-				})
+			if tt.wantErr {
+				_, _, err := InitialiseImposter(tt.configDirArg)
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errContains)
 				return
 			}
 
 			// Run initialisation
-			imposterConfig, plugins := InitialiseImposter(tt.configDirArg)
+			imposterConfig, plugins, err := InitialiseImposter(tt.configDirArg)
+			require.NoError(t, err)
 			assert.NotEmpty(t, plugins)
 
 			configs := []*config.Config{}
@@ -160,7 +159,8 @@ system:
 	require.NoError(t, err)
 
 	// Run initialisation
-	_, _ = InitialiseImposter(tmpDir)
+	_, _, err = InitialiseImposter(tmpDir)
+	require.NoError(t, err)
 
 	// Verify store initialisation
 	// Note: Since store is a global singleton, we can verify its state here
@@ -192,8 +192,9 @@ resources:
 	err := os.WriteFile(filepath.Join(tmpDir, "invalid-config.yml"), invalidConfig, 0644)
 	require.NoError(t, err)
 
-	// Run initialisation - it should not panic on invalid config
-	imposterConfig, plugins := InitialiseImposter(tmpDir)
+	// Run initialisation - it should not fail on invalid config
+	imposterConfig, plugins, err := InitialiseImposter(tmpDir)
+	require.NoError(t, err)
 	assert.NotEmpty(t, plugins)
 
 	configs := []*config.Config{}
@@ -209,31 +210,4 @@ resources:
 	if len(configs) > 0 {
 		assert.Equal(t, "rest", configs[0].Plugin)
 	}
-}
-
-// assertPanicContains checks that the function panics and the panic message contains the expected text
-func assertPanicContains(t *testing.T, expectedText string, f func()) {
-	t.Helper()
-	defer func() {
-		r := recover()
-		if r == nil {
-			t.Errorf("Expected panic, but function did not panic")
-			return
-		}
-
-		var actualMessage string
-		switch v := r.(type) {
-		case string:
-			actualMessage = v
-		case error:
-			actualMessage = v.Error()
-		default:
-			actualMessage = fmt.Sprintf("%v", v)
-		}
-
-		if !strings.Contains(actualMessage, expectedText) {
-			t.Errorf("Expected panic message to contain %q, but got %q", expectedText, actualMessage)
-		}
-	}()
-	f()
 }

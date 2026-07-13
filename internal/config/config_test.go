@@ -41,7 +41,8 @@ resources:
 	require.NoError(t, err)
 
 	// Load the config
-	configs := LoadConfig(tempDir, &ImposterConfig{})
+	configs, err := LoadConfig(tempDir, &ImposterConfig{})
+	require.NoError(t, err)
 	require.Len(t, configs, 1)
 
 	cfg := configs[0]
@@ -113,7 +114,8 @@ resources:
 	require.NoError(t, err)
 
 	// Load the config
-	configs := LoadConfig(tempDir, imposterConfig)
+	configs, err := LoadConfig(tempDir, imposterConfig)
+	require.NoError(t, err)
 	require.Len(t, configs, 1)
 
 	cfg := configs[0]
@@ -207,7 +209,8 @@ resources:
 	require.NoError(t, err)
 
 	// Load the config
-	configs := LoadConfig(tempDir, imposterConfig)
+	configs, err := LoadConfig(tempDir, imposterConfig)
+	require.NoError(t, err)
 	require.Len(t, configs, 1)
 
 	cfg := configs[0]
@@ -239,7 +242,8 @@ resources:
 	err := os.WriteFile(filepath.Join(tempDir, "test-config.yaml"), []byte(configContent), 0644)
 	require.NoError(t, err)
 
-	configs := LoadConfig(tempDir, imposterConfig)
+	configs, err := LoadConfig(tempDir, imposterConfig)
+	require.NoError(t, err)
 	require.Len(t, configs, 1)
 
 	cfg := configs[0]
@@ -268,7 +272,8 @@ resources:
 	err := os.WriteFile(filepath.Join(tempDir, "test-config.yaml"), []byte(configContent), 0644)
 	require.NoError(t, err)
 
-	configs := LoadConfig(tempDir, imposterConfig)
+	configs, err := LoadConfig(tempDir, imposterConfig)
+	require.NoError(t, err)
 	require.Len(t, configs, 1)
 
 	// Defined var is substituted; undefined reference is left intact
@@ -328,7 +333,8 @@ system:
 	require.NoError(t, err)
 
 	// Load the configs
-	configs := LoadConfig(tempDir, imposterConfig)
+	configs, err := LoadConfig(tempDir, imposterConfig)
+	require.NoError(t, err)
 	require.Len(t, configs, 2)
 
 	// Check root config
@@ -400,7 +406,8 @@ resources:
 	require.NoError(t, err)
 
 	// Load the config
-	configs := LoadConfig(tempDir, imposterConfig)
+	configs, err := LoadConfig(tempDir, imposterConfig)
+	require.NoError(t, err)
 	require.Len(t, configs, 1)
 
 	cfg := configs[0]
@@ -453,7 +460,8 @@ resources:
 	err := os.WriteFile(filepath.Join(tempDir, "test-config.yaml"), []byte(configContent), 0644)
 	require.NoError(t, err)
 
-	configs := LoadConfig(tempDir, imposterConfig)
+	configs, err := LoadConfig(tempDir, imposterConfig)
+	require.NoError(t, err)
 	require.Len(t, configs, 1)
 
 	cfg := configs[0]
@@ -507,7 +515,8 @@ resources:
 	require.NoError(t, err)
 
 	// Load the config
-	configs := LoadConfig(tempDir, imposterConfig)
+	configs, err := LoadConfig(tempDir, imposterConfig)
+	require.NoError(t, err)
 	require.Len(t, configs, 1)
 
 	cfg := configs[0]
@@ -625,7 +634,8 @@ func TestLoadConfig_WithRequestBody(t *testing.T) {
 	imposterConfig := &ImposterConfig{}
 
 	// Load the config from testdata
-	configs := LoadConfig("testdata", imposterConfig)
+	configs, err := LoadConfig("testdata", imposterConfig)
+	require.NoError(t, err)
 	require.Len(t, configs, 1)
 
 	cfg := configs[0]
@@ -709,7 +719,8 @@ resources:
 	require.NoError(t, err)
 
 	// Load the config
-	configs := LoadConfig(tempDir, imposterConfig)
+	configs, err := LoadConfig(tempDir, imposterConfig)
+	require.NoError(t, err)
 	require.Len(t, configs, 1)
 
 	cfg := configs[0]
@@ -779,7 +790,8 @@ validation:
 			require.NoError(t, err)
 
 			// Load the config
-			configs := LoadConfig(tempDir, imposterConfig)
+			configs, err := LoadConfig(tempDir, imposterConfig)
+			require.NoError(t, err)
 			require.Len(t, configs, 1)
 
 			cfg := configs[0]
@@ -835,7 +847,8 @@ resources:
 	require.NoError(t, os.WriteFile(filepath.Join(tempDir, "sessions-config.yaml"), []byte(sessionsContent), 0644))
 
 	imposterConfig := &ImposterConfig{}
-	configs := LoadConfig(tempDir, imposterConfig)
+	configs, err := LoadConfig(tempDir, imposterConfig)
+	require.NoError(t, err)
 
 	// The two websocket files must collapse into a single config whose resources
 	// are the union of both files.
@@ -867,7 +880,8 @@ resources:
 	require.NoError(t, os.WriteFile(filepath.Join(tempDir, "b-config.yaml"), []byte(restB), 0644))
 
 	imposterConfig := &ImposterConfig{}
-	configs := LoadConfig(tempDir, imposterConfig)
+	configs, err := LoadConfig(tempDir, imposterConfig)
+	require.NoError(t, err)
 
 	rest := 0
 	for _, c := range configs {

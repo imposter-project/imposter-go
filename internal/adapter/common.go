@@ -13,43 +13,52 @@ import (
 	"github.com/imposter-project/imposter-go/plugin"
 )
 
-// InitialiseImposter performs common initialisation tasks for all adapters
-func InitialiseImposter(configDirArg string) (*config.ImposterConfig, []plugin.Plugin) {
+// InitialiseImposter performs common initialisation tasks for all adapters.
+// It returns an error rather than panicking for user-facing problems (such as
+// missing or invalid configuration) so callers can present a concise message
+// and exit with a non-zero status instead of dumping a stack trace.
+func InitialiseImposter(configDirArg string) (*config.ImposterConfig, []plugin.Plugin, error) {
 	logger.Infof("starting imposter-go %s...", version.Version)
 
 	imposterConfig := config.LoadImposterConfig()
-	configDirs := getConfigDirs(configDirArg)
+	configDirs, err := getConfigDirs(configDirArg)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	store.InitStoreProvider()
 
 	var configs []config.Config
 	for _, configDir := range configDirs {
-		if info, err := os.Stat(configDir); os.IsNotExist(err) || !info.IsDir() {
-			panic(fmt.Errorf("specified config dir '%s' is not a valid directory", configDir))
+		if info, err := os.Stat(configDir); err != nil || !info.IsDir() {
+			return nil, nil, fmt.Errorf("specified config dir '%s' is not a valid directory", configDir)
 		}
 
-		cfgs := config.LoadConfig(configDir, imposterConfig)
-		store.PreloadStores(configDir, cfgs)
+		cfgs, err := config.LoadConfig(configDir, imposterConfig)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to load configuration from '%s': %w", configDir, err)
+		}
+		if err := store.PreloadStores(configDir, cfgs); err != nil {
+			return nil, nil, err
+		}
 
 		configs = append(configs, cfgs...)
 	}
 
-	// Exit if no configuration files were found
+	// Fail if no configuration files were found
 	if len(configs) == 0 {
-		logger.Errorf("no configuration files found in specified directories: %v", configDirs)
-		os.Exit(1)
-	} else {
-		logger.Tracef("%d configs discovered", len(configs))
+		return nil, nil, fmt.Errorf("no configuration files found in specified directories: %v", configDirs)
 	}
+	logger.Tracef("%d configs discovered", len(configs))
 
 	externalPlugins, err := external.StartExternalPlugins(imposterConfig, configs)
 	if err != nil {
-		panic(fmt.Errorf("error starting external plugins: %w", err))
+		return nil, nil, fmt.Errorf("error starting external plugins: %w", err)
 	}
 
 	plugins, err := plugin.LoadPlugins(configs, imposterConfig, externalPlugins)
 	if err != nil {
-		panic(fmt.Errorf("error loading plugins: %w", err))
+		return nil, nil, fmt.Errorf("error loading plugins: %w", err)
 	}
 
 	// Pre-calculate resource IDs for all loaded configurations.
@@ -59,19 +68,19 @@ func InitialiseImposter(configDirArg string) (*config.ImposterConfig, []plugin.P
 		config.PreCalculateResourceID(plg.GetConfig())
 	}
 
-	return imposterConfig, plugins
+	return imposterConfig, plugins, nil
 }
 
-func getConfigDirs(configDirArg string) []string {
+func getConfigDirs(configDirArg string) ([]string, error) {
 	var configDirRaw string
 	if configDirArg != "" {
 		configDirRaw = configDirArg
 	} else {
 		configDirRaw = os.Getenv("IMPOSTER_CONFIG_DIR")
 		if configDirRaw == "" {
-			panic("Config directory path must be provided either as an argument or via IMPOSTER_CONFIG_DIR environment variable")
+			return nil, fmt.Errorf("config directory path must be provided either as an argument or via the IMPOSTER_CONFIG_DIR environment variable")
 		}
 	}
 	configDirs := strings.Split(configDirRaw, ",")
-	return configDirs
+	return configDirs, nil
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/imposter-project/imposter-go/internal/adapter/httpserver"
 	"github.com/imposter-project/imposter-go/internal/scheduler"
 	"github.com/imposter-project/imposter-go/internal/version"
+	"github.com/imposter-project/imposter-go/pkg/logger"
 )
 
 func main() {
@@ -38,7 +39,14 @@ func main() {
 	} else {
 		runtimeAdapter = httpserver.NewAdapter()
 	}
-	runtimeAdapter.Start()
+	if err := runtimeAdapter.Start(); err != nil {
+		// Report the failure concisely and exit non-zero, rather than
+		// letting a panic dump a stack trace for what is usually a
+		// configuration problem.
+		cleanup()
+		logger.Errorf("%v", err)
+		os.Exit(1)
+	}
 	cleanup()
 }
 

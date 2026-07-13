@@ -76,7 +76,7 @@ func LoadImposterConfig() *ImposterConfig {
 }
 
 // LoadConfig loads all config files in the specified directory
-func LoadConfig(configDir string, imposterConfig *ImposterConfig) []Config {
+func LoadConfig(configDir string, imposterConfig *ImposterConfig) ([]Config, error) {
 	logger.Debugf("loading config files from %s", configDir)
 	var configs []Config
 
@@ -194,10 +194,10 @@ func LoadConfig(configDir string, imposterConfig *ImposterConfig) []Config {
 		return nil
 	})
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	return coalesceWebSocketConfigs(configs)
+	return coalesceWebSocketConfigs(configs), nil
 }
 
 // coalesceWebSocketConfigs merges every 'websocket' config into a single

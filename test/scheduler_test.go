@@ -48,7 +48,8 @@ schedules:
 
 	store.InitStoreProvider()
 	imposterConfig := config.LoadImposterConfig()
-	configs := config.LoadConfig(tempDir, imposterConfig)
+	configs, err := config.LoadConfig(tempDir, imposterConfig)
+	require.NoError(t, err)
 	require.Len(t, configs, 1)
 
 	scheduler.Start([]*config.Config{&configs[0]}, imposterConfig)
