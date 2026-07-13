@@ -108,8 +108,9 @@ func (o *OIDCServer) Configure(cfg shared.ExternalConfig) (shared.PluginCapabili
 		o.config = getDefaultConfig()
 	}
 
-	// Store the path prefix for use in routing and URLs
-	o.pathPrefix = o.config.PathPrefix
+	// Store the path prefix for use in routing and URLs, normalised so every
+	// issuer/endpoint concatenation and route match is well-formed
+	o.pathPrefix = normalizePathPrefix(o.config.PathPrefix)
 
 	// Setup JWT signing keys based on algorithm
 	if err := o.setupJWTKeys(); err != nil {
