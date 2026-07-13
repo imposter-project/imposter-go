@@ -67,6 +67,8 @@ schedules:
 - **Top-level `schedules`** (any plugin): engine-lifetime jobs running `steps` (a `remote` step is an outbound webhook; a `script` step runs JavaScript). Responses are rejected here — there is no client to send to.
 - **Resource-level `schedule`** (websocket `on: open` resources only): connection-lifetime jobs that may send `response(s)` frames and/or run `steps`; they stop when the connection closes.
 - A schedule entry declares exactly one of `every` (Go duration) or `cron` (standard 5-field expression). Runs are serialised per entry: a firing that outlasts the interval delays the next one rather than overlapping it.
+- An optional `limit` caps the total number of firings (omitted = unlimited); once reached, the schedule stops and logs that it has done so. Operators can set a global default via `IMPOSTER_SCHEDULE_LIMIT` for schedules that omit `limit` (an explicit `limit` always wins; no default value is shipped). Docs steer users towards setting a limit for outbound pushes.
+- Observability: schedules log registration, trigger and effective limit at INFO (plus a hint when unlimited); each firing, the next fire time, and limit exhaustion at DEBUG/INFO; websocket connections log handled events with frame counts at INFO, unmatched messages at WARN, and frame sends at DEBUG (bodies at TRACE). The resource-level `log:` template is emitted for websocket events, mirroring the HTTP handler.
 
 ## Implementation notes
 

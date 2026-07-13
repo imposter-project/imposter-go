@@ -45,7 +45,7 @@ func TestRunSchedule(t *testing.T) {
 		done := make(chan struct{})
 		go func() {
 			defer close(done)
-			RunSchedule(ctx, next, func() {
+			RunSchedule(ctx, "test", next, 0, func() {
 				count.Add(1)
 				fired <- struct{}{}
 			})
@@ -80,7 +80,7 @@ func TestRunSchedule(t *testing.T) {
 		done := make(chan struct{})
 		go func() {
 			defer close(done)
-			RunSchedule(ctx, next, func() { count.Add(1) })
+			RunSchedule(ctx, "test", next, 0, func() { count.Add(1) })
 		}()
 
 		select {
@@ -89,5 +89,47 @@ func TestRunSchedule(t *testing.T) {
 			t.Fatal("runner did not stop after cancellation")
 		}
 		require.Equal(t, int32(0), count.Load())
+	})
+
+	t.Run("stops after reaching the firing limit", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		var count atomic.Int32
+		next := func(after time.Time) time.Time { return after.Add(5 * time.Millisecond) }
+
+		done := make(chan struct{})
+		go func() {
+			defer close(done)
+			RunSchedule(ctx, "test", next, 3, func() { count.Add(1) })
+		}()
+
+		select {
+		case <-done:
+		case <-time.After(2 * time.Second):
+			t.Fatal("runner did not stop after reaching its limit")
+		}
+		require.Equal(t, int32(3), count.Load())
+	})
+}
+
+func TestEffectiveLimit(t *testing.T) {
+	t.Run("explicit limit wins", func(t *testing.T) {
+		t.Setenv("IMPOSTER_SCHEDULE_LIMIT", "5")
+		require.Equal(t, 10, EffectiveLimit(&config.Schedule{Limit: 10}))
+	})
+
+	t.Run("global default applies when unset", func(t *testing.T) {
+		t.Setenv("IMPOSTER_SCHEDULE_LIMIT", "5")
+		require.Equal(t, 5, EffectiveLimit(&config.Schedule{}))
+	})
+
+	t.Run("unlimited when neither is set", func(t *testing.T) {
+		require.Equal(t, 0, EffectiveLimit(&config.Schedule{}))
+	})
+
+	t.Run("invalid global default is ignored", func(t *testing.T) {
+		t.Setenv("IMPOSTER_SCHEDULE_LIMIT", "nonsense")
+		require.Equal(t, 0, EffectiveLimit(&config.Schedule{}))
 	})
 }

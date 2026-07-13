@@ -149,6 +149,9 @@ func validateScheduleTrigger(sched *Schedule, desc string) error {
 			return fmt.Errorf("%s has invalid 'cron' expression %q: %w", desc, sched.Cron, err)
 		}
 	}
+	if sched.Limit < 0 {
+		return fmt.Errorf("%s 'limit' must not be negative, got %d", desc, sched.Limit)
+	}
 	return nil
 }
 

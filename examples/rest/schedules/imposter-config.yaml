@@ -18,6 +18,9 @@ resources:
 schedules:
   - name: order-webhook
     every: 30s
+    # Fire at most 20 times, then stop. Omit 'limit' only if the schedule
+    # genuinely needs to run for the lifetime of the mock.
+    limit: 20
     steps:
       - type: remote
         url: ${env.WEBHOOK_URL:-http://localhost:9090/webhook}

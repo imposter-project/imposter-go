@@ -27,3 +27,5 @@ curl -X POST http://localhost:8080/orders -d '{"id":"order-123"}'
 Every 30 seconds the mock sends `{"event":"order.updated","orderId":"order-123",...}` to the webhook URL.
 
 Schedules can use `every` (a duration such as `30s` or `5m`) or `cron` (a standard 5-field cron expression) and run any `steps` — `remote` for outbound HTTP, `script` for JavaScript.
+
+The optional `limit` caps how many times a schedule fires; without it, the schedule runs for the lifetime of the mock. Operators can set a global default for schedules that omit `limit` with the `IMPOSTER_SCHEDULE_LIMIT` environment variable.

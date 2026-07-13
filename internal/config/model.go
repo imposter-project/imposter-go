@@ -276,6 +276,7 @@ type Schedule struct {
 	Name      string     `yaml:"name,omitempty"`
 	Every     string     `yaml:"every,omitempty"` // interval, e.g. "30s" (Go duration syntax)
 	Cron      string     `yaml:"cron,omitempty"`  // standard 5-field cron expression
+	Limit     int        `yaml:"limit,omitempty"` // maximum number of firings; 0 (or omitted) means unlimited
 	Response  *Response  `yaml:"response,omitempty"`
 	Responses []Response `yaml:"responses,omitempty"`
 	Steps     []Step     `yaml:"steps,omitempty"`

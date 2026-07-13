@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/exchange"
@@ -42,21 +43,30 @@ func Start(configs []*config.Config, imposterConfig *config.ImposterConfig) {
 	for _, cfg := range configs {
 		for i := range cfg.Schedules {
 			entry := &cfg.Schedules[i]
+			name := ScheduleName(entry, i)
 			next, err := TriggerFunc(entry)
 			if err != nil {
 				// Validation runs at startup, so this should be unreachable.
-				logger.Errorf("invalid schedule trigger: %v", err)
+				logger.Errorf("invalid trigger for schedule %s: %v", name, err)
 				continue
+			}
+
+			limit := EffectiveLimit(entry)
+			logger.Infof("registered schedule %s (%s)", name, DescribeTrigger(entry, limit))
+			if limit == 0 {
+				logger.Infof("schedule %s has no 'limit' set and will keep firing for the lifetime of the engine; set 'limit' or %s to cap it", name, scheduleLimitEnvVar)
+			} else if entry.Limit == 0 {
+				logger.Infof("schedule %s: applying global default limit of %d from %s", name, limit, scheduleLimitEnvVar)
 			}
 
 			count++
 			sched.wg.Add(1)
-			go func(entry *config.Schedule, cfg *config.Config, next NextFireFunc) {
+			go func(entry *config.Schedule, cfg *config.Config, name string, next NextFireFunc, limit int) {
 				defer sched.wg.Done()
-				RunSchedule(ctx, next, func() {
-					fireSchedule(entry, cfg, imposterConfig)
+				RunSchedule(ctx, name, next, limit, func() {
+					fireSchedule(entry, name, cfg, imposterConfig)
 				})
-			}(entry, cfg, next)
+			}(entry, cfg, name, next, limit)
 		}
 	}
 
@@ -85,18 +95,14 @@ func Stop() {
 
 // fireSchedule executes a single run of a schedule entry's steps with a fresh
 // request-scoped store and response state.
-func fireSchedule(entry *config.Schedule, cfg *config.Config, imposterConfig *config.ImposterConfig) {
-	name := entry.Name
-	if name == "" {
-		name = "unnamed"
-	}
-	logger.Debugf("firing schedule %q", name)
+func fireSchedule(entry *config.Schedule, name string, cfg *config.Config, imposterConfig *config.ImposterConfig) {
+	startTime := time.Now()
 
 	// Templating, delays and captures all dereference the exchange's request,
 	// so a synthetic one is required even though no inbound request exists.
 	req, err := http.NewRequest(http.MethodGet, "http://localhost/", nil)
 	if err != nil {
-		logger.Errorf("schedule %q: failed to create synthetic request: %v", name, err)
+		logger.Errorf("schedule %s: failed to create synthetic request: %v", name, err)
 		return
 	}
 
@@ -105,8 +111,8 @@ func fireSchedule(entry *config.Schedule, cfg *config.Config, imposterConfig *co
 	exch := exchange.NewExchange(req, nil, requestStore, responseState)
 
 	if err := steps.RunSteps(entry.Steps, exch, imposterConfig, cfg.ConfigDir, responseState, &config.RequestMatcher{}); err != nil {
-		logger.Errorf("schedule %q: failed to execute steps: %v", name, err)
+		logger.Errorf("schedule %s: failed to execute steps: %v", name, err)
 		return
 	}
-	logger.Infof("schedule %q completed", name)
+	logger.Infof("schedule %s: run completed (%d step(s) in %v)", name, len(entry.Steps), time.Since(startTime).Round(time.Millisecond))
 }

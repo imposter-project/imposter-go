@@ -252,3 +252,21 @@ func TestEffectiveResponses(t *testing.T) {
 		}
 	})
 }
+
+func TestValidateScheduleLimit(t *testing.T) {
+	valid := Config{
+		Plugin:    "rest",
+		Schedules: []Schedule{{Every: "30s", Limit: 10, Steps: []Step{{Type: RemoteStepType}}}},
+	}
+	if err := Validate(&valid); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	negative := Config{
+		Plugin:    "rest",
+		Schedules: []Schedule{{Every: "30s", Limit: -1, Steps: []Step{{Type: RemoteStepType}}}},
+	}
+	if err := Validate(&negative); err == nil {
+		t.Fatal("expected error for negative limit, got nil")
+	}
+}

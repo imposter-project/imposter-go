@@ -13,6 +13,7 @@ import (
 	"github.com/imposter-project/imposter-go/internal/pipeline"
 	"github.com/imposter-project/imposter-go/internal/response"
 	"github.com/imposter-project/imposter-go/internal/store"
+	"github.com/imposter-project/imposter-go/internal/template"
 	"github.com/imposter-project/imposter-go/pkg/logger"
 )
 
@@ -65,6 +66,8 @@ func (c *wsConn) run() {
 	openState := c.runEventPipeline(config.WebSocketEventOpen, nil)
 	if openState.Resource != nil {
 		c.startSchedules(openState.Resource)
+	} else {
+		logger.Debugf("no 'on: open' resource matched - path:%s", c.upgrade.URL.Path)
 	}
 
 	for {
@@ -106,6 +109,11 @@ func (c *wsConn) writeLoop() {
 				c.cancel()
 				return
 			}
+			if logger.IsTraceEnabled() {
+				logger.Tracef("sent websocket frame - path:%s, body:%s", c.upgrade.URL.Path, msg)
+			} else {
+				logger.Debugf("sent websocket frame - path:%s, length:%d", c.upgrade.URL.Path, len(msg))
+			}
 		case <-c.ctx.Done():
 			deadline := time.Now().Add(closeWriteTimeout)
 			_ = c.conn.WriteControl(websocket.CloseMessage,
@@ -135,6 +143,7 @@ func (c *wsConn) runEventPipeline(event string, body []byte) *exchange.ResponseS
 	responseState := response.NewResponseState()
 	exch := exchange.NewExchange(c.upgrade, body, c.requestStore, responseState)
 
+	var frames int
 	hooks := &pipeline.ProtocolHooks{
 		CalculateScore: func(exch *exchange.Exchange, reqMatcher *config.RequestMatcher,
 			systemNamespaces map[string]string, imposterConfig *config.ImposterConfig,
@@ -151,7 +160,9 @@ func (c *wsConn) runEventPipeline(event string, body []byte) *exchange.ResponseS
 		ProcessResponse: func(exch *exchange.Exchange, reqMatcher *config.RequestMatcher,
 			resp *config.Response, respProc response.Processor,
 		) {
-			c.processAndSend(exch, reqMatcher, resp, event != config.WebSocketEventClose)
+			if c.processAndSend(exch, reqMatcher, resp, event != config.WebSocketEventClose) {
+				frames++
+			}
 		},
 		GetResourceName: func(resource *config.Resource) (string, string) {
 			return resource.Path, "WS"
@@ -160,25 +171,40 @@ func (c *wsConn) runEventPipeline(event string, body []byte) *exchange.ResponseS
 
 	pipeline.RunPipeline(h.config, h.imposterConfig, exch, h.respProc, hooks)
 
-	if !responseState.Handled && event == config.WebSocketEventMessage {
-		logger.Debugf("no resource matched websocket message - path:%s", c.upgrade.URL.Path)
+	if responseState.Handled {
+		logger.Infof("handled websocket %s event - path:%s, frames:%d", event, c.upgrade.URL.Path, frames)
+	} else if event == config.WebSocketEventMessage {
+		logger.Warnf("no resource matched websocket message - path:%s, length:%d (enable TRACE logging to see message bodies)", c.upgrade.URL.Path, len(body))
+	} else {
+		logger.Debugf("no resource matched websocket %s event - path:%s", event, c.upgrade.URL.Path)
 	}
+
+	// Emit the matched resource's 'log' template, mirroring the HTTP
+	// handler's behaviour, which websocket events bypass.
+	if responseState.Resource != nil && responseState.Resource.Log != "" {
+		logger.Infoln(template.ProcessTemplate(responseState.Resource.Log, exch, h.imposterConfig, &responseState.Resource.RequestMatcher))
+	}
+
 	return responseState
 }
 
 // processAndSend runs standard response processing (delay, file/content
-// resolution, templating) and enqueues the result as a text frame.
+// resolution, templating) and enqueues the result as a text frame, reporting
+// whether a frame was sent.
 func (c *wsConn) processAndSend(exch *exchange.Exchange, reqMatcher *config.RequestMatcher,
 	resp *config.Response, sendFrame bool,
-) {
+) bool {
 	c.handler.respProc(exch, reqMatcher, resp)
 
 	rs := exch.ResponseState
+	sent := false
 	if sendFrame && len(rs.Body) > 0 {
 		c.send(rs.Body)
+		sent = true
 	}
 	// Reset per-response fields so subsequent responses in a 'responses'
 	// list start clean.
 	rs.Body = nil
 	rs.File = ""
+	return sent
 }

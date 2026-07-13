@@ -269,3 +269,31 @@ resources:
 		return resp.StatusCode == http.StatusOK
 	}, 5*time.Second, 50*time.Millisecond)
 }
+
+func TestWebSocket_ScheduleLimit(t *testing.T) {
+	configContent := `plugin: websocket
+resources:
+  - path: /gateway
+    on: open
+    schedule:
+      - every: 50ms
+        limit: 2
+        response:
+          content: '{"type":"event","event":"tick"}'
+`
+	server := startWebSocketServer(t, configContent)
+
+	conn, _, err := websocket.DefaultDialer.Dial(wsURL(server, "/gateway"), nil)
+	require.NoError(t, err)
+	defer conn.Close()
+
+	// Exactly two ticks arrive, then the schedule stops
+	for i := 0; i < 2; i++ {
+		tick := readTextMessage(t, conn)
+		require.Contains(t, tick, `"tick"`)
+	}
+
+	require.NoError(t, conn.SetReadDeadline(time.Now().Add(500*time.Millisecond)))
+	_, _, err = conn.ReadMessage()
+	require.Error(t, err, "expected no further ticks after the limit was reached")
+}
