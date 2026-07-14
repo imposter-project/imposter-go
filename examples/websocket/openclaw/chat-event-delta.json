@@ -2,9 +2,10 @@
   "type": "event",
   "event": "chat",
   "payload": {
-    "requestId": "${stores.request.reqId}",
-    "deltaText": "Here's a first part of the reply, ",
-    "replace": false
-  },
-  "seq": 2
+    "runId": "${stores.request.reqId}",
+    "sessionKey": "${stores.request.sessionKey}",
+    "seq": 1,
+    "state": "delta",
+    "message": "Here's the first part of the reply, "
+  }
 }

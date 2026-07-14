@@ -1,0 +1,21 @@
+{
+  "type": "res",
+  "id": "${stores.request.reqId}",
+  "ok": true,
+  "payload": {
+    "messages": [
+      {
+        "role": "user",
+        "content": "Hello!",
+        "timestamp": ${datetime.now.millis}
+      },
+      {
+        "role": "assistant",
+        "content": [
+          { "type": "text", "text": "Hi! I'm the mock main agent. Ask me anything." }
+        ],
+        "timestamp": ${datetime.now.millis}
+      }
+    ]
+  }
+}

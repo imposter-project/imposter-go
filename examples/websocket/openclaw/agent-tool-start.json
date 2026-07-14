@@ -1,0 +1,16 @@
+{
+  "type": "event",
+  "event": "agent",
+  "payload": {
+    "runId": "${stores.request.reqId}",
+    "seq": 1,
+    "stream": "tool",
+    "ts": ${datetime.now.millis},
+    "data": {
+      "phase": "start",
+      "name": "read_file",
+      "toolCallId": "tc-1",
+      "args": { "path": "README.md" }
+    }
+  }
+}
