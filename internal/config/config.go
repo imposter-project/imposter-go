@@ -197,7 +197,67 @@ func LoadConfig(configDir string, imposterConfig *ImposterConfig) []Config {
 		panic(err)
 	}
 
-	return configs
+	return coalesceWebSocketConfigs(configs)
+}
+
+// coalesceWebSocketConfigs merges every 'websocket' config into a single
+// config, preserving the position of the first one and leaving all other
+// plugins untouched.
+//
+// A websocket connection is multiplexed over one long-lived connection owned by
+// a single plugin instance: the first plugin whose path matches the upgrade
+// handles every subsequent message using only its own resources. Without this
+// merge, splitting websocket mocks across several '*-config.yaml' files would
+// silently drop all but the first file's resources (and its 'on: open'
+// schedule). Merging is safe because, by this point, the loader has already
+// rewritten each resource's referenced files relative to the shared root
+// ConfigDir, so resources from different files resolve correctly.
+func coalesceWebSocketConfigs(configs []Config) []Config {
+	firstIdx := -1
+	var result []Config
+	for i := range configs {
+		cfg := configs[i]
+		if cfg.Plugin != "websocket" {
+			result = append(result, cfg)
+			continue
+		}
+		if firstIdx == -1 {
+			firstIdx = len(result)
+			result = append(result, cfg)
+			continue
+		}
+		base := &result[firstIdx]
+		base.Resources = append(base.Resources, cfg.Resources...)
+		base.Interceptors = append(base.Interceptors, cfg.Interceptors...)
+		base.Schedules = append(base.Schedules, cfg.Schedules...)
+		mergeSystem(base, cfg.System)
+	}
+	return result
+}
+
+// mergeSystem folds the stores and XML namespaces of an additional config's
+// System block into the base config, so split websocket files may each declare
+// their own preloaded stores.
+func mergeSystem(base *Config, extra *System) {
+	if extra == nil {
+		return
+	}
+	if base.System == nil {
+		base.System = extra
+		return
+	}
+	for name, def := range extra.Stores {
+		if base.System.Stores == nil {
+			base.System.Stores = make(map[string]StoreDefinition)
+		}
+		base.System.Stores[name] = def
+	}
+	for prefix, uri := range extra.XMLNamespaces {
+		if base.System.XMLNamespaces == nil {
+			base.System.XMLNamespaces = make(map[string]string)
+		}
+		base.System.XMLNamespaces[prefix] = uri
+	}
 }
 
 // loadIgnorePaths loads ignore paths from .imposterignore file or uses default ignore paths
