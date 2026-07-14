@@ -23,7 +23,12 @@ type MessageBodyHolder struct {
 	EnvNamespace    string
 }
 
-// GetSOAPVersion returns the SOAP version based on the envelope namespace
+// GetSOAPVersion returns the SOAP version based on the envelope namespace.
+//
+// The envelope namespace is validated in parseBody before a MessageBodyHolder
+// is constructed, so a request-derived holder always carries a recognised
+// namespace. The default branch is therefore a defensive invariant guarding
+// against a programmatically constructed holder with an invalid namespace.
 func (b *MessageBodyHolder) GetSOAPVersion() SOAPVersion {
 	switch b.EnvNamespace {
 	case SOAP11EnvNamespace:
@@ -113,6 +118,17 @@ func (h *PluginHandler) parseBody(body []byte) (*MessageBodyHolder, error) {
 	bodyNode := xmlquery.FindOne(doc, "//*[local-name()='Body']/*[1]")
 	if bodyNode == nil {
 		return nil, fmt.Errorf("no SOAP body element found")
+	}
+
+	// Reject unrecognised envelope namespaces here so that downstream SOAP
+	// version detection never receives an unsupported envelope. This turns a
+	// malformed request into a proper SOAP Fault (see the caller) rather than
+	// a panic from GetSOAPVersion.
+	switch envNamespace {
+	case SOAP11EnvNamespace, SOAP12DraftEnvNamespace, SOAP12RecEnvNamespace:
+		// recognised SOAP envelope namespace
+	default:
+		return nil, fmt.Errorf("root element is not a SOAP envelope - namespace is %s", envNamespace)
 	}
 
 	return &MessageBodyHolder{

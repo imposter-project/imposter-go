@@ -335,7 +335,8 @@ Content-Type: image/jpeg
 
 			// Load config
 			imposterConfig := &config.ImposterConfig{}
-			configs := config.LoadConfig(tt.configDir, imposterConfig)
+			configs, err := config.LoadConfig(tt.configDir, imposterConfig)
+			require.NoError(t, err)
 			require.Len(t, configs, 1, "Expected one config")
 			cfg := &configs[0]
 

@@ -40,7 +40,8 @@ resources:
 		ServerPort: "8080",
 		ServerUrl:  "http://localhost:8080",
 	}
-	configs := config.LoadConfig(tempDir, imposterConfig)
+	configs, err := config.LoadConfig(tempDir, imposterConfig)
+	require.NoError(t, err)
 	plugins, err := plugin.LoadPlugins(configs, imposterConfig, nil)
 	require.NoError(t, err)
 

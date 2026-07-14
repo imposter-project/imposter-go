@@ -29,8 +29,9 @@ func NewAdapter() adapter.Adapter {
 }
 
 // Start begins the Lambda runtime
-func (a *LambdaAdapter) Start() {
+func (a *LambdaAdapter) Start() error {
 	lambda.Start(HandleLambdaRequest)
+	return nil
 }
 
 var (
@@ -55,8 +56,15 @@ func init() {
 		os.Setenv("IMPOSTER_CONFIG_DIR", "/var/task/config")
 	}
 
-	// Load configuration once during cold start
-	imposterConfig, plugins = adapter.InitialiseImposter("")
+	// Load configuration once during cold start. A failure here is fatal:
+	// panicking is the AWS convention for signalling a failed init phase, and
+	// the error now carries a concise, user-facing message.
+	var err error
+	imposterConfig, plugins, err = adapter.InitialiseImposter("")
+	if err != nil {
+		logger.Errorf("failed to initialise imposter: %v", err)
+		panic(err)
+	}
 
 	// Schedules and websocket connections require a long-lived process, which
 	// the Lambda execution model does not provide.

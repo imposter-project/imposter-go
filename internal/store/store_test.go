@@ -43,7 +43,9 @@ func TestPreloadStores(t *testing.T) {
 	storeProvider.InitStores()
 
 	// Test preloading
-	PreloadStores(tmpDir, configs)
+	if err := PreloadStores(tmpDir, configs); err != nil {
+		t.Fatal(err)
+	}
 
 	t.Run("PreloadedFileStore", func(t *testing.T) {
 		s := Open("fileStore", nil)

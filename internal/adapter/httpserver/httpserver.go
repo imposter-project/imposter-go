@@ -2,6 +2,7 @@ package httpserver
 
 import (
 	"crypto/tls"
+	"fmt"
 	"net/http"
 	"os"
 	"time"
@@ -26,14 +27,17 @@ func NewAdapter() adapter.Adapter {
 }
 
 // Start begins the HTTP server runtime
-func (a *HTTPAdapter) Start() {
+func (a *HTTPAdapter) Start() error {
 	startTime := time.Now()
 	var configDirArg string
 	if len(os.Args) >= 2 {
 		configDirArg = os.Args[1]
 	}
 
-	imposterConfig, plugins := adapter.InitialiseImposter(configDirArg)
+	imposterConfig, plugins, err := adapter.InitialiseImposter(configDirArg)
+	if err != nil {
+		return err
+	}
 
 	// Start engine-lifetime scheduled jobs declared in the loaded configs
 	var configs []*config.Config
@@ -45,7 +49,7 @@ func (a *HTTPAdapter) Start() {
 	// Initialise and start the server with multiple configs
 	srv := newServer(imposterConfig, plugins)
 	logger.Infof("startup completed in %v", time.Since(startTime))
-	srv.start(imposterConfig)
+	return srv.start(imposterConfig)
 }
 
 // httpServer represents the HTTP server configuration.
@@ -66,7 +70,7 @@ func newServer(imposterConfig *config.ImposterConfig, plugins []plugin.Plugin) *
 // When TLS is configured, the server uses h2 (HTTP/2 over TLS), or HTTPS/1.1
 // when HTTP/2 is disabled. Otherwise it uses h2c (HTTP/2 cleartext), or plain
 // HTTP/1.1 when HTTP/2 is disabled.
-func (s *httpServer) start(imposterConfig *config.ImposterConfig) {
+func (s *httpServer) start(imposterConfig *config.ImposterConfig) error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		handler.HandleRequest(imposterConfig, w, r, s.Plugins)
@@ -85,7 +89,7 @@ func (s *httpServer) start(imposterConfig *config.ImposterConfig) {
 			logger.Infof("server is listening on %s (https/1.1)...", s.Addr)
 		}
 		if err := server.ListenAndServeTLS(imposterConfig.TLSCertFile, imposterConfig.TLSKeyFile); err != nil {
-			logger.Errorf("error starting TLS server: %v", err)
+			return fmt.Errorf("error starting TLS server: %w", err)
 		}
 	} else {
 		var httpHandler http.Handler = mux
@@ -101,7 +105,8 @@ func (s *httpServer) start(imposterConfig *config.ImposterConfig) {
 			Handler: httpHandler,
 		}
 		if err := server.ListenAndServe(); err != nil {
-			logger.Errorf("error starting server: %v", err)
+			return fmt.Errorf("error starting server: %w", err)
 		}
 	}
+	return nil
 }

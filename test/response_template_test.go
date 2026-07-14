@@ -37,7 +37,8 @@ resources:
 	require.NoError(t, err)
 
 	imposterConfig := config.LoadImposterConfig()
-	configs := config.LoadConfig(tempDir, imposterConfig)
+	configs, err := config.LoadConfig(tempDir, imposterConfig)
+	require.NoError(t, err)
 	plugins, err := plugin.LoadPlugins(configs, imposterConfig, nil)
 	require.NoError(t, err)
 
@@ -73,7 +74,8 @@ resources:
 	require.NoError(t, err)
 
 	imposterConfig := config.LoadImposterConfig()
-	configs := config.LoadConfig(tempDir, imposterConfig)
+	configs, err := config.LoadConfig(tempDir, imposterConfig)
+	require.NoError(t, err)
 	plugins, err := plugin.LoadPlugins(configs, imposterConfig, nil)
 	require.NoError(t, err)
 
@@ -109,7 +111,8 @@ resources:
 	require.NoError(t, err)
 
 	imposterConfig := config.LoadImposterConfig()
-	configs := config.LoadConfig(tempDir, imposterConfig)
+	configs, err := config.LoadConfig(tempDir, imposterConfig)
+	require.NoError(t, err)
 	plugins, err := plugin.LoadPlugins(configs, imposterConfig, nil)
 	require.NoError(t, err)
 
@@ -145,7 +148,8 @@ resources:
 	require.NoError(t, err)
 
 	imposterConfig := config.LoadImposterConfig()
-	configs := config.LoadConfig(tempDir, imposterConfig)
+	configs, err := config.LoadConfig(tempDir, imposterConfig)
+	require.NoError(t, err)
 	plugins, err := plugin.LoadPlugins(configs, imposterConfig, nil)
 	require.NoError(t, err)
 
@@ -181,7 +185,8 @@ resources:
 	require.NoError(t, err)
 
 	imposterConfig := config.LoadImposterConfig()
-	configs := config.LoadConfig(tempDir, imposterConfig)
+	configs, err := config.LoadConfig(tempDir, imposterConfig)
+	require.NoError(t, err)
 	plugins, err := plugin.LoadPlugins(configs, imposterConfig, nil)
 	require.NoError(t, err)
 
@@ -221,7 +226,8 @@ resources:
 	require.NoError(t, err)
 
 	imposterConfig := config.LoadImposterConfig()
-	configs := config.LoadConfig(tempDir, imposterConfig)
+	configs, err := config.LoadConfig(tempDir, imposterConfig)
+	require.NoError(t, err)
 	plugins, err := plugin.LoadPlugins(configs, imposterConfig, nil)
 	require.NoError(t, err)
 

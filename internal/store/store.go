@@ -92,14 +92,14 @@ func GetStoreProvider() StoreProvider {
 	return storeProvider
 }
 
-func PreloadStores(configDir string, configs []config.Config) {
+func PreloadStores(configDir string, configs []config.Config) error {
 	for _, cfg := range configs {
 		if cfg.System != nil && cfg.System.Stores != nil {
 			for storeName, definition := range cfg.System.Stores {
 				if definition.PreloadFile != "" {
 					filePath, err := utils.ValidatePath(definition.PreloadFile, configDir)
 					if err != nil {
-						panic(fmt.Errorf("invalid preload file path: %s", definition.PreloadFile))
+						return fmt.Errorf("invalid preload file path: %s", definition.PreloadFile)
 					}
 					preloadFromFile(storeName, filePath)
 				}
@@ -109,6 +109,7 @@ func PreloadStores(configDir string, configs []config.Config) {
 			}
 		}
 	}
+	return nil
 }
 
 func preloadFromFile(storeName string, path string) {

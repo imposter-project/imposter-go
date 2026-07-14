@@ -29,7 +29,8 @@ func startWebSocketServer(t *testing.T, configContent string) *httptest.Server {
 
 	store.InitStoreProvider()
 	imposterConfig := config.LoadImposterConfig()
-	configs := config.LoadConfig(tempDir, imposterConfig)
+	configs, err := config.LoadConfig(tempDir, imposterConfig)
+	require.NoError(t, err)
 	plugins, err := plugin.LoadPlugins(configs, imposterConfig, nil)
 	require.NoError(t, err)
 
@@ -213,7 +214,8 @@ resources:
 	require.NoError(t, os.WriteFile(filepath.Join(tempDir, "rest-config.yaml"), []byte(restConfig), 0644))
 
 	imposterConfig := config.LoadImposterConfig()
-	configs := config.LoadConfig(tempDir, imposterConfig)
+	configs, err := config.LoadConfig(tempDir, imposterConfig)
+	require.NoError(t, err)
 	plugins, err := plugin.LoadPlugins(configs, imposterConfig, nil)
 	require.NoError(t, err)
 
@@ -366,7 +368,8 @@ resources:
 
 	store.InitStoreProvider()
 	imposterConfig := config.LoadImposterConfig()
-	configs := config.LoadConfig(tempDir, imposterConfig)
+	configs, err := config.LoadConfig(tempDir, imposterConfig)
+	require.NoError(t, err)
 	plugins, err := plugin.LoadPlugins(configs, imposterConfig, nil)
 	require.NoError(t, err)
 

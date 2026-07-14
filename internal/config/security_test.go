@@ -228,7 +228,8 @@ resources:
 	require.NoError(t, err)
 
 	// Load the config
-	configs := LoadConfig(tempDir, imposterConfig)
+	configs, err := LoadConfig(tempDir, imposterConfig)
+	require.NoError(t, err)
 	require.Len(t, configs, 1)
 
 	cfg := configs[0]
