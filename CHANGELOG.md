@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.20.0] - 2026-07-14
+### Added
+- feat: add WebSocket plugin and scheduled tasks (#88)
+
+### Changed
+- docs: move OpenClaw example to examples repo; keep echo in-repo (#93)
+- docs: reference 'native' engine type
+
 ## [5.19.3] - 2026-07-13
 ### Changed
 - build(deps): bump the go-minor-and-patch group across 1 directory with 6 updates
