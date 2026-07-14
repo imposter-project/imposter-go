@@ -235,9 +235,18 @@ func coalesceWebSocketConfigs(configs []Config) []Config {
 	return result
 }
 
-// mergeSystem folds the stores and XML namespaces of an additional config's
-// System block into the base config, so split websocket files may each declare
-// their own preloaded stores.
+// mergeSystem folds an additional config's System block - its preloaded stores
+// and XML namespaces - into the base config.
+//
+// The System block is a general, server-wide feature, not websocket-specific:
+// store names share one global namespace, store.PreloadStores preloads the
+// stores of every loaded config at startup, and XML namespaces are read per
+// config for XPath matching (see pipeline.go and the soap handler). Those
+// consumers all iterate the config list returned by LoadConfig. Because
+// coalescing removes the other websocket configs from that list, their System
+// entries have to be carried onto the surviving config - otherwise their stores
+// would silently never preload and their namespaces would be missing from
+// XPath matchers on the merged connection.
 func mergeSystem(base *Config, extra *System) {
 	if extra == nil {
 		return
