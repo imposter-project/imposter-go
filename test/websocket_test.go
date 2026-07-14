@@ -318,3 +318,75 @@ resources:
 		conn.Close()
 	}
 }
+
+// TestWebSocket_SplitConfigsMergeOntoOneConnection proves that websocket
+// resources spread across several *-config.yaml files are all active on a
+// single multiplexed connection (the loader coalesces them into one handler).
+func TestWebSocket_SplitConfigsMergeOntoOneConnection(t *testing.T) {
+	tempDir := t.TempDir()
+
+	// File 1: owns the handshake (on: open) and one method.
+	openConfig := `plugin: websocket
+resources:
+  - path: /*
+    on: open
+    response:
+      content: '{"event":"open"}'
+  - path: /*
+    requestBody:
+      allOf:
+        - jsonPath: $.method
+          value: agents.list
+    capture:
+      reqId:
+        requestBody:
+          jsonPath: $.id
+    response:
+      content: '{"id":"${stores.request.reqId}","payload":"agents"}'
+      template: true`
+
+	// File 2: a different method, in a separate file.
+	sessionsConfig := `plugin: websocket
+resources:
+  - path: /*
+    requestBody:
+      allOf:
+        - jsonPath: $.method
+          value: sessions.list
+    capture:
+      reqId:
+        requestBody:
+          jsonPath: $.id
+    response:
+      content: '{"id":"${stores.request.reqId}","payload":"sessions"}'
+      template: true`
+
+	require.NoError(t, os.WriteFile(filepath.Join(tempDir, "open-config.yaml"), []byte(openConfig), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(tempDir, "sessions-config.yaml"), []byte(sessionsConfig), 0644))
+
+	store.InitStoreProvider()
+	imposterConfig := config.LoadImposterConfig()
+	configs := config.LoadConfig(tempDir, imposterConfig)
+	plugins, err := plugin.LoadPlugins(configs, imposterConfig, nil)
+	require.NoError(t, err)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		handler.HandleRequest(imposterConfig, w, r, plugins)
+	}))
+	t.Cleanup(server.Close)
+
+	conn, _, err := websocket.DefaultDialer.Dial(wsURL(server, "/ws"), nil)
+	require.NoError(t, err)
+	defer conn.Close()
+
+	// on: open resource (file 1) fires.
+	require.JSONEq(t, `{"event":"open"}`, readTextMessage(t, conn))
+
+	// Method from file 1.
+	require.NoError(t, conn.WriteMessage(websocket.TextMessage, []byte(`{"type":"req","id":"1","method":"agents.list"}`)))
+	require.JSONEq(t, `{"id":"1","payload":"agents"}`, readTextMessage(t, conn))
+
+	// Method from file 2 - would be dead without coalescing.
+	require.NoError(t, conn.WriteMessage(websocket.TextMessage, []byte(`{"type":"req","id":"2","method":"sessions.list"}`)))
+	require.JSONEq(t, `{"id":"2","payload":"sessions"}`, readTextMessage(t, conn))
+}

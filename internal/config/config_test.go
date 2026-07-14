@@ -804,3 +804,76 @@ validation:
 		})
 	}
 }
+
+func TestLoadConfig_CoalescesWebSocketConfigs(t *testing.T) {
+	tempDir := t.TempDir()
+
+	// Two separate websocket config files, each on the same wildcard path.
+	openContent := `plugin: websocket
+resources:
+  - path: /*
+    on: open
+    response:
+      content: hello
+  - path: /*
+    requestBody:
+      jsonPath: $.method
+      value: ping
+    response:
+      content: pong`
+
+	sessionsContent := `plugin: websocket
+resources:
+  - path: /*
+    requestBody:
+      jsonPath: $.method
+      value: sessions.list
+    response:
+      content: sessions`
+
+	require.NoError(t, os.WriteFile(filepath.Join(tempDir, "open-config.yaml"), []byte(openContent), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(tempDir, "sessions-config.yaml"), []byte(sessionsContent), 0644))
+
+	imposterConfig := &ImposterConfig{}
+	configs := LoadConfig(tempDir, imposterConfig)
+
+	// The two websocket files must collapse into a single config whose resources
+	// are the union of both files.
+	var wsConfigs []Config
+	for _, c := range configs {
+		if c.Plugin == "websocket" {
+			wsConfigs = append(wsConfigs, c)
+		}
+	}
+	require.Len(t, wsConfigs, 1, "expected websocket configs to be merged into one")
+	require.Len(t, wsConfigs[0].Resources, 3, "merged config should hold resources from both files")
+}
+
+func TestLoadConfig_LeavesOtherPluginsSeparate(t *testing.T) {
+	tempDir := t.TempDir()
+
+	restA := `plugin: rest
+resources:
+  - path: /a
+    response:
+      content: a`
+	restB := `plugin: rest
+resources:
+  - path: /b
+    response:
+      content: b`
+
+	require.NoError(t, os.WriteFile(filepath.Join(tempDir, "a-config.yaml"), []byte(restA), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(tempDir, "b-config.yaml"), []byte(restB), 0644))
+
+	imposterConfig := &ImposterConfig{}
+	configs := LoadConfig(tempDir, imposterConfig)
+
+	rest := 0
+	for _, c := range configs {
+		if c.Plugin == "rest" {
+			rest++
+		}
+	}
+	require.Equal(t, 2, rest, "non-websocket plugins must not be merged")
+}
