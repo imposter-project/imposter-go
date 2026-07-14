@@ -9,7 +9,9 @@ Simulates a subset of the [OpenClaw Gateway WebSocket protocol](https://docs.ope
 5. A `cron.list` request returns no jobs.
 6. A `sessions.create` request returns the `main` session key (there is a single session, so create/resume always lands on `main`).
 7. A `chat.history` request returns a short seed conversation, so the chat screen has something to render. Return `{"messages":[]}` for an empty history.
-8. A `chat.send` request is acknowledged with a `res` frame (`runId`/`status`), followed by streamed `agent` (tool start/result) and `chat` (`delta` then `final`) events with realistic delays. The `runId` is the request id and the `sessionKey` is echoed from the request, so the client routes the events to the active run.
+8. A `models.list` request returns a few models. The `main` session's current model (from `sessions.list`) is one of them, so the model picker highlights it.
+9. A `sessions.patch` request (used to set the session model, thinking level, etc.) is acknowledged with an `ok` `res` frame — it is a void RPC, so no payload is needed.
+10. A `chat.send` request is acknowledged with a `res` frame (`runId`/`status`), followed by streamed `agent` (tool start/result) and `chat` (`delta` then `final`) events with realistic delays. The `runId` is the request id and the `sessionKey` is echoed from the request, so the client routes the events to the active run.
 
 The resources use a wildcard path (`path: /*`), so the mock accepts a WebSocket connection on any path — mirroring the real OpenClaw gateway, which multiplexes on a single port and routes the upgrade by the `Upgrade: websocket` header rather than a specific URL path. Connect on whatever path your client uses (e.g. `/ws`).
 
@@ -48,10 +50,17 @@ open the session and load its history:
 {"type":"req","id":"req-6","method":"chat.history","params":{"sessionKey":"main","limit":50}}
 ```
 
+list models and switch the session's model:
+
+```json
+{"type":"req","id":"req-7","method":"models.list","params":{}}
+{"type":"req","id":"req-8","method":"sessions.patch","params":{"key":"main","model":"claude-sonnet-5"}}
+```
+
 and send a chat message:
 
 ```json
-{"type":"req","id":"req-7","method":"chat.send","params":{"sessionKey":"main","message":"hello","idempotencyKey":"idem-1"}}
+{"type":"req","id":"req-9","method":"chat.send","params":{"sessionKey":"main","message":"hello","idempotencyKey":"idem-1"}}
 ```
 
 to receive an acknowledgement followed by streamed tool and chat events. Leave the connection open to observe the periodic `tick` events.

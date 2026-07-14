@@ -7,6 +7,8 @@
 #   single 'main' agent, one 'main' session, and no cron jobs respectively
 # - 'sessions.create' returns the 'main' session key; 'chat.history' returns a
 #   short seed conversation so the chat screen has something to render
+# - 'models.list' returns a few models; 'sessions.patch' acknowledges setting
+#   the session model (or other settings)
 plugin: websocket
 
 resources:
@@ -158,4 +160,38 @@ resources:
           jsonPath: $.id
     response:
       file: chat-history.json
+      template: true
+
+  # models.list: the models the session can switch between. The 'main' session's
+  # current model (see sessions.list) is one of these, so the picker highlights it.
+  - path: /*
+    requestBody:
+      allOf:
+        - jsonPath: $.type
+          value: req
+        - jsonPath: $.method
+          value: models.list
+    capture:
+      reqId:
+        requestBody:
+          jsonPath: $.id
+    response:
+      file: models.json
+      template: true
+
+  # sessions.patch: set the model (or other settings) for a session. This is a
+  # void RPC - the client only needs an ok:true acknowledgement.
+  - path: /*
+    requestBody:
+      allOf:
+        - jsonPath: $.type
+          value: req
+        - jsonPath: $.method
+          value: sessions.patch
+    capture:
+      reqId:
+        requestBody:
+          jsonPath: $.id
+    response:
+      content: '{"type":"res","id":"${stores.request.reqId}","ok":true}'
       template: true
