@@ -66,7 +66,7 @@ The quickest way to run these examples is to install [imposter-cli](https://gith
 Install the plugin as follows:
 
 ```bash
-imposter plugin install -d oidc-server -t golang
+imposter plugin install -d oidc-server -t native
 ```
 
 Run Imposter:

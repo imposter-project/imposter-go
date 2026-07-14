@@ -26,16 +26,16 @@ The recommended way to get started for most users is to use the latest [Imposter
 > **Note**
 > If you don't have Imposter CLI installed, or you want to use the `imposter-go` binary directly, continue to the [Installation](#Installation) section.
 
-With Imposter CLI installed, use the `-t golang` option, and pass `-v <version>`:
+With Imposter CLI installed, use the `-t native` option, and pass `-v <version>`:
 
 ```
-imposter up -t golang -v <version>
+imposter up -t native -v <version>
 ```
 
 ...where `version` is from the [Releases](https://github.com/imposter-project/imposter-go/releases/) page, for example:
 
 ```
-imposter up -t golang -v 0.15.0
+imposter up -t native -v 0.15.0
 ```
 
 ## Installation

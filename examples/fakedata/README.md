@@ -14,7 +14,7 @@ The quickest way to run these examples is to install [imposter-cli](https://gith
 Install the plugin as follows:
 
 ```bash
-imposter plugin install -d fake-data -t golang
+imposter plugin install -d fake-data -t native
 ```
 
 ## REST Example
