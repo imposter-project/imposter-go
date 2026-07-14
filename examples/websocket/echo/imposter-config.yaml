@@ -1,0 +1,17 @@
+# Minimal WebSocket example.
+# - On connect, the server sends a greeting.
+# - Each message received is echoed back to the client.
+plugin: websocket
+
+resources:
+  # Connection opened: send a greeting
+  - path: /*
+    on: open
+    response:
+      content: "Welcome! Send me a message and I'll echo it back."
+
+  # Message received (on: message is the default): echo it back
+  - path: /*
+    response:
+      content: "You said: ${context.request.body}"
+      template: true

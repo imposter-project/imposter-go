@@ -1,0 +1,197 @@
+# Simulates a subset of the OpenClaw Gateway WebSocket API:
+# - on connect, the server sends a connect.challenge event and starts a periodic tick
+# - a 'connect' request is answered with hello-ok, echoing the request ID
+# - a 'chat.send' request is answered with a res frame (runId/status), followed by
+#   streamed agent (tool) and chat (delta/final) events, echoing the run's session
+# - 'agents.list', 'sessions.list' and 'cron.list' requests are answered with a
+#   single 'main' agent, one 'main' session, and no cron jobs respectively
+# - 'sessions.create' returns the 'main' session key; 'chat.history' returns a
+#   short seed conversation so the chat screen has something to render
+# - 'models.list' returns a few models; 'sessions.patch' acknowledges setting
+#   the session model (or other settings)
+plugin: websocket
+
+resources:
+  # Connection opened: send the challenge and start the keepalive tick.
+  # The challenge 'ts' and tick 'timestamp' are numbers (epoch millis), not
+  # strings - the gateway protocol types them as int64.
+  - path: /*
+    on: open
+    response:
+      content: '{"type":"event","event":"connect.challenge","payload":{"nonce":"${random.uuid()}","ts":${datetime.now.millis}}}'
+      template: true
+    schedule:
+      - every: 15s
+        response:
+          content: '{"type":"event","event":"tick","payload":{"timestamp":${datetime.now.millis}}}'
+          template: true
+
+  # Handshake request: reply with hello-ok, echoing the request ID
+  - path: /*
+    requestBody:
+      allOf:
+        - jsonPath: $.type
+          value: req
+        - jsonPath: $.method
+          value: connect
+    capture:
+      reqId:
+        requestBody:
+          jsonPath: $.id
+    response:
+      file: hello-ok.json
+      template: true
+
+  # chat.send request: acknowledge with runId/status, then stream a tool
+  # agent event and chat delta/final events. runId is the request id; the
+  # session key is echoed from the request so the client routes the events.
+  - path: /*
+    requestBody:
+      allOf:
+        - jsonPath: $.type
+          value: req
+        - jsonPath: $.method
+          value: chat.send
+    capture:
+      reqId:
+        requestBody:
+          jsonPath: $.id
+      sessionKey:
+        requestBody:
+          jsonPath: $.params.sessionKey
+    responses:
+      - content: '{"type":"res","id":"${stores.request.reqId}","ok":true,"payload":{"runId":"${stores.request.reqId}","status":"started"}}'
+        template: true
+      - file: agent-tool-start.json
+        delay:
+          exact: 300
+        template: true
+      - file: agent-tool-result.json
+        delay:
+          exact: 300
+        template: true
+      - file: chat-event-delta.json
+        delay:
+          min: 200
+          max: 600
+        template: true
+      - file: chat-event-final.json
+        delay:
+          exact: 400
+        template: true
+
+  # agents.list: a single agent, 'main', which is also the default
+  - path: /*
+    requestBody:
+      allOf:
+        - jsonPath: $.type
+          value: req
+        - jsonPath: $.method
+          value: agents.list
+    capture:
+      reqId:
+        requestBody:
+          jsonPath: $.id
+    response:
+      content: '{"type":"res","id":"${stores.request.reqId}","ok":true,"payload":{"defaultId":"main","mainKey":"main","scope":"global","agents":[{"id":"main","name":"main"}]}}'
+      template: true
+
+  # sessions.list: one 'main' session for the main agent
+  - path: /*
+    requestBody:
+      allOf:
+        - jsonPath: $.type
+          value: req
+        - jsonPath: $.method
+          value: sessions.list
+    capture:
+      reqId:
+        requestBody:
+          jsonPath: $.id
+    response:
+      content: '{"type":"res","id":"${stores.request.reqId}","ok":true,"payload":{"sessions":[{"key":"main","derivedTitle":"Main conversation","lastMessagePreview":"","updatedAt":${datetime.now.millis},"model":"claude-opus-4-8"}]}}'
+      template: true
+
+  # cron.list: no scheduled jobs
+  - path: /*
+    requestBody:
+      allOf:
+        - jsonPath: $.type
+          value: req
+        - jsonPath: $.method
+          value: cron.list
+    capture:
+      reqId:
+        requestBody:
+          jsonPath: $.id
+    response:
+      content: '{"type":"res","id":"${stores.request.reqId}","ok":true,"payload":{"jobs":[],"total":0,"offset":0,"limit":50,"hasMore":false}}'
+      template: true
+
+  # sessions.create: create or resume a session. There is a single session,
+  # so the created key is always 'main' - the client opens the chat on it.
+  - path: /*
+    requestBody:
+      allOf:
+        - jsonPath: $.type
+          value: req
+        - jsonPath: $.method
+          value: sessions.create
+    capture:
+      reqId:
+        requestBody:
+          jsonPath: $.id
+    response:
+      content: '{"type":"res","id":"${stores.request.reqId}","ok":true,"payload":{"key":"main"}}'
+      template: true
+
+  # chat.history: prior messages for the session, so the chat screen renders
+  # a short seed conversation. Return {"messages":[]} for an empty history.
+  - path: /*
+    requestBody:
+      allOf:
+        - jsonPath: $.type
+          value: req
+        - jsonPath: $.method
+          value: chat.history
+    capture:
+      reqId:
+        requestBody:
+          jsonPath: $.id
+    response:
+      file: chat-history.json
+      template: true
+
+  # models.list: the models the session can switch between. The 'main' session's
+  # current model (see sessions.list) is one of these, so the picker highlights it.
+  - path: /*
+    requestBody:
+      allOf:
+        - jsonPath: $.type
+          value: req
+        - jsonPath: $.method
+          value: models.list
+    capture:
+      reqId:
+        requestBody:
+          jsonPath: $.id
+    response:
+      file: models.json
+      template: true
+
+  # sessions.patch: set the model (or other settings) for a session. This is a
+  # void RPC - the client only needs an ok:true acknowledgement.
+  - path: /*
+    requestBody:
+      allOf:
+        - jsonPath: $.type
+          value: req
+        - jsonPath: $.method
+          value: sessions.patch
+    capture:
+      reqId:
+        requestBody:
+          jsonPath: $.id
+    response:
+      content: '{"type":"res","id":"${stores.request.reqId}","ok":true}'
+      template: true

@@ -14,6 +14,7 @@ type ResponseState struct {
 	Body             []byte
 	Stopped          bool                 // indicates if the response has been stopped (e.g., connection closed)
 	Handled          bool                 // indicates if a handler has handled the request
+	Hijacked         bool                 // indicates a plugin has taken over the underlying connection (e.g. websocket upgrade)
 	Resource         *config.BaseResource // the resource that handled the request
 	Delay            config.Delay         // delay configuration for the response
 	Fail             string               // failure type for the response
@@ -29,6 +30,17 @@ func (rs *ResponseState) HandledWithResource(resource *config.BaseResource) {
 
 // WriteToResponseWriter writes the final state to the http.ResponseWriter
 func (rs *ResponseState) WriteToResponseWriter(w http.ResponseWriter) {
+	if rs.Hijacked {
+		// The connection has been taken over (e.g. websocket upgrade); nothing
+		// may be written, but cleanup functions still run.
+		for _, cleanup := range rs.CleanupFunctions {
+			if cleanup != nil {
+				cleanup()
+			}
+		}
+		return
+	}
+
 	if rs.Stopped {
 		// Handle connection closing
 		if hijacker, ok := w.(http.Hijacker); ok {

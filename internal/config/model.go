@@ -199,6 +199,25 @@ type RequestMatcher struct {
 	Operation  string `yaml:"operation,omitempty"`
 	SOAPAction string `yaml:"soapAction,omitempty"`
 	Binding    string `yaml:"binding,omitempty"`
+
+	// WebSocket-specific fields
+	On string `yaml:"on,omitempty"`
+}
+
+// WebSocket resource trigger events, used in the RequestMatcher 'On' field.
+const (
+	WebSocketEventOpen    = "open"
+	WebSocketEventMessage = "message"
+	WebSocketEventClose   = "close"
+)
+
+// NormalisedOn returns the WebSocket trigger event for the matcher,
+// defaulting to 'message' when unset.
+func (m *RequestMatcher) NormalisedOn() string {
+	if m.On == "" {
+		return WebSocketEventMessage
+	}
+	return m.On
 }
 
 // StepType represents the type of step to execute
@@ -231,13 +250,52 @@ type BaseResource struct {
 	Capture          map[string]Capture `yaml:"capture,omitempty"`
 	Steps            []Step             `yaml:"steps,omitempty"`
 	Response         *Response          `yaml:"response,omitempty"`
+	Responses        []Response         `yaml:"responses,omitempty"`
 	Concurrency      []ConcurrencyLimit `yaml:"concurrency,omitempty"`
 	Log              string             `yaml:"log,omitempty"`
 	Passthrough      string             `yaml:"passthrough,omitempty"`
+	Schedule         []Schedule         `yaml:"schedule,omitempty"`
 	RuntimeGenerated bool               `yaml:"-"`
 
 	// ResourceID is computed at startup
 	ResourceID string `yaml:"-"`
+}
+
+// EffectiveResponses returns the normalised, ordered list of responses for
+// the resource: Responses when set, otherwise a single-element slice wrapping
+// Response, otherwise nil. A singular 'response' block is exactly equivalent
+// to a 'responses' list with one element.
+func (r *BaseResource) EffectiveResponses() []Response {
+	return effectiveResponses(r.Response, r.Responses)
+}
+
+// Schedule defines a time-driven trigger. At the top level of a config it
+// runs for the lifetime of the engine; on a WebSocket 'open' resource it runs
+// for the lifetime of each connection.
+type Schedule struct {
+	Name      string     `yaml:"name,omitempty"`
+	Every     string     `yaml:"every,omitempty"` // interval, e.g. "30s" (Go duration syntax)
+	Cron      string     `yaml:"cron,omitempty"`  // standard 5-field cron expression
+	Limit     int        `yaml:"limit,omitempty"` // maximum number of firings; 0 (or omitted) means unlimited
+	Response  *Response  `yaml:"response,omitempty"`
+	Responses []Response `yaml:"responses,omitempty"`
+	Steps     []Step     `yaml:"steps,omitempty"`
+}
+
+// EffectiveResponses returns the normalised, ordered list of responses for
+// the schedule entry, mirroring BaseResource.EffectiveResponses.
+func (s *Schedule) EffectiveResponses() []Response {
+	return effectiveResponses(s.Response, s.Responses)
+}
+
+func effectiveResponses(single *Response, multi []Response) []Response {
+	if len(multi) > 0 {
+		return multi
+	}
+	if single != nil {
+		return []Response{*single}
+	}
+	return nil
 }
 
 // Resource represents an HTTP resource
@@ -403,6 +461,7 @@ type Config struct {
 	Vars         map[string]string   `yaml:"vars,omitempty"`
 	Resources    []Resource          `yaml:"resources,omitempty"`
 	Interceptors []Interceptor       `yaml:"interceptors"`
+	Schedules    []Schedule          `yaml:"schedules,omitempty"`
 	Upstreams    map[string]Upstream `yaml:"upstreams,omitempty"`
 	System       *System             `yaml:"system,omitempty"`
 	Security     *SecurityConfig     `yaml:"security"`

@@ -1,0 +1,17 @@
+{
+  "type": "event",
+  "event": "chat",
+  "payload": {
+    "runId": "${stores.request.reqId}",
+    "sessionKey": "${stores.request.sessionKey}",
+    "seq": 2,
+    "state": "final",
+    "message": {
+      "role": "assistant",
+      "content": [
+        { "type": "text", "text": "Here's the first part of the reply, and here is the rest." }
+      ]
+    },
+    "stopReason": "end_turn"
+  }
+}

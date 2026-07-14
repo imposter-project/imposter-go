@@ -5,12 +5,40 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"sync"
+	"time"
 
 	"github.com/imposter-project/imposter-go/internal/capture"
 	"github.com/imposter-project/imposter-go/internal/config"
 	"github.com/imposter-project/imposter-go/internal/exchange"
 	"github.com/imposter-project/imposter-go/internal/template"
+	"github.com/imposter-project/imposter-go/pkg/logger"
 )
+
+const defaultTimeout = 30 * time.Second
+
+var (
+	httpClient *http.Client
+	clientOnce sync.Once
+)
+
+// getClient lazily constructs the shared HTTP client used for remote steps,
+// honouring the IMPOSTER_REMOTE_STEP_TIMEOUT environment variable.
+func getClient() *http.Client {
+	clientOnce.Do(func() {
+		timeout := defaultTimeout
+		if raw := os.Getenv("IMPOSTER_REMOTE_STEP_TIMEOUT"); raw != "" {
+			if parsed, err := time.ParseDuration(raw); err == nil {
+				timeout = parsed
+			} else {
+				logger.Warnf("invalid IMPOSTER_REMOTE_STEP_TIMEOUT %q, using default %s", raw, defaultTimeout)
+			}
+		}
+		httpClient = &http.Client{Timeout: timeout}
+	})
+	return httpClient
+}
 
 // ExecuteRemoteStep executes a remote HTTP request step
 func ExecuteRemoteStep(step *config.Step, exch *exchange.Exchange, imposterConfig *config.ImposterConfig) error {
@@ -36,8 +64,7 @@ func ExecuteRemoteStep(step *config.Step, exch *exchange.Exchange, imposterConfi
 	}
 
 	// Execute request
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := getClient().Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to execute request: %w", err)
 	}

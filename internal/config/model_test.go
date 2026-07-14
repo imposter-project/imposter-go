@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 func TestMatchCondition_Match(t *testing.T) {
@@ -170,4 +172,55 @@ func TestBodyMatchCondition_Match(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+func TestWebSocketConfigUnmarshal(t *testing.T) {
+	// 'on' must parse as a string key/value with yaml.v3 (which dropped the
+	// YAML 1.1 on/off boolean resolution), without needing quotes.
+	yamlContent := `plugin: websocket
+resources:
+  - path: /gateway
+    on: open
+    response:
+      content: challenge
+    schedule:
+      - every: 15s
+        response:
+          content: tick
+  - path: /gateway
+    requestBody:
+      jsonPath: $.method
+      value: connect
+    responses:
+      - content: first
+      - content: second
+        delay:
+          exact: 250
+schedules:
+  - name: job
+    cron: "0 * * * *"
+    steps:
+      - type: remote
+        url: http://example.com
+`
+
+	var cfg Config
+	err := yaml.Unmarshal([]byte(yamlContent), &cfg)
+	require.NoError(t, err)
+
+	require.Len(t, cfg.Resources, 2)
+	require.Equal(t, "open", cfg.Resources[0].On)
+	require.Equal(t, WebSocketEventOpen, cfg.Resources[0].NormalisedOn())
+	require.Len(t, cfg.Resources[0].Schedule, 1)
+	require.Equal(t, "15s", cfg.Resources[0].Schedule[0].Every)
+	require.Equal(t, "tick", cfg.Resources[0].Schedule[0].Response.Content)
+
+	require.Empty(t, cfg.Resources[1].On)
+	require.Equal(t, WebSocketEventMessage, cfg.Resources[1].NormalisedOn())
+	require.Len(t, cfg.Resources[1].Responses, 2)
+	require.Equal(t, 250, cfg.Resources[1].Responses[1].Delay.Exact)
+
+	require.Len(t, cfg.Schedules, 1)
+	require.Equal(t, "0 * * * *", cfg.Schedules[0].Cron)
+	require.Len(t, cfg.Schedules[0].Steps, 1)
 }

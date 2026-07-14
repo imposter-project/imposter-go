@@ -11,6 +11,7 @@ import (
 	"github.com/imposter-project/imposter-go/plugin/openapi"
 	"github.com/imposter-project/imposter-go/plugin/rest"
 	"github.com/imposter-project/imposter-go/plugin/soap"
+	"github.com/imposter-project/imposter-go/plugin/websocket"
 )
 
 type Plugin interface {
@@ -54,6 +55,8 @@ func loadPlugin(
 		plg, err = rest.NewPluginHandler(cfg, imposterConfig)
 	case "soap":
 		plg, err = soap.NewPluginHandler(cfg, imposterConfig)
+	case "websocket":
+		plg, err = websocket.NewPluginHandler(cfg, imposterConfig)
 	default:
 		for _, e := range externalPlugins {
 			if e.Name == cfg.Plugin {

@@ -57,6 +57,7 @@ func HandleRequest(imposterConfig *config.ImposterConfig, w http.ResponseWriter,
 	}
 
 	exch := exchange.NewExchange(req, body, requestStore, responseState)
+	exch.ResponseWriter = w
 
 	for _, plg := range plugins {
 		responseProc := response.NewProcessor(imposterConfig, plg.GetConfig().ConfigDir)
@@ -66,6 +67,12 @@ func HandleRequest(imposterConfig *config.ImposterConfig, w http.ResponseWriter,
 		if responseState.Handled {
 			break
 		}
+	}
+
+	// If a plugin has taken over the connection (e.g. websocket upgrade),
+	// nothing more may be written to it.
+	if responseState.Hijacked {
+		return
 	}
 
 	// If no handler handled the response, return 404

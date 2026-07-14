@@ -1,0 +1,30 @@
+# Demonstrates engine-lifetime schedules: while the mock is running, a
+# webhook-style HTTP POST is sent every 30 seconds, independent of any
+# inbound request.
+plugin: rest
+
+resources:
+  - path: /orders
+    method: POST
+    capture:
+      lastOrderId:
+        store: orders
+        requestBody:
+          jsonPath: $.id
+    response:
+      statusCode: 201
+      content: '{"accepted":true}'
+
+schedules:
+  - name: order-webhook
+    every: 30s
+    # Fire at most 20 times, then stop. Omit 'limit' only if the schedule
+    # genuinely needs to run for the lifetime of the mock.
+    limit: 20
+    steps:
+      - type: remote
+        url: ${env.WEBHOOK_URL:-http://localhost:9090/webhook}
+        method: POST
+        headers:
+          Content-Type: application/json
+        body: '{"event":"order.updated","orderId":"${stores.orders.lastOrderId}","at":"${datetime.now.iso8601_datetime}"}'

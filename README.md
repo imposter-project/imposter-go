@@ -10,6 +10,8 @@ A Go implementation of the [Imposter Mock Engine](https://www.imposter.sh). This
 - ✅ [SOAP/WSDL mock](https://docs.imposter.sh/soap_plugin/) support
 - ✅ [OpenAPI/Swagger mock](https://docs.imposter.sh/openapi_plugin/) support
 - ✅ [gRPC/Protobuf mock](https://docs.imposter.sh/grpc_plugin/) support (see [examples/grpc](./examples/grpc))
+- ✅ [WebSocket mock](https://docs.imposter.sh/websocket_plugin/) support, including streamed and periodic server-initiated messages (see [examples/websocket](./examples/websocket))
+- ✅ [Scheduled tasks](https://docs.imposter.sh/scheduled_tasks/) for periodic or cron-driven actions, such as webhook-style HTTP pushes (see [examples/rest/schedules](./examples/rest/schedules))
 - ✅ JavaScript [scripting](https://docs.imposter.sh/scripting/)
 - ✅ Support for [steps](https://docs.imposter.sh/steps/)
 - ✅ Support for [simulated delays](https://docs.imposter.sh/performance_simulation/), [simulated errors](https://docs.imposter.sh/failure_simulation/) and [rate limiting](./docs/rate_limiting.md)
