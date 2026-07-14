@@ -7,7 +7,7 @@ A minimal WebSocket mock — the "hello world" of the `websocket` plugin:
 
 The resources use a wildcard path (`path: /*`), so the mock accepts a connection on any path.
 
-For a richer example — connection-lifecycle events, request/response matching, streamed replies and periodic pushes — see the [openclaw](../openclaw) example.
+For a richer example (connection-lifecycle events, request/response matching, streamed replies and periodic pushes), see the [OpenClaw example](https://github.com/imposter-project/examples/tree/main/websocket/openclaw) in the examples repository.
 
 ## Run
 
