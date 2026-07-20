@@ -15,7 +15,7 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-plugin v1.8.0
-	github.com/pb33f/libopenapi v0.38.6
+	github.com/pb33f/libopenapi v0.38.7
 	github.com/pb33f/libopenapi-validator v0.14.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/stretchr/testify v1.11.1
@@ -105,7 +105,7 @@ require (
 
 require (
 	github.com/PaesslerAG/jsonpath v0.1.1
-	github.com/antchfx/xpath v1.3.6
+	github.com/antchfx/xpath v1.3.7
 	github.com/aws/aws-lambda-go v1.54.0
 	github.com/aws/aws-sdk-go v1.55.8
 	github.com/go-redis/redis/v8 v8.11.5
