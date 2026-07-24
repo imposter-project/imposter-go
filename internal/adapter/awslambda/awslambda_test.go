@@ -2,6 +2,7 @@ package awslambda
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"io"
 	"net/http"
 	"testing"
@@ -10,6 +11,26 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestDetectLambdaEventType_APIGatewayProxy(t *testing.T) {
+	// v1 payload: top-level httpMethod.
+	payload := json.RawMessage(`{"httpMethod":"GET","path":"/api","queryStringParameters":{"foo":"bar"}}`)
+	assert.Equal(t, eventAPIGatewayProxy, detectLambdaEventType(payload))
+}
+
+func TestDetectLambdaEventType_LambdaFunctionURL(t *testing.T) {
+	// v2 payload: no top-level httpMethod, method is under requestContext.http.
+	payload := json.RawMessage(`{"version":"2.0","rawPath":"/api","requestContext":{"http":{"method":"POST"}}}`)
+	assert.Equal(t, eventLambdaFunctionURL, detectLambdaEventType(payload))
+}
+
+func TestDetectLambdaEventType_Unknown(t *testing.T) {
+	assert.Equal(t, eventUnknown, detectLambdaEventType(json.RawMessage(`{"foo":"bar"}`)))
+}
+
+func TestDetectLambdaEventType_InvalidJSON(t *testing.T) {
+	assert.Equal(t, eventUnknown, detectLambdaEventType(json.RawMessage(`not json`)))
+}
 
 func TestConvertLambdaRequestToHTTPRequest_WithQuery(t *testing.T) {
 	httpReq, err := convertLambdaRequestToHTTPRequest("GET", "/api/endpoint", "foo=bar&baz=qux", nil, nil)

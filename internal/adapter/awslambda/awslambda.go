@@ -80,16 +80,57 @@ func init() {
 	}
 }
 
+// lambdaEventType identifies which Lambda HTTP event shape a payload carries.
+type lambdaEventType int
+
+const (
+	eventUnknown lambdaEventType = iota
+	eventAPIGatewayProxy
+	eventLambdaFunctionURL
+)
+
+// detectLambdaEventType inspects only the discriminating fields of the payload
+// so the full event is decoded once, into the correct type. API Gateway proxy
+// (v1) carries a top-level httpMethod; Function URL / API Gateway HTTP API (v2)
+// carries requestContext.http.method instead.
+func detectLambdaEventType(req json.RawMessage) lambdaEventType {
+	var probe struct {
+		HTTPMethod     string `json:"httpMethod"`
+		RequestContext struct {
+			HTTP struct {
+				Method string `json:"method"`
+			} `json:"http"`
+		} `json:"requestContext"`
+	}
+	if err := json.Unmarshal(req, &probe); err != nil {
+		return eventUnknown
+	}
+	switch {
+	case probe.HTTPMethod != "":
+		return eventAPIGatewayProxy
+	case probe.RequestContext.HTTP.Method != "":
+		return eventLambdaFunctionURL
+	default:
+		return eventUnknown
+	}
+}
+
 // HandleLambdaRequest handles incoming Lambda requests and routes them to the appropriate handler.
 func HandleLambdaRequest(req json.RawMessage) (interface{}, error) {
-	var apiGatewayReq events.APIGatewayProxyRequest
-	var lambdaFunctionURLReq events.LambdaFunctionURLRequest
-
-	if err := json.Unmarshal(req, &apiGatewayReq); err == nil && apiGatewayReq.HTTPMethod != "" {
+	switch detectLambdaEventType(req) {
+	case eventAPIGatewayProxy:
+		var apiGatewayReq events.APIGatewayProxyRequest
+		if err := json.Unmarshal(req, &apiGatewayReq); err != nil {
+			return events.APIGatewayProxyResponse{StatusCode: 400, Body: "Unsupported request type"}, nil
+		}
 		return handleAPIGatewayProxyRequest(apiGatewayReq, plugins)
-	} else if err := json.Unmarshal(req, &lambdaFunctionURLReq); err == nil && lambdaFunctionURLReq.RequestContext.HTTP.Method != "" {
+	case eventLambdaFunctionURL:
+		var lambdaFunctionURLReq events.LambdaFunctionURLRequest
+		if err := json.Unmarshal(req, &lambdaFunctionURLReq); err != nil {
+			return events.LambdaFunctionURLResponse{StatusCode: 400, Body: "Unsupported request type"}, nil
+		}
 		return handleLambdaFunctionURLRequest(lambdaFunctionURLReq, plugins)
-	} else {
+	default:
 		return events.LambdaFunctionURLResponse{StatusCode: 400, Body: "Unsupported request type"}, nil
 	}
 }
