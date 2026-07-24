@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -95,8 +96,9 @@ func HandleLambdaRequest(req json.RawMessage) (interface{}, error) {
 
 // handleAPIGatewayProxyRequest processes API Gateway Proxy requests.
 func handleAPIGatewayProxyRequest(req events.APIGatewayProxyRequest, plugins []plugin.Plugin) (events.APIGatewayProxyResponse, error) {
-	// Convert APIGatewayProxyRequest to http.Request
-	httpReq, err := convertLambdaRequestToHTTPRequest(req.HTTPMethod, req.Path, req.Headers, req.Body)
+	// Convert APIGatewayProxyRequest to http.Request, preserving query parameters
+	// so that route matching and script access (context.request.queryParams) work.
+	httpReq, err := convertLambdaRequestToHTTPRequest(req.HTTPMethod, req.Path, buildAPIGatewayQueryString(req), req.Headers, req.Body)
 	if err != nil {
 		return events.APIGatewayProxyResponse{StatusCode: 500, Body: "Failed to convert request"}, nil
 	}
@@ -115,8 +117,9 @@ func handleAPIGatewayProxyRequest(req events.APIGatewayProxyRequest, plugins []p
 
 // handleLambdaFunctionURLRequest processes Lambda Function URL requests.
 func handleLambdaFunctionURLRequest(req events.LambdaFunctionURLRequest, plugins []plugin.Plugin) (events.LambdaFunctionURLResponse, error) {
-	// Convert LambdaFunctionURLRequest to http.Request
-	httpReq, err := convertLambdaRequestToHTTPRequest(req.RequestContext.HTTP.Method, req.RawPath, req.Headers, req.Body)
+	// Convert LambdaFunctionURLRequest to http.Request. RawQueryString is already
+	// URL-encoded in the v2 payload, so it can be used directly as the raw query.
+	httpReq, err := convertLambdaRequestToHTTPRequest(req.RequestContext.HTTP.Method, req.RawPath, req.RawQueryString, req.Headers, req.Body)
 	if err != nil {
 		return events.LambdaFunctionURLResponse{StatusCode: 500, Body: "Failed to convert request"}, nil
 	}
@@ -134,11 +137,16 @@ func handleLambdaFunctionURLRequest(req events.LambdaFunctionURLRequest, plugins
 }
 
 // convertLambdaRequestToHTTPRequest converts a Lambda request to an http.Request.
-func convertLambdaRequestToHTTPRequest(method, path string, headers map[string]string, body string) (*http.Request, error) {
+// rawQuery is the URL-encoded query string (without the leading '?'); it is set
+// on the request URL so downstream matching and scripts can read query parameters.
+func convertLambdaRequestToHTTPRequest(method, path, rawQuery string, headers map[string]string, body string) (*http.Request, error) {
 	bodyReader := strings.NewReader(body)
 	httpReq, err := http.NewRequest(method, path, bodyReader)
 	if err != nil {
 		return nil, err
+	}
+	if rawQuery != "" {
+		httpReq.URL.RawQuery = rawQuery
 	}
 
 	for key, value := range headers {
@@ -146,6 +154,27 @@ func convertLambdaRequestToHTTPRequest(method, path string, headers map[string]s
 	}
 
 	return httpReq, nil
+}
+
+// buildAPIGatewayQueryString reconstructs an encoded query string from an API
+// Gateway proxy (v1) request. Parameter values in the event are already
+// URL-decoded, so they are re-encoded here. MultiValueQueryStringParameters is
+// preferred when present because it preserves repeated keys (e.g. ?foo=a&foo=b);
+// otherwise the single-valued QueryStringParameters map is used.
+func buildAPIGatewayQueryString(req events.APIGatewayProxyRequest) string {
+	values := url.Values{}
+	if len(req.MultiValueQueryStringParameters) > 0 {
+		for key, vals := range req.MultiValueQueryStringParameters {
+			for _, v := range vals {
+				values.Add(key, v)
+			}
+		}
+	} else {
+		for key, v := range req.QueryStringParameters {
+			values.Set(key, v)
+		}
+	}
+	return values.Encode()
 }
 
 // convertHTTPResponseToLambdaResponse converts an http.Response to an APIGatewayProxyResponse.
