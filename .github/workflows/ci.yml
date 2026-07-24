@@ -5,7 +5,7 @@ name: CI
 
 on:
   push:
-    branches: [ "main", "build/*", "ci/*", "feat/*", "fix/*" ]
+    branches: [ "main", "develop", "build/*", "ci/*", "feat/*", "fix/*" ]
     tags: [ "v*" ]
   pull_request:
 
@@ -125,7 +125,7 @@ jobs:
     needs: [build, integration-test]
     runs-on: ubuntu-latest-l
     timeout-minutes: 10
-    if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || github.event_name == 'pull_request'
     steps:
     - uses: actions/checkout@v7
       with:
@@ -145,7 +145,7 @@ jobs:
 
   docker-dry-run:
     needs: build
-    if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || github.event_name == 'pull_request'
     strategy:
       fail-fast: false
       matrix:
