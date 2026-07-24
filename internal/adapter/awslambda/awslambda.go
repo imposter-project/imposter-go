@@ -80,74 +80,69 @@ func init() {
 	}
 }
 
-// lambdaEventType identifies which Lambda HTTP event shape a payload carries.
-type lambdaEventType int
+// lambdaHTTPEvent holds the fields of the supported Lambda HTTP event shapes
+// that the adapter consumes, so an incoming payload is JSON-decoded exactly
+// once regardless of its shape. API Gateway proxy (v1) carries a top-level
+// httpMethod; Function URL / API Gateway HTTP API (v2) carries
+// requestContext.http.method instead. AWS routing metadata not read by the
+// handlers (e.g. stageVariables, pathParameters, resource) is intentionally
+// omitted.
+type lambdaHTTPEvent struct {
+	// API Gateway proxy (v1)
+	HTTPMethod                      string              `json:"httpMethod"`
+	Path                            string              `json:"path"`
+	MultiValueHeaders               map[string][]string `json:"multiValueHeaders"`
+	QueryStringParameters           map[string]string   `json:"queryStringParameters"`
+	MultiValueQueryStringParameters map[string][]string `json:"multiValueQueryStringParameters"`
 
-const (
-	eventUnknown lambdaEventType = iota
-	eventAPIGatewayProxy
-	eventLambdaFunctionURL
-)
+	// Function URL / API Gateway HTTP API (v2)
+	RawPath        string   `json:"rawPath"`
+	RawQueryString string   `json:"rawQueryString"`
+	Cookies        []string `json:"cookies"`
+	RequestContext struct {
+		HTTP struct {
+			Method string `json:"method"`
+		} `json:"http"`
+	} `json:"requestContext"`
 
-// detectLambdaEventType inspects only the discriminating fields of the payload
-// so the full event is decoded once, into the correct type. API Gateway proxy
-// (v1) carries a top-level httpMethod; Function URL / API Gateway HTTP API (v2)
-// carries requestContext.http.method instead.
-func detectLambdaEventType(req json.RawMessage) lambdaEventType {
-	var probe struct {
-		HTTPMethod     string `json:"httpMethod"`
-		RequestContext struct {
-			HTTP struct {
-				Method string `json:"method"`
-			} `json:"http"`
-		} `json:"requestContext"`
-	}
-	if err := json.Unmarshal(req, &probe); err != nil {
-		return eventUnknown
-	}
-	switch {
-	case probe.HTTPMethod != "":
-		return eventAPIGatewayProxy
-	case probe.RequestContext.HTTP.Method != "":
-		return eventLambdaFunctionURL
-	default:
-		return eventUnknown
-	}
+	// Shared
+	Headers         map[string]string `json:"headers"`
+	Body            string            `json:"body"`
+	IsBase64Encoded bool              `json:"isBase64Encoded"`
 }
 
-// HandleLambdaRequest handles incoming Lambda requests and routes them to the appropriate handler.
+// HandleLambdaRequest handles incoming Lambda requests and routes them to the
+// appropriate handler. The payload is decoded once into a lambdaHTTPEvent and
+// the event shape is determined from its discriminating fields, so neither
+// shape is ever decoded twice.
 func HandleLambdaRequest(req json.RawMessage) (interface{}, error) {
-	switch detectLambdaEventType(req) {
-	case eventAPIGatewayProxy:
-		var apiGatewayReq events.APIGatewayProxyRequest
-		if err := json.Unmarshal(req, &apiGatewayReq); err != nil {
-			return events.APIGatewayProxyResponse{StatusCode: 400, Body: "Unsupported request type"}, nil
-		}
-		return handleAPIGatewayProxyRequest(apiGatewayReq, plugins)
-	case eventLambdaFunctionURL:
-		var lambdaFunctionURLReq events.LambdaFunctionURLRequest
-		if err := json.Unmarshal(req, &lambdaFunctionURLReq); err != nil {
-			return events.LambdaFunctionURLResponse{StatusCode: 400, Body: "Unsupported request type"}, nil
-		}
-		return handleLambdaFunctionURLRequest(lambdaFunctionURLReq, plugins)
+	var evt lambdaHTTPEvent
+	if err := json.Unmarshal(req, &evt); err != nil {
+		return events.LambdaFunctionURLResponse{StatusCode: 400, Body: "Unsupported request type"}, nil
+	}
+
+	switch {
+	case evt.HTTPMethod != "":
+		return handleAPIGatewayProxyRequest(evt, plugins)
+	case evt.RequestContext.HTTP.Method != "":
+		return handleLambdaFunctionURLRequest(evt, plugins)
 	default:
 		return events.LambdaFunctionURLResponse{StatusCode: 400, Body: "Unsupported request type"}, nil
 	}
 }
 
-// handleAPIGatewayProxyRequest processes API Gateway Proxy requests.
-func handleAPIGatewayProxyRequest(req events.APIGatewayProxyRequest, plugins []plugin.Plugin) (events.APIGatewayProxyResponse, error) {
+// handleAPIGatewayProxyRequest processes API Gateway proxy (v1) requests.
+func handleAPIGatewayProxyRequest(evt lambdaHTTPEvent, plugins []plugin.Plugin) (events.APIGatewayProxyResponse, error) {
 	// Decode the body first: API Gateway base64-encodes binary payloads (e.g.
 	// file uploads and multipart bodies) and sets IsBase64Encoded accordingly.
-	body, err := decodeLambdaBody(req.Body, req.IsBase64Encoded)
+	body, err := decodeLambdaBody(evt.Body, evt.IsBase64Encoded)
 	if err != nil {
 		return events.APIGatewayProxyResponse{StatusCode: 400, Body: "Failed to decode request body"}, nil
 	}
 
-	// Convert APIGatewayProxyRequest to http.Request, preserving query parameters
-	// and headers so that route matching and script access (queryParams, headers,
-	// formParams derived from the body) work.
-	httpReq, err := convertLambdaRequestToHTTPRequest(req.HTTPMethod, req.Path, buildAPIGatewayQueryString(req), buildAPIGatewayHeaders(req), body)
+	// Preserve query parameters and headers so that route matching and script
+	// access (queryParams, headers, formParams derived from the body) work.
+	httpReq, err := convertLambdaRequestToHTTPRequest(evt.HTTPMethod, evt.Path, buildAPIGatewayQueryString(evt), buildAPIGatewayHeaders(evt), body)
 	if err != nil {
 		return events.APIGatewayProxyResponse{StatusCode: 500, Body: "Failed to convert request"}, nil
 	}
@@ -164,20 +159,20 @@ func handleAPIGatewayProxyRequest(req events.APIGatewayProxyRequest, plugins []p
 	return convertHTTPResponseToLambdaResponse(recorder), nil
 }
 
-// handleLambdaFunctionURLRequest processes Lambda Function URL requests.
-func handleLambdaFunctionURLRequest(req events.LambdaFunctionURLRequest, plugins []plugin.Plugin) (events.LambdaFunctionURLResponse, error) {
+// handleLambdaFunctionURLRequest processes Function URL / API Gateway HTTP API
+// (v2) requests.
+func handleLambdaFunctionURLRequest(evt lambdaHTTPEvent, plugins []plugin.Plugin) (events.LambdaFunctionURLResponse, error) {
 	// Decode the body first: the v2 payload base64-encodes binary payloads (e.g.
 	// file uploads and multipart bodies) and sets IsBase64Encoded accordingly.
-	body, err := decodeLambdaBody(req.Body, req.IsBase64Encoded)
+	body, err := decodeLambdaBody(evt.Body, evt.IsBase64Encoded)
 	if err != nil {
 		return events.LambdaFunctionURLResponse{StatusCode: 400, Body: "Failed to decode request body"}, nil
 	}
 
-	// Convert LambdaFunctionURLRequest to http.Request. RawQueryString is already
-	// URL-encoded in the v2 payload, so it can be used directly as the raw query.
-	// Cookies arrive in a separate array (not the headers map) and are folded
-	// back into a Cookie header by buildFunctionURLHeaders.
-	httpReq, err := convertLambdaRequestToHTTPRequest(req.RequestContext.HTTP.Method, req.RawPath, req.RawQueryString, buildFunctionURLHeaders(req), body)
+	// RawQueryString is already URL-encoded in the v2 payload, so it is used
+	// directly. Cookies arrive in a separate array (not the headers map) and are
+	// folded back into a Cookie header by buildFunctionURLHeaders.
+	httpReq, err := convertLambdaRequestToHTTPRequest(evt.RequestContext.HTTP.Method, evt.RawPath, evt.RawQueryString, buildFunctionURLHeaders(evt), body)
 	if err != nil {
 		return events.LambdaFunctionURLResponse{StatusCode: 500, Body: "Failed to convert request"}, nil
 	}
@@ -227,20 +222,20 @@ func decodeLambdaBody(body string, isBase64 bool) ([]byte, error) {
 }
 
 // buildAPIGatewayQueryString reconstructs an encoded query string from an API
-// Gateway proxy (v1) request. Parameter values in the event are already
+// Gateway proxy (v1) event. Parameter values in the event are already
 // URL-decoded, so they are re-encoded here. MultiValueQueryStringParameters is
 // preferred when present because it preserves repeated keys (e.g. ?foo=a&foo=b);
 // otherwise the single-valued QueryStringParameters map is used.
-func buildAPIGatewayQueryString(req events.APIGatewayProxyRequest) string {
+func buildAPIGatewayQueryString(evt lambdaHTTPEvent) string {
 	values := url.Values{}
-	if len(req.MultiValueQueryStringParameters) > 0 {
-		for key, vals := range req.MultiValueQueryStringParameters {
+	if len(evt.MultiValueQueryStringParameters) > 0 {
+		for key, vals := range evt.MultiValueQueryStringParameters {
 			for _, v := range vals {
 				values.Add(key, v)
 			}
 		}
 	} else {
-		for key, v := range req.QueryStringParameters {
+		for key, v := range evt.QueryStringParameters {
 			values.Set(key, v)
 		}
 	}
@@ -251,16 +246,16 @@ func buildAPIGatewayQueryString(req events.APIGatewayProxyRequest) string {
 // (v1) event to http.Header. MultiValueHeaders is preferred when present so
 // repeated headers (e.g. multiple Cookie or Accept values) are preserved;
 // otherwise the single-valued Headers map is used.
-func buildAPIGatewayHeaders(req events.APIGatewayProxyRequest) http.Header {
+func buildAPIGatewayHeaders(evt lambdaHTTPEvent) http.Header {
 	header := make(http.Header)
-	if len(req.MultiValueHeaders) > 0 {
-		for key, vals := range req.MultiValueHeaders {
+	if len(evt.MultiValueHeaders) > 0 {
+		for key, vals := range evt.MultiValueHeaders {
 			for _, v := range vals {
 				header.Add(key, v)
 			}
 		}
 	} else {
-		for key, v := range req.Headers {
+		for key, v := range evt.Headers {
 			header.Set(key, v)
 		}
 	}
@@ -271,13 +266,13 @@ func buildAPIGatewayHeaders(req events.APIGatewayProxyRequest) http.Header {
 // / API Gateway HTTP API (v2) event to http.Header. In the v2 payload format
 // cookies are delivered in a separate Cookies array rather than the headers
 // map, so they are recombined into a single Cookie header (RFC 6265).
-func buildFunctionURLHeaders(req events.LambdaFunctionURLRequest) http.Header {
+func buildFunctionURLHeaders(evt lambdaHTTPEvent) http.Header {
 	header := make(http.Header)
-	for key, v := range req.Headers {
+	for key, v := range evt.Headers {
 		header.Set(key, v)
 	}
-	if len(req.Cookies) > 0 {
-		header.Set("Cookie", strings.Join(req.Cookies, "; "))
+	if len(evt.Cookies) > 0 {
+		header.Set("Cookie", strings.Join(evt.Cookies, "; "))
 	}
 	return header
 }

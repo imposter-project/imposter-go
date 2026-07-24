@@ -7,29 +7,56 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/aws/aws-lambda-go/events"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestDetectLambdaEventType_APIGatewayProxy(t *testing.T) {
-	// v1 payload: top-level httpMethod.
-	payload := json.RawMessage(`{"httpMethod":"GET","path":"/api","queryStringParameters":{"foo":"bar"}}`)
-	assert.Equal(t, eventAPIGatewayProxy, detectLambdaEventType(payload))
+// TestLambdaHTTPEvent_DecodesAPIGatewayV1 verifies a v1 payload maps onto the
+// unified event with a single decode, and is distinguishable as v1.
+func TestLambdaHTTPEvent_DecodesAPIGatewayV1(t *testing.T) {
+	payload := []byte(`{
+		"httpMethod":"GET",
+		"path":"/api",
+		"headers":{"Content-Type":"application/json"},
+		"multiValueHeaders":{"X-Custom":["a","b"]},
+		"queryStringParameters":{"foo":"bar"},
+		"multiValueQueryStringParameters":{"foo":["a","b"]},
+		"body":"hello",
+		"isBase64Encoded":false
+	}`)
+
+	var evt lambdaHTTPEvent
+	require.NoError(t, json.Unmarshal(payload, &evt))
+
+	assert.Equal(t, "GET", evt.HTTPMethod)
+	assert.Empty(t, evt.RequestContext.HTTP.Method) // not a v2 event
+	assert.Equal(t, "/api", evt.Path)
+	assert.Equal(t, "bar", evt.QueryStringParameters["foo"])
+	assert.Equal(t, []string{"a", "b"}, evt.MultiValueHeaders["X-Custom"])
+	assert.Equal(t, "hello", evt.Body)
 }
 
-func TestDetectLambdaEventType_LambdaFunctionURL(t *testing.T) {
-	// v2 payload: no top-level httpMethod, method is under requestContext.http.
-	payload := json.RawMessage(`{"version":"2.0","rawPath":"/api","requestContext":{"http":{"method":"POST"}}}`)
-	assert.Equal(t, eventLambdaFunctionURL, detectLambdaEventType(payload))
-}
+// TestLambdaHTTPEvent_DecodesFunctionURLV2 verifies a v2 payload maps onto the
+// unified event with a single decode, and is distinguishable as v2.
+func TestLambdaHTTPEvent_DecodesFunctionURLV2(t *testing.T) {
+	payload := []byte(`{
+		"version":"2.0",
+		"rawPath":"/api",
+		"rawQueryString":"foo=bar",
+		"cookies":["session=abc","theme=dark"],
+		"headers":{"content-type":"text/plain"},
+		"requestContext":{"http":{"method":"POST"}},
+		"body":"hi"
+	}`)
 
-func TestDetectLambdaEventType_Unknown(t *testing.T) {
-	assert.Equal(t, eventUnknown, detectLambdaEventType(json.RawMessage(`{"foo":"bar"}`)))
-}
+	var evt lambdaHTTPEvent
+	require.NoError(t, json.Unmarshal(payload, &evt))
 
-func TestDetectLambdaEventType_InvalidJSON(t *testing.T) {
-	assert.Equal(t, eventUnknown, detectLambdaEventType(json.RawMessage(`not json`)))
+	assert.Empty(t, evt.HTTPMethod) // not a v1 event
+	assert.Equal(t, "POST", evt.RequestContext.HTTP.Method)
+	assert.Equal(t, "/api", evt.RawPath)
+	assert.Equal(t, "foo=bar", evt.RawQueryString)
+	assert.Equal(t, []string{"session=abc", "theme=dark"}, evt.Cookies)
 }
 
 func TestConvertLambdaRequestToHTTPRequest_WithQuery(t *testing.T) {
@@ -73,22 +100,22 @@ func TestConvertLambdaRequestToHTTPRequest_BodyAndHeaders(t *testing.T) {
 }
 
 func TestBuildAPIGatewayQueryString_SingleValue(t *testing.T) {
-	req := events.APIGatewayProxyRequest{
+	evt := lambdaHTTPEvent{
 		QueryStringParameters: map[string]string{"foo": "bar"},
 	}
 
-	raw := buildAPIGatewayQueryString(req)
+	raw := buildAPIGatewayQueryString(evt)
 	assert.Equal(t, "foo=bar", raw)
 }
 
 func TestBuildAPIGatewayQueryString_EncodesSpecialCharacters(t *testing.T) {
 	// The event delivers already-decoded values; the reconstructed query string
 	// must re-encode them so they round-trip through url.Query().
-	req := events.APIGatewayProxyRequest{
+	evt := lambdaHTTPEvent{
 		QueryStringParameters: map[string]string{"q": "hello world&more"},
 	}
 
-	raw := buildAPIGatewayQueryString(req)
+	raw := buildAPIGatewayQueryString(evt)
 
 	httpReq, err := convertLambdaRequestToHTTPRequest("GET", "/search", raw, nil, nil)
 	require.NoError(t, err)
@@ -96,14 +123,14 @@ func TestBuildAPIGatewayQueryString_EncodesSpecialCharacters(t *testing.T) {
 }
 
 func TestBuildAPIGatewayQueryString_MultiValuePreferred(t *testing.T) {
-	req := events.APIGatewayProxyRequest{
+	evt := lambdaHTTPEvent{
 		QueryStringParameters: map[string]string{"foo": "b"},
 		MultiValueQueryStringParameters: map[string][]string{
 			"foo": {"a", "b"},
 		},
 	}
 
-	raw := buildAPIGatewayQueryString(req)
+	raw := buildAPIGatewayQueryString(evt)
 
 	httpReq, err := convertLambdaRequestToHTTPRequest("GET", "/api", raw, nil, nil)
 	require.NoError(t, err)
@@ -111,8 +138,7 @@ func TestBuildAPIGatewayQueryString_MultiValuePreferred(t *testing.T) {
 }
 
 func TestBuildAPIGatewayQueryString_Empty(t *testing.T) {
-	req := events.APIGatewayProxyRequest{}
-	assert.Equal(t, "", buildAPIGatewayQueryString(req))
+	assert.Equal(t, "", buildAPIGatewayQueryString(lambdaHTTPEvent{}))
 }
 
 func TestDecodeLambdaBody_PlainText(t *testing.T) {
@@ -136,43 +162,43 @@ func TestDecodeLambdaBody_InvalidBase64(t *testing.T) {
 }
 
 func TestBuildAPIGatewayHeaders_SingleValue(t *testing.T) {
-	req := events.APIGatewayProxyRequest{
+	evt := lambdaHTTPEvent{
 		Headers: map[string]string{"Content-Type": "application/json"},
 	}
 
-	header := buildAPIGatewayHeaders(req)
+	header := buildAPIGatewayHeaders(evt)
 	assert.Equal(t, "application/json", header.Get("Content-Type"))
 }
 
 func TestBuildAPIGatewayHeaders_MultiValuePreferred(t *testing.T) {
-	req := events.APIGatewayProxyRequest{
+	evt := lambdaHTTPEvent{
 		Headers: map[string]string{"X-Custom": "single"},
 		MultiValueHeaders: map[string][]string{
 			"X-Custom": {"a", "b"},
 		},
 	}
 
-	header := buildAPIGatewayHeaders(req)
+	header := buildAPIGatewayHeaders(evt)
 	assert.Equal(t, []string{"a", "b"}, header.Values("X-Custom"))
 }
 
 func TestBuildFunctionURLHeaders_FoldsCookies(t *testing.T) {
-	req := events.LambdaFunctionURLRequest{
+	evt := lambdaHTTPEvent{
 		Headers: map[string]string{"Content-Type": "text/plain"},
 		Cookies: []string{"session=abc", "theme=dark"},
 	}
 
-	header := buildFunctionURLHeaders(req)
+	header := buildFunctionURLHeaders(evt)
 	assert.Equal(t, "text/plain", header.Get("Content-Type"))
 	assert.Equal(t, "session=abc; theme=dark", header.Get("Cookie"))
 }
 
 func TestBuildFunctionURLHeaders_NoCookies(t *testing.T) {
-	req := events.LambdaFunctionURLRequest{
+	evt := lambdaHTTPEvent{
 		Headers: map[string]string{"Accept": "application/json"},
 	}
 
-	header := buildFunctionURLHeaders(req)
+	header := buildFunctionURLHeaders(evt)
 	assert.Equal(t, "application/json", header.Get("Accept"))
 	assert.Empty(t, header.Get("Cookie"))
 }
@@ -180,12 +206,12 @@ func TestBuildFunctionURLHeaders_NoCookies(t *testing.T) {
 // TestFunctionURLCookiesReadableAsCookie verifies the folded Cookie header is
 // parseable by the standard library, so downstream cookie access works.
 func TestFunctionURLCookiesReadableAsCookie(t *testing.T) {
-	req := events.LambdaFunctionURLRequest{
+	evt := lambdaHTTPEvent{
 		RawPath: "/api",
 		Cookies: []string{"session=abc", "theme=dark"},
 	}
 
-	httpReq, err := convertLambdaRequestToHTTPRequest(req.RequestContext.HTTP.Method, req.RawPath, req.RawQueryString, buildFunctionURLHeaders(req), nil)
+	httpReq, err := convertLambdaRequestToHTTPRequest("GET", evt.RawPath, evt.RawQueryString, buildFunctionURLHeaders(evt), nil)
 	require.NoError(t, err)
 
 	c, err := httpReq.Cookie("session")
@@ -196,14 +222,16 @@ func TestFunctionURLCookiesReadableAsCookie(t *testing.T) {
 	assert.Equal(t, "dark", c.Value)
 }
 
-func TestHandleAPIGatewayProxyRequest_PreservesQueryParams(t *testing.T) {
-	req := events.APIGatewayProxyRequest{
+// TestAPIGatewayQueryParamsReachRequest exercises the v1 assembly: query params
+// from the event reach the http.Request.
+func TestAPIGatewayQueryParamsReachRequest(t *testing.T) {
+	evt := lambdaHTTPEvent{
 		HTTPMethod:            "GET",
 		Path:                  "/api/endpoint",
 		QueryStringParameters: map[string]string{"foo": "bar"},
 	}
 
-	httpReq, err := convertLambdaRequestToHTTPRequest(req.HTTPMethod, req.Path, buildAPIGatewayQueryString(req), buildAPIGatewayHeaders(req), []byte(req.Body))
+	httpReq, err := convertLambdaRequestToHTTPRequest(evt.HTTPMethod, evt.Path, buildAPIGatewayQueryString(evt), buildAPIGatewayHeaders(evt), []byte(evt.Body))
 	require.NoError(t, err)
 	assert.Equal(t, "bar", httpReq.URL.Query().Get("foo"))
 }
@@ -211,16 +239,16 @@ func TestHandleAPIGatewayProxyRequest_PreservesQueryParams(t *testing.T) {
 // TestFormURLEncodedBodyParses exercises the full path a form POST takes: the
 // body and Content-Type header must survive conversion so ParseForm works.
 func TestFormURLEncodedBodyParses(t *testing.T) {
-	req := events.APIGatewayProxyRequest{
+	evt := lambdaHTTPEvent{
 		HTTPMethod: "POST",
 		Path:       "/submit",
 		Headers:    map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
 		Body:       "name=alice&role=admin",
 	}
 
-	body, err := decodeLambdaBody(req.Body, req.IsBase64Encoded)
+	body, err := decodeLambdaBody(evt.Body, evt.IsBase64Encoded)
 	require.NoError(t, err)
-	httpReq, err := convertLambdaRequestToHTTPRequest(req.HTTPMethod, req.Path, buildAPIGatewayQueryString(req), buildAPIGatewayHeaders(req), body)
+	httpReq, err := convertLambdaRequestToHTTPRequest(evt.HTTPMethod, evt.Path, buildAPIGatewayQueryString(evt), buildAPIGatewayHeaders(evt), body)
 	require.NoError(t, err)
 
 	require.NoError(t, httpReq.ParseForm())
@@ -231,7 +259,7 @@ func TestFormURLEncodedBodyParses(t *testing.T) {
 // TestBase64FormBodyParses verifies a base64-encoded form body (as API Gateway
 // delivers binary/opaque payloads) is decoded before form parsing.
 func TestBase64FormBodyParses(t *testing.T) {
-	req := events.APIGatewayProxyRequest{
+	evt := lambdaHTTPEvent{
 		HTTPMethod:      "POST",
 		Path:            "/submit",
 		Headers:         map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
@@ -239,9 +267,9 @@ func TestBase64FormBodyParses(t *testing.T) {
 		IsBase64Encoded: true,
 	}
 
-	body, err := decodeLambdaBody(req.Body, req.IsBase64Encoded)
+	body, err := decodeLambdaBody(evt.Body, evt.IsBase64Encoded)
 	require.NoError(t, err)
-	httpReq, err := convertLambdaRequestToHTTPRequest(req.HTTPMethod, req.Path, buildAPIGatewayQueryString(req), buildAPIGatewayHeaders(req), body)
+	httpReq, err := convertLambdaRequestToHTTPRequest(evt.HTTPMethod, evt.Path, buildAPIGatewayQueryString(evt), buildAPIGatewayHeaders(evt), body)
 	require.NoError(t, err)
 
 	require.NoError(t, httpReq.ParseForm())
@@ -249,13 +277,15 @@ func TestBase64FormBodyParses(t *testing.T) {
 	assert.Equal(t, "user", httpReq.PostFormValue("role"))
 }
 
-func TestHandleLambdaFunctionURLRequest_PreservesQueryParams(t *testing.T) {
-	req := events.LambdaFunctionURLRequest{
+// TestFunctionURLQueryParamsReachRequest exercises the v2 assembly: the raw
+// query string reaches the http.Request.
+func TestFunctionURLQueryParamsReachRequest(t *testing.T) {
+	evt := lambdaHTTPEvent{
 		RawPath:        "/api/endpoint",
 		RawQueryString: "foo=bar&baz=qux",
 	}
 
-	httpReq, err := convertLambdaRequestToHTTPRequest(req.RequestContext.HTTP.Method, req.RawPath, req.RawQueryString, buildFunctionURLHeaders(req), []byte(req.Body))
+	httpReq, err := convertLambdaRequestToHTTPRequest("GET", evt.RawPath, evt.RawQueryString, buildFunctionURLHeaders(evt), []byte(evt.Body))
 	require.NoError(t, err)
 	assert.Equal(t, "bar", httpReq.URL.Query().Get("foo"))
 	assert.Equal(t, "qux", httpReq.URL.Query().Get("baz"))
