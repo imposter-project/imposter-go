@@ -175,12 +175,14 @@ func (o *OIDCServer) renderLoginForm(sessionID, clientID string, errorMsg ...str
 	data := struct {
 		SessionID  string
 		ClientID   string
+		ServerBase string
 		PathPrefix string
 		Error      string
 	}{
 		SessionID:  sessionID,
 		ClientID:   clientID,
-		PathPrefix: serverBase + o.pathPrefix,
+		ServerBase: serverBase,
+		PathPrefix: o.pathPrefix,
 		Error:      errorMessage,
 	}
 
