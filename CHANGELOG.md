@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.21.1] - 2026-07-24
+### Changed
+- build(deps): bump the github-actions group with 3 updates
+- build(deps): bump the go-minor-and-patch group with 2 updates
+
+### Fixed
+- fix: preserve query, body, headers and cookies in Lambda adapter (#99)
+
 ## [5.21.0] - 2026-07-14
 ### Added
 - feat: merge split websocket configs onto one connection (#95)
