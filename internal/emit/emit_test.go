@@ -109,7 +109,6 @@ func TestStreamHTTP_WritesChunksAndFlushes(t *testing.T) {
 	exch.ResponseWriter = rec
 
 	resource := &config.BaseResource{
-		Stream: true,
 		Responses: []config.Response{
 			{Content: "chunk1", Headers: map[string]string{"Content-Type": "text/event-stream"}},
 			{Content: "chunk2"},
@@ -152,7 +151,6 @@ func TestStreamHTTP_BufferedFallbackWhenNotFlushable(t *testing.T) {
 	exch.ResponseWriter = &nonFlushingWriter{header: http.Header{}}
 
 	resource := &config.BaseResource{
-		Stream: true,
 		Responses: []config.Response{
 			{Content: "chunk1"},
 			{Content: "chunk2"},

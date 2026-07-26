@@ -205,7 +205,7 @@ func RunPipeline(
 
 	// Process the response(s) if configured. A singular 'response' block is
 	// equivalent to a 'responses' list with one element.
-	if best.Resource.Stream && exch.ResponseWriter != nil {
+	if best.Resource.StreamEnabled() && exch.ResponseWriter != nil {
 		// Stream the responses to the client incrementally (HTTP SSE/chunked),
 		// including any request-scoped schedules, instead of buffering a single
 		// body. Guarded on ResponseWriter so it only applies to live HTTP

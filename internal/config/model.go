@@ -251,7 +251,7 @@ type BaseResource struct {
 	Steps            []Step             `yaml:"steps,omitempty"`
 	Response         *Response          `yaml:"response,omitempty"`
 	Responses        []Response         `yaml:"responses,omitempty"`
-	Stream           bool               `yaml:"stream,omitempty"` // stream 'responses'/'schedule' output to the client incrementally (HTTP: Server-Sent Events / chunked)
+	Stream           *bool              `yaml:"stream,omitempty"` // stream 'responses'/'schedule' output incrementally (HTTP: SSE/chunked). Tri-state: unset = plugin default (buffered for HTTP, always-on for websocket); the websocket plugin rejects an explicit false
 	Concurrency      []ConcurrencyLimit `yaml:"concurrency,omitempty"`
 	Log              string             `yaml:"log,omitempty"`
 	Passthrough      string             `yaml:"passthrough,omitempty"`
@@ -268,6 +268,13 @@ type BaseResource struct {
 // to a 'responses' list with one element.
 func (r *BaseResource) EffectiveResponses() []Response {
 	return effectiveResponses(r.Response, r.Responses)
+}
+
+// StreamEnabled reports whether this resource has explicitly opted into
+// incremental streaming ('stream: true'). It is false when unset or explicitly
+// false. Websocket connections stream by nature and do not consult this.
+func (r *BaseResource) StreamEnabled() bool {
+	return r.Stream != nil && *r.Stream
 }
 
 // Schedule defines a time-driven trigger. At the top level of a config it

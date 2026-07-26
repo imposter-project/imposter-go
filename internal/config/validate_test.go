@@ -2,6 +2,8 @@ package config
 
 import "testing"
 
+func boolPtr(b bool) *bool { return &b }
+
 func TestValidateUpstreams(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -288,7 +290,7 @@ func TestValidateStreaming(t *testing.T) {
 		{
 			name: "rest: multiple responses with stream is valid",
 			cfg: Config{Plugin: "rest", Resources: []Resource{{BaseResource: BaseResource{
-				Stream: true, Responses: streamSeq()}}}},
+				Stream: boolPtr(true), Responses: streamSeq()}}}},
 		},
 		{
 			name: "rest: multiple responses without stream is an error",
@@ -299,12 +301,12 @@ func TestValidateStreaming(t *testing.T) {
 		{
 			name: "rest: single response with stream is valid",
 			cfg: Config{Plugin: "rest", Resources: []Resource{{BaseResource: BaseResource{
-				Stream: true, Response: &Response{Content: "a", Headers: sseHeaders}}}}},
+				Stream: boolPtr(true), Response: &Response{Content: "a", Headers: sseHeaders}}}}},
 		},
 		{
 			name: "rest: schedule with stream is valid",
 			cfg: Config{Plugin: "rest", Resources: []Resource{{BaseResource: BaseResource{
-				Stream: true, Response: &Response{Content: "open"}, Schedule: pushSchedule()}}}},
+				Stream: boolPtr(true), Response: &Response{Content: "open"}, Schedule: pushSchedule()}}}},
 		},
 		{
 			name: "rest: schedule without stream is an error",
@@ -315,18 +317,31 @@ func TestValidateStreaming(t *testing.T) {
 		{
 			name: "rest: stream with nothing to stream is an error",
 			cfg: Config{Plugin: "rest", Resources: []Resource{{BaseResource: BaseResource{
-				Stream: true}}}},
+				Stream: boolPtr(true)}}}},
 			wantErr: true,
+		},
+		{
+			name: "websocket: explicit stream:false is an error (always streams)",
+			cfg: Config{Plugin: "websocket", Resources: []Resource{{BaseResource: BaseResource{
+				RequestMatcher: RequestMatcher{Path: "/ws", On: "open"},
+				Stream:         boolPtr(false), Response: &Response{Content: "hi"}}}}},
+			wantErr: true,
+		},
+		{
+			name: "websocket: redundant stream:true is accepted",
+			cfg: Config{Plugin: "websocket", Resources: []Resource{{BaseResource: BaseResource{
+				RequestMatcher: RequestMatcher{Path: "/ws", On: "open"},
+				Stream:         boolPtr(true), Response: &Response{Content: "hi"}}}}},
 		},
 		{
 			name: "openapi: streaming inherits from the rest pipeline",
 			cfg: Config{Plugin: "openapi", Resources: []Resource{{BaseResource: BaseResource{
-				Stream: true, Responses: streamSeq()}}}},
+				Stream: boolPtr(true), Responses: streamSeq()}}}},
 		},
 		{
 			name: "soap: responses are not supported",
 			cfg: Config{Plugin: "soap", Resources: []Resource{{BaseResource: BaseResource{
-				Stream: true, Responses: streamSeq()}}}},
+				Stream: boolPtr(true), Responses: streamSeq()}}}},
 			wantErr: true,
 		},
 	}

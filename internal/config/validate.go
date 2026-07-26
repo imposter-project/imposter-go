@@ -84,8 +84,12 @@ func validateWebSocketFields(cfg *Config, res *Resource) error {
 		return validateStreamingFields(cfg, res)
 	}
 
-	if res.Stream {
-		logger.Warnf("resource (path %q) declares 'stream', which has no effect for websocket resources; websocket responses are always sent as frames", res.Path)
+	// A websocket connection is inherently a streaming, multi-frame transport,
+	// so 'stream' is implicitly true and setting it is redundant-but-consistent.
+	// An explicit 'stream: false', however, asserts something the plugin cannot
+	// honour, so reject it to catch the misunderstanding at startup.
+	if res.Stream != nil && !*res.Stream {
+		return fmt.Errorf("resource (path %q) declares 'stream: false', but the websocket plugin always streams responses as frames; remove it", res.Path)
 	}
 
 	switch res.On {
@@ -121,9 +125,11 @@ var streamingPlugins = map[string]bool{"rest": true, "openapi": true}
 // fields on a non-websocket (HTTP) resource. Streaming is only supported by
 // the plugins that serve responses through the shared pipeline.
 func validateStreamingFields(cfg *Config, res *Resource) error {
+	streaming := res.StreamEnabled()
+
 	if !streamingPlugins[cfg.Plugin] {
-		if res.Stream {
-			return fmt.Errorf("resource (path %q) declares 'stream', which is not supported by the %q plugin", res.Path, cfg.Plugin)
+		if streaming {
+			return fmt.Errorf("resource (path %q) declares 'stream: true', which is not supported by the %q plugin", res.Path, cfg.Plugin)
 		}
 		if len(res.Responses) > 0 {
 			return fmt.Errorf("resource (path %q) declares 'responses', which is not supported by the %q plugin", res.Path, cfg.Plugin)
@@ -137,13 +143,13 @@ func validateStreamingFields(cfg *Config, res *Resource) error {
 	// A 'responses' list is streamed one flushed chunk at a time; requiring the
 	// explicit opt-in keeps the intent clear and leaves room to give multiple
 	// buffered responses a different meaning later.
-	if len(res.Responses) > 0 && !res.Stream {
+	if len(res.Responses) > 0 && !streaming {
 		return fmt.Errorf("resource (path %q) declares multiple 'responses' without 'stream: true'; set 'stream: true' to send them as a stream, or use a single 'response'", res.Path)
 	}
-	if len(res.Schedule) > 0 && !res.Stream {
+	if len(res.Schedule) > 0 && !streaming {
 		return fmt.Errorf("resource (path %q) declares a 'schedule' without 'stream: true'; scheduled server-push requires a stream", res.Path)
 	}
-	if res.Stream && res.Response == nil && len(res.Responses) == 0 && len(res.Schedule) == 0 {
+	if streaming && res.Response == nil && len(res.Responses) == 0 && len(res.Schedule) == 0 {
 		return fmt.Errorf("resource (path %q) declares 'stream: true' but has no 'response', 'responses' or 'schedule' to stream", res.Path)
 	}
 

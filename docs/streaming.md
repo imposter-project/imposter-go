@@ -82,6 +82,10 @@ the client is connected.
   (which need an open connection) are skipped with a warning.
 - **Content type inference.** As with any response, if no `Content-Type` is set
   it is inferred from the response file extension, falling back to JSON.
+- **Websocket is always streaming.** A websocket connection is inherently a
+  multi-frame stream, so `stream` is implicit there: setting `stream: true` is
+  redundant but accepted, while an explicit `stream: false` is rejected at
+  startup, since the plugin cannot honour it.
 
 ## See also
 
