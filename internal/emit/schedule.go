@@ -18,8 +18,7 @@ import (
 // its trigger until the context is cancelled or its firing limit is reached.
 // Each firing runs the entry's steps, then emits its responses via the sink.
 //
-// This is the generalisation of the websocket plugin's connection-scoped
-// schedules: only NewExchange and Sink differ between protocols.
+// A caller binds it to a transport by supplying NewExchange and a Sink.
 type ScheduleHost struct {
 	// Ctx bounds every schedule's lifetime; cancelling it stops all of them
 	// (e.g. the websocket connection closed, or the HTTP client disconnected).

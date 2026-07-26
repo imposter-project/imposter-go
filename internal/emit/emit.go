@@ -1,9 +1,8 @@
 // Package emit holds the transport-agnostic machinery for sending one or more
 // processed responses to a client over a long-lived exchange — a websocket
-// connection or a streamed HTTP response. The websocket plugin and the HTTP
-// streaming path share these primitives so that "process a response block,
-// then send it" (and "fire a schedule that emits responses") lives in one
-// place rather than being duplicated per protocol.
+// connection or a streamed HTTP response. Each transport provides a Sink that
+// delivers a single processed body; on top of that the package processes a list
+// of responses (EmitResponses) and drives scheduled emission (ScheduleHost).
 package emit
 
 import (

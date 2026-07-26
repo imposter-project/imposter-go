@@ -8,8 +8,8 @@ import (
 )
 
 // startSchedules launches connection-scoped schedules declared on the matched
-// 'on: open' resource, via the shared emit.ScheduleHost. They stop when the
-// connection closes (c.ctx is cancelled) or when their firing limit is reached.
+// 'on: open' resource, via emit.ScheduleHost. They stop when the connection
+// closes (c.ctx is cancelled) or when their firing limit is reached.
 //
 // Each firing gets a fresh response state but reuses the connection-scoped
 // request store, so values captured by one firing are visible to later ones.

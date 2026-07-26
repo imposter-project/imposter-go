@@ -140,9 +140,8 @@ func validateStreamingFields(cfg *Config, res *Resource) error {
 		return nil
 	}
 
-	// A 'responses' list is streamed one flushed chunk at a time; requiring the
-	// explicit opt-in keeps the intent clear and leaves room to give multiple
-	// buffered responses a different meaning later.
+	// A 'responses' list is streamed one flushed chunk at a time; the explicit
+	// opt-in keeps that intent unambiguous.
 	if len(res.Responses) > 0 && !streaming {
 		return fmt.Errorf("resource (path %q) declares multiple 'responses' without 'stream: true'; set 'stream: true' to send them as a stream, or use a single 'response'", res.Path)
 	}
