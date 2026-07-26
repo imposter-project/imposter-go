@@ -2,7 +2,32 @@ package main
 
 import (
 	"testing"
+
+	"github.com/imposter-project/imposter-go/external/shared"
 )
+
+func TestServeStaticContent_EmptyPathWithServerBasePath(t *testing.T) {
+	// When IMPOSTER_SERVER_URL includes a base path (e.g. behind a reverse
+	// proxy), the trailing-slash redirect must include that base path so the
+	// browser resolves it against the proxy rather than the origin root.
+	originalPrefix := wsdlPrefixPath
+	originalConfig := config
+	defer func() { wsdlPrefixPath = originalPrefix; config = originalConfig }()
+
+	wsdlPrefixPath = "/_wsdl"
+	config = shared.ExternalConfig{Server: shared.ServerConfig{URL: "http://localhost:8080/myapp"}}
+
+	result := serveStaticContent("/_wsdl")
+
+	if result.StatusCode != 302 {
+		t.Errorf("Expected status code 302, got %d", result.StatusCode)
+	}
+
+	expectedLocation := "/myapp/_wsdl/"
+	if result.Headers["Location"] != expectedLocation {
+		t.Errorf("Expected Location header '%s', got '%s'", expectedLocation, result.Headers["Location"])
+	}
+}
 
 func TestServeStaticContent_EmptyPath(t *testing.T) {
 	originalPrefix := wsdlPrefixPath

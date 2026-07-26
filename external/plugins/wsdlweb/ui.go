@@ -34,7 +34,7 @@ func serveStaticContent(path string) shared.HandlerResponse {
 	path = strings.TrimPrefix(path, wsdlPrefixPath)
 	if len(path) == 0 {
 		return shared.HandlerResponse{StatusCode: 302, Headers: map[string]string{
-			"Location": wsdlPrefixPath + "/",
+			"Location": shared.ServerBasePath(config.Server.URL) + wsdlPrefixPath + "/",
 		}}
 	}
 

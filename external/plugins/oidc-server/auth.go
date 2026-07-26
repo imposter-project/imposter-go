@@ -167,10 +167,7 @@ func (o *OIDCServer) renderLoginForm(sessionID, clientID string, errorMsg ...str
 		errorMessage = errorMsg[0]
 	}
 
-	serverBase := ""
-	if parsed, err := url.Parse(o.serverURL); err == nil {
-		serverBase = strings.TrimRight(parsed.Path, "/")
-	}
+	serverBase := shared.ServerBasePath(o.serverURL)
 
 	data := struct {
 		SessionID  string
