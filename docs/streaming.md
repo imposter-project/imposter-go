@@ -6,8 +6,7 @@ one go. Setting `stream: true` on a resource instead delivers its output
 produced, over a chunked (`Transfer-Encoding: chunked`) HTTP response.
 
 This drives Server-Sent Events (SSE), newline-delimited JSON (NDJSON), and any
-other chunked format — for example standing in for an "OpenAI compatible"
-streaming chat completion.
+other chunked format.
 
 Streaming is supported by the plugins that serve responses through the shared
 request pipeline: `rest` and `openapi`.
@@ -21,18 +20,21 @@ A per-part `delay` paces the stream.
 ```yaml
 plugin: rest
 resources:
-  - path: /v1/chat/completions
-    method: POST
+  - path: /updates
+    method: GET
     stream: true
     responses:
-      - content: "data: {\"choices\":[{\"delta\":{\"content\":\"Hello\"}}]}\n\n"
+      - content: "data: working\n\n"
         headers:
           Content-Type: text/event-stream
-        delay: { exact: 50 }
-      - content: "data: {\"choices\":[{\"delta\":{\"content\":\" world\"}}]}\n\n"
-        delay: { exact: 50 }
-      - content: "data: [DONE]\n\n"
+        delay: { exact: 500 }
+      - content: "data: still working\n\n"
+        delay: { exact: 500 }
+      - content: "data: done\n\n"
 ```
+
+A client reading this receives three `data:` events half a second apart, rather
+than all at once at the end.
 
 The status line and headers are taken from the first part, so set the
 `Content-Type` (e.g. `text/event-stream`) there. Write the SSE framing
