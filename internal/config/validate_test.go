@@ -270,3 +270,76 @@ func TestValidateScheduleLimit(t *testing.T) {
 		t.Fatal("expected error for negative limit, got nil")
 	}
 }
+
+func TestValidateStreaming(t *testing.T) {
+	sseHeaders := map[string]string{"Content-Type": "text/event-stream"}
+	streamSeq := func() []Response {
+		return []Response{{Content: "a", Headers: sseHeaders}, {Content: "b"}}
+	}
+	pushSchedule := func() []Schedule {
+		return []Schedule{{Every: "1s", Response: &Response{Content: "tick"}}}
+	}
+
+	tests := []struct {
+		name    string
+		cfg     Config
+		wantErr bool
+	}{
+		{
+			name: "rest: multiple responses with stream is valid",
+			cfg: Config{Plugin: "rest", Resources: []Resource{{BaseResource: BaseResource{
+				Stream: true, Responses: streamSeq()}}}},
+		},
+		{
+			name: "rest: multiple responses without stream is an error",
+			cfg: Config{Plugin: "rest", Resources: []Resource{{BaseResource: BaseResource{
+				Responses: streamSeq()}}}},
+			wantErr: true,
+		},
+		{
+			name: "rest: single response with stream is valid",
+			cfg: Config{Plugin: "rest", Resources: []Resource{{BaseResource: BaseResource{
+				Stream: true, Response: &Response{Content: "a", Headers: sseHeaders}}}}},
+		},
+		{
+			name: "rest: schedule with stream is valid",
+			cfg: Config{Plugin: "rest", Resources: []Resource{{BaseResource: BaseResource{
+				Stream: true, Response: &Response{Content: "open"}, Schedule: pushSchedule()}}}},
+		},
+		{
+			name: "rest: schedule without stream is an error",
+			cfg: Config{Plugin: "rest", Resources: []Resource{{BaseResource: BaseResource{
+				Schedule: pushSchedule()}}}},
+			wantErr: true,
+		},
+		{
+			name: "rest: stream with nothing to stream is an error",
+			cfg: Config{Plugin: "rest", Resources: []Resource{{BaseResource: BaseResource{
+				Stream: true}}}},
+			wantErr: true,
+		},
+		{
+			name: "openapi: streaming inherits from the rest pipeline",
+			cfg: Config{Plugin: "openapi", Resources: []Resource{{BaseResource: BaseResource{
+				Stream: true, Responses: streamSeq()}}}},
+		},
+		{
+			name: "soap: responses are not supported",
+			cfg: Config{Plugin: "soap", Resources: []Resource{{BaseResource: BaseResource{
+				Stream: true, Responses: streamSeq()}}}},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := Validate(&tt.cfg)
+			if tt.wantErr && err == nil {
+				t.Fatal("expected error, got nil")
+			}
+			if !tt.wantErr && err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
+	}
+}

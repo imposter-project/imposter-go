@@ -251,6 +251,7 @@ type BaseResource struct {
 	Steps            []Step             `yaml:"steps,omitempty"`
 	Response         *Response          `yaml:"response,omitempty"`
 	Responses        []Response         `yaml:"responses,omitempty"`
+	Stream           bool               `yaml:"stream,omitempty"` // stream 'responses'/'schedule' output to the client incrementally (HTTP: Server-Sent Events / chunked)
 	Concurrency      []ConcurrencyLimit `yaml:"concurrency,omitempty"`
 	Log              string             `yaml:"log,omitempty"`
 	Passthrough      string             `yaml:"passthrough,omitempty"`

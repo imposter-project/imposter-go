@@ -81,13 +81,11 @@ func validateWebSocketFields(cfg *Config, res *Resource) error {
 		if res.On != "" {
 			return fmt.Errorf("resource (path %q) declares 'on', which is only supported by the websocket plugin", res.Path)
 		}
-		if len(res.Responses) > 0 {
-			return fmt.Errorf("resource (path %q) declares 'responses', which is only supported by the websocket plugin", res.Path)
-		}
-		if len(res.Schedule) > 0 {
-			return fmt.Errorf("resource (path %q) declares 'schedule', which is only supported by the websocket plugin", res.Path)
-		}
-		return nil
+		return validateStreamingFields(cfg, res)
+	}
+
+	if res.Stream {
+		logger.Warnf("resource (path %q) declares 'stream', which has no effect for websocket resources; websocket responses are always sent as frames", res.Path)
 	}
 
 	switch res.On {
@@ -112,8 +110,51 @@ func validateWebSocketFields(cfg *Config, res *Resource) error {
 		logger.Warnf("resource (path %q) declares 'method', which has no effect for websocket resources", res.Path)
 	}
 
-	for i := range res.Schedule {
-		sched := &res.Schedule[i]
+	return validateScheduleEntries(res.Schedule)
+}
+
+// streamingPlugins are the plugins that serve responses through the shared
+// pipeline and therefore support incremental streaming ('stream: true').
+var streamingPlugins = map[string]bool{"rest": true, "openapi": true}
+
+// validateStreamingFields checks the 'stream', 'responses' and 'schedule'
+// fields on a non-websocket (HTTP) resource. Streaming is only supported by
+// the plugins that serve responses through the shared pipeline.
+func validateStreamingFields(cfg *Config, res *Resource) error {
+	if !streamingPlugins[cfg.Plugin] {
+		if res.Stream {
+			return fmt.Errorf("resource (path %q) declares 'stream', which is not supported by the %q plugin", res.Path, cfg.Plugin)
+		}
+		if len(res.Responses) > 0 {
+			return fmt.Errorf("resource (path %q) declares 'responses', which is not supported by the %q plugin", res.Path, cfg.Plugin)
+		}
+		if len(res.Schedule) > 0 {
+			return fmt.Errorf("resource (path %q) declares 'schedule', which is not supported by the %q plugin", res.Path, cfg.Plugin)
+		}
+		return nil
+	}
+
+	// A 'responses' list is streamed one flushed chunk at a time; requiring the
+	// explicit opt-in keeps the intent clear and leaves room to give multiple
+	// buffered responses a different meaning later.
+	if len(res.Responses) > 0 && !res.Stream {
+		return fmt.Errorf("resource (path %q) declares multiple 'responses' without 'stream: true'; set 'stream: true' to send them as a stream, or use a single 'response'", res.Path)
+	}
+	if len(res.Schedule) > 0 && !res.Stream {
+		return fmt.Errorf("resource (path %q) declares a 'schedule' without 'stream: true'; scheduled server-push requires a stream", res.Path)
+	}
+	if res.Stream && res.Response == nil && len(res.Responses) == 0 && len(res.Schedule) == 0 {
+		return fmt.Errorf("resource (path %q) declares 'stream: true' but has no 'response', 'responses' or 'schedule' to stream", res.Path)
+	}
+
+	return validateScheduleEntries(res.Schedule)
+}
+
+// validateScheduleEntries validates a set of schedule entries' triggers and
+// payloads. Shared by websocket and HTTP streaming resources.
+func validateScheduleEntries(schedules []Schedule) error {
+	for i := range schedules {
+		sched := &schedules[i]
 		desc := scheduleDesc(sched, i)
 		if err := validateScheduleTrigger(sched, desc); err != nil {
 			return err
@@ -125,7 +166,6 @@ func validateWebSocketFields(cfg *Config, res *Resource) error {
 			return fmt.Errorf("%s must declare a response or at least one step", desc)
 		}
 	}
-
 	return nil
 }
 
