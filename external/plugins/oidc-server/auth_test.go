@@ -380,6 +380,32 @@ func TestOIDCServer_handleAuthorizePost(t *testing.T) {
 	}
 }
 
+func TestOIDCServer_renderLoginForm_withServerBasePath(t *testing.T) {
+	config := getDefaultConfig()
+	server := &OIDCServer{
+		logger: hclog.New(&hclog.LoggerOptions{
+			Level:  hclog.Off,
+			Output: nil,
+		}),
+		config:     config,
+		serverURL:  "http://localhost:8080/myapp",
+		pathPrefix: "/oidc",
+		sessions:   make(map[string]*AuthSession),
+		codes:      make(map[string]*AuthCode),
+		tokens:     make(map[string]*AccessToken),
+		jwtSecret:  []byte("test-secret-key-32-bytes-long!"),
+	}
+
+	resp := server.renderLoginForm("test-session", "test-client")
+	if resp.StatusCode != 200 {
+		t.Fatalf("Expected status 200, got %d", resp.StatusCode)
+	}
+	body := string(resp.Body)
+	if !strings.Contains(body, `action="/myapp/oidc/authorize"`) {
+		t.Errorf("Expected form action to include server base path, got body: %s", body)
+	}
+}
+
 func TestOIDCServer_renderLoginForm(t *testing.T) {
 	server := createTestOIDCServerForAuth()
 
@@ -399,6 +425,7 @@ func TestOIDCServer_renderLoginForm(t *testing.T) {
 				return strings.Contains(body, "test-session") &&
 					strings.Contains(body, "test-client") &&
 					strings.Contains(body, "Sign In") &&
+					strings.Contains(body, `action="/oidc/authorize"`) &&
 					!strings.Contains(body, "class=\"error\"")
 			},
 		},
