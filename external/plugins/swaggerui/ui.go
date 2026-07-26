@@ -33,7 +33,7 @@ func serveStaticContent(path string) shared.HandlerResponse {
 	path = strings.TrimPrefix(path, specPrefixPath)
 	if len(path) == 0 {
 		return shared.HandlerResponse{StatusCode: 302, Headers: map[string]string{
-			"Location": specPrefixPath + "/",
+			"Location": shared.ServerBasePath(config.Server.URL) + specPrefixPath + "/",
 		}}
 	}
 
@@ -68,8 +68,18 @@ func serveStaticContent(path string) shared.HandlerResponse {
 
 // generateInitialiser generates the index page response using the embedded template.
 func generateInitialiser() error {
-	// serialise the specConfigs to JSON
-	jsonData, err := json.Marshal(specConfigs)
+	// Prepend the server base path to each spec URL so Swagger UI fetches them
+	// through any reverse-proxy base path. The stored specConfigs are left
+	// untouched, as their un-prefixed URLs are used for internal route matching.
+	basePath := shared.ServerBasePath(config.Server.URL)
+	browserConfigs := make([]SpecConfig, len(specConfigs))
+	for i, specConfig := range specConfigs {
+		specConfig.URL = basePath + specConfig.URL
+		browserConfigs[i] = specConfig
+	}
+
+	// serialise the browser-facing specConfigs to JSON
+	jsonData, err := json.Marshal(browserConfigs)
 	if err != nil {
 		return fmt.Errorf("failed to marshal spec config JSON: %w", err)
 	}
