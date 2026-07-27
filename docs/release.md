@@ -10,12 +10,18 @@ To create a new release:
 
 2. The GitHub Actions workflow will automatically:
     - Build binaries for all supported platforms (Linux, macOS, Windows)
-    - Generate a changelog from commit messages
+    - Extract the entries for the tagged version from `CHANGELOG.md`
     - Create a GitHub release
     - Upload the built artifacts
 
 The release notes will include:
 - Version and release date
-- Automatically generated changelog (excluding docs, test, ci, and chore commits)
 - Installation instructions
+- The `CHANGELOG.md` entries for the tagged version
 - Link to the full changelog comparing with the previous tag
+
+The entries are extracted by the [since](https://github.com/release-tools/since)
+action and passed to GoReleaser via `--release-notes`, so the release body
+matches the changelog exactly. The release job fails if the most recent entry in
+`CHANGELOG.md` is not for the tag being released — run `since project release`
+(or update the changelog by hand) before tagging.
