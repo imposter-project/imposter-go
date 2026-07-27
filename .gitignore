@@ -37,3 +37,6 @@ coverage.html
 
 # Testing
 /.playwright-mcp/
+
+# Release notes extracted from CHANGELOG.md during CI
+/.changelog-extract.md
