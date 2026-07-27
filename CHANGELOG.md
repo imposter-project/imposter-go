@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.21.2] - 2026-07-27
+### Changed
+- build(deps): bump github.com/antchfx/xpath
+- build(deps): bump google.golang.org/grpc from 1.67.0 to 1.82.1
+- ci: populate release body from changelog extract (#105)
+- ci: run workflow on develop branch
+- docs: update human and agent guidance
+
+### Fixed
+- fix: respect server base path in OIDC server (#101)
+- fix: respect server base path in swagger UI and WSDL viewer URLs (#103)
+
 ## [5.21.1] - 2026-07-24
 ### Changed
 - build(deps): bump the github-actions group with 3 updates
