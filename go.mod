@@ -105,7 +105,7 @@ require (
 
 require (
 	github.com/PaesslerAG/jsonpath v0.1.1
-	github.com/antchfx/xpath v1.3.7
+	github.com/antchfx/xpath v1.3.8
 	github.com/aws/aws-lambda-go v1.54.0
 	github.com/aws/aws-sdk-go v1.55.8
 	github.com/go-redis/redis/v8 v8.11.5
