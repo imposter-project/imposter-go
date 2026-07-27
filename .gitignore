@@ -32,8 +32,8 @@ coverage.html
 
 # Tool config
 /.tool-versions
-/.claude/settings.local.json
-/CLAUDE.md
+/.claude/*.local.json
+/.claude/worktrees/
 
 # Testing
 /.playwright-mcp/

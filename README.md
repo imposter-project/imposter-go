@@ -1,25 +1,27 @@
 # imposter-go [![CI](https://github.com/imposter-project/imposter-go/actions/workflows/ci.yml/badge.svg)](https://github.com/imposter-project/imposter-go/actions/workflows/ci.yml)
 
-A Go implementation of the [Imposter Mock Engine](https://www.imposter.sh). This project is now considered stable.
+A Go implementation of the [Imposter Mock Engine](https://www.imposter.sh). This project is the latest stable release of Imposter.
 
 ## Features
 
 - 💻 Run locally: Lightweight local HTTP mock server
 - 🚀 Run in AWS Lambda: low latency, high throughput, <140ms cold start (see [test results](./examples/lambda/perf-tests))
+- 🐳 Run in Docker/Kubernetes or other container environments (13MB image size)
 - ✅ [REST/HTTP API mock](https://docs.imposter.sh/rest_plugin/) support
 - ✅ [SOAP/WSDL mock](https://docs.imposter.sh/soap_plugin/) support
 - ✅ [OpenAPI/Swagger mock](https://docs.imposter.sh/openapi_plugin/) support
 - ✅ [gRPC/Protobuf mock](https://docs.imposter.sh/grpc_plugin/) support (see [examples/grpc](./examples/grpc))
-- ✅ [WebSocket mock](https://docs.imposter.sh/websocket_plugin/) support, including streamed and periodic server-initiated messages (see [examples/websocket/echo](./examples/websocket/echo), and the [OpenClaw gateway example](https://github.com/imposter-project/examples/tree/main/websocket/openclaw))
+- ✅ [WebSocket mock](https://docs.imposter.sh/websocket_plugin/) support, including streamed and periodic server-initiated messages (see [examples/websocket/echo](./examples/websocket/echo)
 - ✅ [Scheduled tasks](https://docs.imposter.sh/scheduled_tasks/) for periodic or cron-driven actions, such as webhook-style HTTP pushes (see [examples/rest/schedules](./examples/rest/schedules))
 - ✅ JavaScript [scripting](https://docs.imposter.sh/scripting/)
 - ✅ Support for [steps](https://docs.imposter.sh/steps/)
 - ✅ Support for [simulated delays](https://docs.imposter.sh/performance_simulation/), [simulated errors](https://docs.imposter.sh/failure_simulation/) and [rate limiting](./docs/rate_limiting.md)
 - ✅ Support for [passthrough/proxy to upstream services](./docs/passthrough.md)
 
-## ⚠️ Limitations
+## Limitations
 
-- No support for Groovy [scripting](https://docs.imposter.sh/scripting/)
+- No support for Groovy scripting - migrate to JavaScript (ES6+)
+- Legacy configuration format is supported, via a runtime flag (see below)
 
 ## Getting Started
 
