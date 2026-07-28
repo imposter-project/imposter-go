@@ -99,7 +99,7 @@ jobs:
         {
           echo "## imposter-go ${TAG} ($(date -u '+%Y-%m-%d'))"
           echo
-          echo "For installation instructions, please visit https://github.com/imposter-project/imposter-go#installation"
+          echo "For installation instructions, please visit https://github.com/imposter-project/imposter-go#getting-started"
           echo "For user documentation, please visit https://docs.imposter.sh"
           echo
           cat .changelog-extract.md
