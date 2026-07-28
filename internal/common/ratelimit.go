@@ -36,6 +36,9 @@ func RateLimitCheck(
 			logger.Warnf("rate limiter error: %v", err)
 		}
 		logger.Infof("rate limit applied for resource %s", resourceKey)
+		// The rate limit response replaces the response entirely, including
+		// anything an earlier interceptor's script set explicitly.
+		exch.ResponseState.ClearExplicitFlags()
 		processResponseFunc(exch, &resource.RequestMatcher, limitResponse.Response, respProc)
 		exch.ResponseState.HandledWithResource(&resource.BaseResource)
 		return true

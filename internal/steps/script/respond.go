@@ -14,12 +14,12 @@ type ResponseBuilder struct {
 }
 
 func (rb *ResponseBuilder) withStatusCode(statusCode int) goja.Value {
-	rb.state.StatusCode = statusCode
+	rb.state.SetStatusCode(statusCode)
 	return rb.obj
 }
 
 func (rb *ResponseBuilder) withContent(content string) goja.Value {
-	rb.state.Body = []byte(content)
+	rb.state.SetBody([]byte(content))
 	return rb.obj
 }
 
@@ -38,7 +38,7 @@ func (rb *ResponseBuilder) withHeader(name, value string) goja.Value {
 }
 
 func (rb *ResponseBuilder) withEmpty() goja.Value {
-	rb.state.Body = []byte{}
+	rb.state.SetBody([]byte{})
 	return rb.obj
 }
 

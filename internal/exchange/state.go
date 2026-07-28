@@ -20,12 +20,45 @@ type ResponseState struct {
 	Fail             string               // failure type for the response
 	File             string               // path to the response file
 	CleanupFunctions []func()             // functions to execute after response is written
+
+	// StatusCodeSet indicates the status code was set explicitly by a script,
+	// rather than defaulted. Config values are only applied as a fallback, so
+	// a script-set status code is not overwritten by a resource's response
+	// configuration.
+	StatusCodeSet bool
+
+	// BodySet indicates the body was set explicitly by a script. As with
+	// StatusCodeSet, a resource's response content is only used as a fallback.
+	BodySet bool
 }
 
 // HandledWithResource marks the response as handled and sets the resource that handled it
 func (rs *ResponseState) HandledWithResource(resource *config.BaseResource) {
 	rs.Handled = true
 	rs.Resource = resource
+}
+
+// SetStatusCode records an explicitly requested status code, marking it so
+// that it takes precedence over any status code in the response configuration.
+func (rs *ResponseState) SetStatusCode(statusCode int) {
+	rs.StatusCode = statusCode
+	rs.StatusCodeSet = true
+}
+
+// SetBody records an explicitly requested body, marking it so that it takes
+// precedence over any content in the response configuration.
+func (rs *ResponseState) SetBody(body []byte) {
+	rs.Body = body
+	rs.BodySet = true
+}
+
+// ClearExplicitFlags forgets that the status code and body were explicitly
+// set, allowing a subsequent configured response to be applied unconditionally.
+// This is used where the configured response must win regardless of what came
+// before it, such as a rate limit response.
+func (rs *ResponseState) ClearExplicitFlags() {
+	rs.StatusCodeSet = false
+	rs.BodySet = false
 }
 
 // WriteToResponseWriter writes the final state to the http.ResponseWriter

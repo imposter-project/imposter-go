@@ -79,8 +79,9 @@ func processResponse(
 		SimulateDelay(resp.Delay, req)
 	}
 
-	// Set status code
-	if resp.StatusCode > 0 {
+	// Set status code. A status code set explicitly by a script takes
+	// precedence, so the configured value acts only as a default.
+	if resp.StatusCode > 0 && !rs.StatusCodeSet {
 		rs.StatusCode = resp.StatusCode
 	}
 
@@ -126,6 +127,13 @@ func processResponse(
 		logger.Debugf("using directory-based response file: %s", respFile)
 	}
 
+	// Content set explicitly by a script takes precedence over configured
+	// content, so the latter acts only as a default. A response file still
+	// wins over script-set content, matching the JVM engine.
+	if rs.BodySet && respFile == "" {
+		respContent = ""
+	}
+
 	// Only override response content if specified, as it may have been set by an interceptor
 	if respFile != "" || respContent != "" {
 		var responseContent string
@@ -161,6 +169,10 @@ func processResponse(
 		}
 
 		rs.Body = []byte(responseContent)
+	} else if rs.BodySet && resp.Template {
+		// The body came from a script rather than the configuration, so it has
+		// not passed through the template processor yet.
+		rs.Body = []byte(template.ProcessTemplate(string(rs.Body), exch, imposterConfig, reqMatcher))
 	}
 
 	if logger.IsTraceEnabled() {
