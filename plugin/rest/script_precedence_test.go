@@ -103,18 +103,46 @@ func TestHandler_ScriptContentBeatsConfig(t *testing.T) {
 	}
 }
 
-// TestHandler_ConfigFileBeatsScriptContent checks that a configured response
-// file still takes precedence over script-set content, as it does in the JVM
-// engine, where the response file is served in preference to content.
-func TestHandler_ConfigFileBeatsScriptContent(t *testing.T) {
+// TestHandler_ScriptContentBeatsConfigFile checks that script-set content takes
+// precedence over a configured response file, which acts only as a default.
+func TestHandler_ScriptContentBeatsConfigFile(t *testing.T) {
 	rs := runScriptPrecedenceRequest(t,
 		`respond().withContent('from-script')`,
 		&config.Response{File: "body.json"},
 		map[string]string{"body.json": "from-file"},
 	)
 
-	if string(rs.Body) != "from-file" {
-		t.Errorf("Expected configured file content, got %q", string(rs.Body))
+	if string(rs.Body) != "from-script" {
+		t.Errorf("Expected script content, got %q", string(rs.Body))
+	}
+}
+
+// TestHandler_ScriptFileBeatsScriptContent checks that a response file set by
+// the script wins over content set by the same script, as the file is the more
+// specific source.
+func TestHandler_ScriptFileBeatsScriptContent(t *testing.T) {
+	rs := runScriptPrecedenceRequest(t,
+		`respond().withContent('from-script-content').withFile('script.json')`,
+		&config.Response{},
+		map[string]string{"script.json": "from-script-file"},
+	)
+
+	if string(rs.Body) != "from-script-file" {
+		t.Errorf("Expected script file content, got %q", string(rs.Body))
+	}
+}
+
+// TestHandler_ScriptContentBeatsConfigDir checks that script-set content takes
+// precedence over a directory-based response.
+func TestHandler_ScriptContentBeatsConfigDir(t *testing.T) {
+	rs := runScriptPrecedenceRequest(t,
+		`respond().withContent('from-script')`,
+		&config.Response{Dir: "."},
+		nil,
+	)
+
+	if string(rs.Body) != "from-script" {
+		t.Errorf("Expected script content, got %q", string(rs.Body))
 	}
 }
 

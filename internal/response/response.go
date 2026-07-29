@@ -107,8 +107,18 @@ func processResponse(
 		respFile = rs.File
 	}
 
+	// Content set explicitly by a script takes precedence over the configured
+	// response file and content, both of which act only as defaults. A
+	// response file set by the script itself is the more specific source, so
+	// it still wins over script-set content.
+	scriptContentWins := rs.BodySet && rs.File == ""
+	if scriptContentWins {
+		respFile = ""
+		respContent = ""
+	}
+
 	// Handle directory-based responses with wildcards
-	if resp.Dir != "" {
+	if resp.Dir != "" && !scriptContentWins {
 		if reqMatcher == nil || !strings.HasSuffix(reqMatcher.Path, "/*") {
 			logger.Errorf("directory response requires a wildcard path - method:%s, path:%s", req.Method, req.URL.Path)
 			rs.StatusCode = http.StatusInternalServerError
