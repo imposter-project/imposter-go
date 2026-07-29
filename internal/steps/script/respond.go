@@ -14,12 +14,12 @@ type ResponseBuilder struct {
 }
 
 func (rb *ResponseBuilder) withStatusCode(statusCode int) goja.Value {
-	rb.state.StatusCode = statusCode
+	rb.state.SetStatusCode(statusCode)
 	return rb.obj
 }
 
 func (rb *ResponseBuilder) withContent(content string) goja.Value {
-	rb.state.Body = []byte(content)
+	rb.state.SetBody([]byte(content))
 	return rb.obj
 }
 
@@ -30,15 +30,12 @@ func (rb *ResponseBuilder) withFile(filePath string) goja.Value {
 }
 
 func (rb *ResponseBuilder) withHeader(name, value string) goja.Value {
-	if rb.state.Headers == nil {
-		rb.state.Headers = make(map[string]string)
-	}
-	rb.state.Headers[name] = value
+	rb.state.SetHeader(name, value)
 	return rb.obj
 }
 
 func (rb *ResponseBuilder) withEmpty() goja.Value {
-	rb.state.Body = []byte{}
+	rb.state.SetBody([]byte{})
 	return rb.obj
 }
 

@@ -409,3 +409,224 @@ func TestSetContentTypeHeader(t *testing.T) {
 		})
 	}
 }
+
+// TestProcessResponseScriptPrecedence checks how values set explicitly on the
+// response state, as a script does, interact with the resource's response
+// configuration. Configured values act as defaults, so they only apply where
+// the script has not already set something.
+func TestProcessResponseScriptPrecedence(t *testing.T) {
+	tmpDir := t.TempDir()
+	err := os.WriteFile(tmpDir+"/config.txt", []byte("config file content"), 0644)
+	assert.NoError(t, err)
+	err = os.WriteFile(tmpDir+"/script.txt", []byte("script file content"), 0644)
+	assert.NoError(t, err)
+
+	tests := []struct {
+		name           string
+		setupState     func(rs *exchange.ResponseState)
+		response       config.Response
+		requestMatcher *config.RequestMatcher
+		expectedStatus int
+		expectedBody   string
+		expectedHeader map[string]string
+	}{
+		{
+			name:           "script status code overrides configured status code",
+			setupState:     func(rs *exchange.ResponseState) { rs.SetStatusCode(http.StatusConflict) },
+			response:       config.Response{StatusCode: http.StatusOK},
+			expectedStatus: http.StatusConflict,
+		},
+		{
+			name:           "configured status code applies when the script sets none",
+			setupState:     func(rs *exchange.ResponseState) {},
+			response:       config.Response{StatusCode: http.StatusAccepted},
+			expectedStatus: http.StatusAccepted,
+		},
+		{
+			name:           "configured status code does not apply to an unmarked default",
+			setupState:     func(rs *exchange.ResponseState) { rs.StatusCode = http.StatusTeapot },
+			response:       config.Response{StatusCode: http.StatusAccepted},
+			expectedStatus: http.StatusAccepted,
+		},
+		{
+			name:           "script content overrides configured content",
+			setupState:     func(rs *exchange.ResponseState) { rs.SetBody([]byte("script content")) },
+			response:       config.Response{Content: "config content"},
+			expectedStatus: http.StatusOK,
+			expectedBody:   "script content",
+		},
+		{
+			name:           "script content overrides configured file",
+			setupState:     func(rs *exchange.ResponseState) { rs.SetBody([]byte("script content")) },
+			response:       config.Response{File: "config.txt"},
+			expectedStatus: http.StatusOK,
+			expectedBody:   "script content",
+		},
+		{
+			name: "script file overrides script content",
+			setupState: func(rs *exchange.ResponseState) {
+				rs.SetBody([]byte("script content"))
+				rs.File = "script.txt"
+			},
+			response:       config.Response{Content: "config content"},
+			expectedStatus: http.StatusOK,
+			expectedBody:   "script file content",
+		},
+		{
+			name:           "script file overrides configured file",
+			setupState:     func(rs *exchange.ResponseState) { rs.File = "script.txt" },
+			response:       config.Response{File: "config.txt"},
+			expectedStatus: http.StatusOK,
+			expectedBody:   "script file content",
+		},
+		{
+			name:           "configured content applies when the script sets no body",
+			setupState:     func(rs *exchange.ResponseState) { rs.SetStatusCode(http.StatusCreated) },
+			response:       config.Response{Content: "config content"},
+			expectedStatus: http.StatusCreated,
+			expectedBody:   "config content",
+		},
+		{
+			name:           "an empty body set by a script is not refilled from configuration",
+			setupState:     func(rs *exchange.ResponseState) { rs.SetBody([]byte{}) },
+			response:       config.Response{Content: "config content"},
+			expectedStatus: http.StatusOK,
+			expectedBody:   "",
+		},
+		{
+			name:           "script content is templated when configuration enables templating",
+			setupState:     func(rs *exchange.ResponseState) { rs.SetBody([]byte("method: ${context.request.method}")) },
+			response:       config.Response{Template: true},
+			expectedStatus: http.StatusOK,
+			expectedBody:   "method: GET",
+		},
+		{
+			name:           "script content is not templated when configuration does not enable templating",
+			setupState:     func(rs *exchange.ResponseState) { rs.SetBody([]byte("method: ${context.request.method}")) },
+			response:       config.Response{},
+			expectedStatus: http.StatusOK,
+			expectedBody:   "method: ${context.request.method}",
+		},
+		{
+			name:           "script headers override configured headers of the same name",
+			setupState:     func(rs *exchange.ResponseState) { rs.SetHeader("X-Shared", "script") },
+			response:       config.Response{Headers: map[string]string{"X-Shared": "config"}},
+			expectedStatus: http.StatusOK,
+			expectedHeader: map[string]string{"X-Shared": "script"},
+		},
+		{
+			name:           "script headers override configured headers differing only in casing",
+			setupState:     func(rs *exchange.ResponseState) { rs.SetHeader("X-Shared", "script") },
+			response:       config.Response{Headers: map[string]string{"x-shared": "config"}},
+			expectedStatus: http.StatusOK,
+			expectedHeader: map[string]string{"X-Shared": "script"},
+		},
+		{
+			name:           "script headers are retained when configuration does not set them",
+			setupState:     func(rs *exchange.ResponseState) { rs.SetHeader("X-Script", "script") },
+			response:       config.Response{Headers: map[string]string{"X-Config": "config"}},
+			expectedStatus: http.StatusOK,
+			expectedHeader: map[string]string{"X-Script": "script", "X-Config": "config"},
+		},
+		{
+			name:           "configured headers override those set other than by a script",
+			setupState:     func(rs *exchange.ResponseState) { rs.Headers["Content-Type"] = "text/plain" },
+			response:       config.Response{Headers: map[string]string{"Content-Type": "application/xml"}},
+			expectedStatus: http.StatusOK,
+			expectedHeader: map[string]string{"Content-Type": "application/xml"},
+		},
+		{
+			name:           "script content overrides a directory response",
+			setupState:     func(rs *exchange.ResponseState) { rs.SetBody([]byte("script content")) },
+			response:       config.Response{Dir: "."},
+			requestMatcher: &config.RequestMatcher{Path: "/no-wildcard"},
+			expectedStatus: http.StatusOK,
+			expectedBody:   "script content",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rs := NewResponseState()
+			tt.setupState(rs)
+
+			req := httptest.NewRequest(http.MethodGet, "/test", nil)
+			exch := exchange.NewExchange(req, nil, store.NewRequestStore(), rs)
+			processResponse(exch, tt.requestMatcher, &tt.response, tmpDir, &config.ImposterConfig{})
+
+			assert.Equal(t, tt.expectedStatus, rs.StatusCode)
+			assert.Equal(t, tt.expectedBody, string(rs.Body))
+			for k, v := range tt.expectedHeader {
+				assert.Equal(t, v, rs.Headers[k])
+			}
+		})
+	}
+}
+
+// TestProcessResponseScriptDelayPrecedence checks that a delay set on the
+// response state, as a script does, is used in preference to the delay in the
+// response configuration.
+func TestProcessResponseScriptDelayPrecedence(t *testing.T) {
+	rs := NewResponseState()
+	rs.Delay = config.Delay{Exact: 50}
+
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	exch := exchange.NewExchange(req, nil, store.NewRequestStore(), rs)
+
+	// the configured delay is an order of magnitude longer, so the elapsed
+	// time shows which of the two was applied
+	resp := config.Response{Delay: config.Delay{Exact: 1000}}
+
+	start := time.Now()
+	processResponse(exch, nil, &resp, t.TempDir(), &config.ImposterConfig{})
+	elapsed := time.Since(start)
+
+	assert.GreaterOrEqual(t, elapsed, 50*time.Millisecond, "the delay set by the script should be applied")
+	assert.Less(t, elapsed, 500*time.Millisecond, "the configured delay should not be applied")
+}
+
+// TestProcessResponseScriptFailurePrecedence checks that a failure set on the
+// response state, as a script does, is simulated in preference to the failure
+// in the response configuration, and short-circuits response processing.
+func TestProcessResponseScriptFailurePrecedence(t *testing.T) {
+	tests := []struct {
+		name          string
+		stateFailure  string
+		configFailure string
+		expectStopped bool
+		expectBody    string
+	}{
+		{
+			name:          "script failure takes precedence over configured failure",
+			stateFailure:  "EmptyResponse",
+			configFailure: "CloseConnection",
+			expectStopped: false,
+		},
+		{
+			name:          "configured failure applies when the script sets none",
+			configFailure: "CloseConnection",
+			expectStopped: true,
+		},
+		{
+			name:         "script failure short-circuits configured content",
+			stateFailure: "EmptyResponse",
+			expectBody:   "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rs := NewResponseState()
+			rs.Fail = tt.stateFailure
+
+			req := httptest.NewRequest(http.MethodGet, "/test", nil)
+			exch := exchange.NewExchange(req, nil, store.NewRequestStore(), rs)
+			resp := config.Response{Fail: tt.configFailure, Content: "config content"}
+
+			processResponse(exch, nil, &resp, t.TempDir(), &config.ImposterConfig{})
+
+			assert.Equal(t, tt.expectStopped, rs.Stopped)
+			assert.Equal(t, tt.expectBody, string(rs.Body))
+		})
+	}
+}

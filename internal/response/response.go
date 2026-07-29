@@ -79,8 +79,9 @@ func processResponse(
 		SimulateDelay(resp.Delay, req)
 	}
 
-	// Set status code
-	if resp.StatusCode > 0 {
+	// Set status code. A status code set explicitly by a script takes
+	// precedence, so the configured value acts only as a default.
+	if resp.StatusCode > 0 && !rs.StatusCodeSet {
 		rs.StatusCode = resp.StatusCode
 	}
 
@@ -106,8 +107,18 @@ func processResponse(
 		respFile = rs.File
 	}
 
+	// Content set explicitly by a script takes precedence over the configured
+	// response file and content, both of which act only as defaults. A
+	// response file set by the script itself is the more specific source, so
+	// it still wins over script-set content.
+	scriptContentWins := rs.BodySet && rs.File == ""
+	if scriptContentWins {
+		respFile = ""
+		respContent = ""
+	}
+
 	// Handle directory-based responses with wildcards
-	if resp.Dir != "" {
+	if resp.Dir != "" && !scriptContentWins {
 		if reqMatcher == nil || !strings.HasSuffix(reqMatcher.Path, "/*") {
 			logger.Errorf("directory response requires a wildcard path - method:%s, path:%s", req.Method, req.URL.Path)
 			rs.StatusCode = http.StatusInternalServerError
@@ -161,6 +172,10 @@ func processResponse(
 		}
 
 		rs.Body = []byte(responseContent)
+	} else if rs.BodySet && resp.Template {
+		// The body came from a script rather than the configuration, so it has
+		// not passed through the template processor yet.
+		rs.Body = []byte(template.ProcessTemplate(string(rs.Body), exch, imposterConfig, reqMatcher))
 	}
 
 	if logger.IsTraceEnabled() {
@@ -173,13 +188,17 @@ func processResponse(
 		req.Method, req.URL.Path, rs.StatusCode, len(rs.Body))
 }
 
-// CopyResponseHeaders copies headers from a map to an exchange.ResponseState
-// If a header already exists, it will be overwritten
+// CopyResponseHeaders copies headers from a map to an exchange.ResponseState.
+// An existing header is overwritten, unless it was set explicitly by a script,
+// in which case the configured header acts only as a default.
 func CopyResponseHeaders(src map[string]string, rs *exchange.ResponseState) {
 	if src == nil {
 		return
 	}
 	for key, value := range src {
+		if rs.IsHeaderExplicit(key) {
+			continue
+		}
 		rs.Headers[key] = value
 	}
 }
