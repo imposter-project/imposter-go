@@ -137,13 +137,6 @@ func processResponse(
 		logger.Debugf("using directory-based response file: %s", respFile)
 	}
 
-	// Content set explicitly by a script takes precedence over configured
-	// content, so the latter acts only as a default. A response file still
-	// wins over script-set content, matching the JVM engine.
-	if rs.BodySet && respFile == "" {
-		respContent = ""
-	}
-
 	// Only override response content if specified, as it may have been set by an interceptor
 	if respFile != "" || respContent != "" {
 		var responseContent string
@@ -195,13 +188,17 @@ func processResponse(
 		req.Method, req.URL.Path, rs.StatusCode, len(rs.Body))
 }
 
-// CopyResponseHeaders copies headers from a map to an exchange.ResponseState
-// If a header already exists, it will be overwritten
+// CopyResponseHeaders copies headers from a map to an exchange.ResponseState.
+// An existing header is overwritten, unless it was set explicitly by a script,
+// in which case the configured header acts only as a default.
 func CopyResponseHeaders(src map[string]string, rs *exchange.ResponseState) {
 	if src == nil {
 		return
 	}
 	for key, value := range src {
+		if rs.IsHeaderExplicit(key) {
+			continue
+		}
 		rs.Headers[key] = value
 	}
 }

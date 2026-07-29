@@ -118,13 +118,15 @@ func TestRateLimitCheck_OverridesScriptSetResponse(t *testing.T) {
 	store.InitStoreProvider()
 	exch := newRateLimitExchange()
 
-	// simulate an interceptor script having set the status code and body
+	// simulate an interceptor script having set the response properties
 	exch.ResponseState.SetStatusCode(http.StatusOK)
 	exch.ResponseState.SetBody([]byte("from-script"))
+	exch.ResponseState.SetHeader("X-Source", "script")
 
 	resource := newLimitedResource("overrides-script", &config.Response{
 		StatusCode: http.StatusTooManyRequests,
 		Content:    "slow down",
+		Headers:    map[string]string{"X-Source": "rate-limit"},
 	})
 
 	limited := RateLimitCheck(resource, "GET", "/limited", exch, response.NewProcessor(&config.ImposterConfig{}, t.TempDir()), passThroughProcessor)
@@ -134,6 +136,8 @@ func TestRateLimitCheck_OverridesScriptSetResponse(t *testing.T) {
 		"limit response status code should override the script-set status code")
 	assert.Equal(t, "slow down", string(exch.ResponseState.Body),
 		"limit response content should override the script-set body")
+	assert.Equal(t, "rate-limit", exch.ResponseState.Headers["X-Source"],
+		"limit response headers should override script-set headers")
 }
 
 // TestRateLimitCheck_GeneratesKeyWhenResourceIDMissing checks that rate

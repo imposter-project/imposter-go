@@ -30,10 +30,7 @@ func (rb *ResponseBuilder) withFile(filePath string) goja.Value {
 }
 
 func (rb *ResponseBuilder) withHeader(name, value string) goja.Value {
-	if rb.state.Headers == nil {
-		rb.state.Headers = make(map[string]string)
-	}
-	rb.state.Headers[name] = value
+	rb.state.SetHeader(name, value)
 	return rb.obj
 }
 

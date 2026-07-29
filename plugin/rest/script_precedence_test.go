@@ -174,22 +174,42 @@ func TestHandler_ScriptEmptyBodyNotRefilledFromConfig(t *testing.T) {
 	}
 }
 
-// TestHandler_ConfigHeadersBeatScriptHeaders checks that configured headers
-// continue to take precedence over script-set headers of the same name, which
-// is the behaviour of both engines. Headers the configuration does not set are
-// left untouched.
-func TestHandler_ConfigHeadersBeatScriptHeaders(t *testing.T) {
+// TestHandler_ScriptHeadersBeatConfigHeaders checks that script-set headers
+// take precedence over configured headers of the same name, and that headers
+// set by only one of the two are retained.
+func TestHandler_ScriptHeadersBeatConfigHeaders(t *testing.T) {
 	rs := runScriptPrecedenceRequest(t,
 		`respond().withHeader("X-Shared", "script").withHeader("X-Script-Only", "script")`,
-		&config.Response{Headers: map[string]string{"X-Shared": "config"}},
+		&config.Response{Headers: map[string]string{"X-Shared": "config", "X-Config-Only": "config"}},
 		nil,
 	)
 
-	if rs.Headers["X-Shared"] != "config" {
-		t.Errorf("Expected configured header to win, got %q", rs.Headers["X-Shared"])
+	if rs.Headers["X-Shared"] != "script" {
+		t.Errorf("Expected script header to win, got %q", rs.Headers["X-Shared"])
 	}
 	if rs.Headers["X-Script-Only"] != "script" {
 		t.Errorf("Expected script-only header to be retained, got %q", rs.Headers["X-Script-Only"])
+	}
+	if rs.Headers["X-Config-Only"] != "config" {
+		t.Errorf("Expected configured-only header to be applied, got %q", rs.Headers["X-Config-Only"])
+	}
+}
+
+// TestHandler_ScriptHeadersBeatConfigHeadersIgnoringCase checks that a
+// configured header does not override a script-set header that differs only in
+// casing, since HTTP header names are case-insensitive.
+func TestHandler_ScriptHeadersBeatConfigHeadersIgnoringCase(t *testing.T) {
+	rs := runScriptPrecedenceRequest(t,
+		`respond().withHeader("X-Shared", "script")`,
+		&config.Response{Headers: map[string]string{"x-shared": "config"}},
+		nil,
+	)
+
+	if rs.Headers["X-Shared"] != "script" {
+		t.Errorf("Expected script header to win, got %q", rs.Headers["X-Shared"])
+	}
+	if _, exists := rs.Headers["x-shared"]; exists {
+		t.Errorf("Expected configured header to be skipped, got %q", rs.Headers["x-shared"])
 	}
 }
 
