@@ -6,6 +6,7 @@ import (
 	"github.com/imposter-project/imposter-go/internal/capture"
 	"github.com/imposter-project/imposter-go/internal/common"
 	"github.com/imposter-project/imposter-go/internal/config"
+	"github.com/imposter-project/imposter-go/internal/emit"
 	"github.com/imposter-project/imposter-go/internal/exchange"
 	"github.com/imposter-project/imposter-go/internal/matcher"
 	"github.com/imposter-project/imposter-go/internal/passthrough"
@@ -204,9 +205,17 @@ func RunPipeline(
 
 	// Process the response(s) if configured. A singular 'response' block is
 	// equivalent to a 'responses' list with one element.
-	resps := best.Resource.EffectiveResponses()
-	for i := range resps {
-		processResp(exch, &best.Resource.RequestMatcher, &resps[i], respProc)
+	if best.Resource.StreamEnabled() && exch.ResponseWriter != nil {
+		// Stream the responses to the client incrementally (HTTP SSE/chunked),
+		// including any request-scoped schedules, instead of buffering a single
+		// body. Guarded on ResponseWriter so it only applies to live HTTP
+		// requests (websocket uses its own frame sink with a nil writer).
+		emit.StreamHTTP(exch, &best.Resource.BaseResource, respProc, imposterConfig, cfg.ConfigDir)
+	} else {
+		resps := best.Resource.EffectiveResponses()
+		for i := range resps {
+			processResp(exch, &best.Resource.RequestMatcher, &resps[i], respProc)
+		}
 	}
 
 	// If we matched a resource, ensure the request is marked as handled
