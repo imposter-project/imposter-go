@@ -29,8 +29,15 @@ func (rb *ResponseBuilder) withFile(filePath string) goja.Value {
 	return rb.obj
 }
 
-func (rb *ResponseBuilder) withHeader(name, value string) goja.Value {
-	rb.state.SetHeader(name, value)
+func (rb *ResponseBuilder) withHeader(call goja.FunctionCall) goja.Value {
+	name := call.Argument(0).ToString().String()
+	value := call.Argument(1)
+
+	if goja.IsNull(value) || goja.IsUndefined(value) {
+		rb.state.RemoveHeader(name)
+	} else {
+		rb.state.SetHeader(name, value.ToString().String())
+	}
 	return rb.obj
 }
 
