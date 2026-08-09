@@ -40,3 +40,4 @@ coverage.html
 
 # Release notes extracted from CHANGELOG.md during CI
 /.changelog-extract.md
+/opencode/plans

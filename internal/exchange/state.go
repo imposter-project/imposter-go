@@ -80,6 +80,16 @@ func (rs *ResponseState) IsHeaderExplicit(name string) bool {
 	return rs.explicitHeaders[http.CanonicalHeaderKey(name)]
 }
 
+// RemoveHeader removes a header and clears its explicit flag so that a
+// configured response header can apply as a fallback.
+func (rs *ResponseState) RemoveHeader(name string) {
+	delete(rs.Headers, name)
+	canonical := http.CanonicalHeaderKey(name)
+	if rs.explicitHeaders != nil {
+		delete(rs.explicitHeaders, canonical)
+	}
+}
+
 // ClearExplicitFlags forgets that the status code, body and headers were
 // explicitly set, allowing a subsequent configured response to be applied
 // unconditionally. This is used where the configured response must win

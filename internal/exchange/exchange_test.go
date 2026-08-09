@@ -68,6 +68,25 @@ func TestResponseState_SetHeader(t *testing.T) {
 	assert.False(t, rs.IsHeaderExplicit("X-Not-Set"))
 }
 
+func TestResponseState_RemoveHeader(t *testing.T) {
+	rs := &ResponseState{}
+	rs.SetHeader("X-Custom", "value")
+
+	rs.RemoveHeader("X-Custom")
+
+	assert.NotContains(t, rs.Headers, "X-Custom")
+	assert.False(t, rs.IsHeaderExplicit("X-Custom"))
+}
+
+func TestResponseState_RemoveHeader_NoOp(t *testing.T) {
+	rs := &ResponseState{Headers: map[string]string{}}
+
+	rs.RemoveHeader("X-NonExistent")
+
+	assert.Empty(t, rs.Headers)
+	assert.False(t, rs.IsHeaderExplicit("X-NonExistent"))
+}
+
 func TestResponseState_ClearExplicitFlags(t *testing.T) {
 	rs := &ResponseState{}
 	rs.SetStatusCode(http.StatusTeapot)

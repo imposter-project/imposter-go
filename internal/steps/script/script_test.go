@@ -387,6 +387,113 @@ func TestExecuteScriptStep(t *testing.T) {
 			},
 		},
 		{
+			name: "response builder withHeader null removes header",
+			step: config.Step{
+				Type: config.ScriptStepType,
+				Lang: "javascript",
+				Code: `
+					respond()
+						.withHeader("X-A", null)
+				`,
+			},
+			setupExch: func() *exchange.Exchange {
+				req, _ := http.NewRequest("GET", "/test", nil)
+				return &exchange.Exchange{
+					Request: &exchange.RequestContext{
+						Request: req,
+						Body:    []byte{},
+					},
+				}
+			},
+			validate: func(t *testing.T, rs *exchange.ResponseState) {
+				assert.NotContains(t, rs.Headers, "X-A")
+				assert.False(t, rs.IsHeaderExplicit("X-A"))
+			},
+			reqMatcher: &config.RequestMatcher{
+				Path: "/test",
+			},
+		},
+		{
+			name: "response builder withHeader undefined removes header",
+			step: config.Step{
+				Type: config.ScriptStepType,
+				Lang: "javascript",
+				Code: `
+					respond()
+						.withHeader("X-A", undefined)
+				`,
+			},
+			setupExch: func() *exchange.Exchange {
+				req, _ := http.NewRequest("GET", "/test", nil)
+				return &exchange.Exchange{
+					Request: &exchange.RequestContext{
+						Request: req,
+						Body:    []byte{},
+					},
+				}
+			},
+			validate: func(t *testing.T, rs *exchange.ResponseState) {
+				assert.NotContains(t, rs.Headers, "X-A")
+			},
+			reqMatcher: &config.RequestMatcher{
+				Path: "/test",
+			},
+		},
+		{
+			name: "response builder withHeader set then remove",
+			step: config.Step{
+				Type: config.ScriptStepType,
+				Lang: "javascript",
+				Code: `
+					respond()
+						.withHeader("X-A", "v")
+						.withHeader("X-A", null)
+				`,
+			},
+			setupExch: func() *exchange.Exchange {
+				req, _ := http.NewRequest("GET", "/test", nil)
+				return &exchange.Exchange{
+					Request: &exchange.RequestContext{
+						Request: req,
+						Body:    []byte{},
+					},
+				}
+			},
+			validate: func(t *testing.T, rs *exchange.ResponseState) {
+				assert.NotContains(t, rs.Headers, "X-A")
+				assert.False(t, rs.IsHeaderExplicit("X-A"))
+			},
+			reqMatcher: &config.RequestMatcher{
+				Path: "/test",
+			},
+		},
+		{
+			name: "response builder withHeader remove non-existent is no-op",
+			step: config.Step{
+				Type: config.ScriptStepType,
+				Lang: "javascript",
+				Code: `
+					respond()
+						.withHeader("X-Missing", null)
+				`,
+			},
+			setupExch: func() *exchange.Exchange {
+				req, _ := http.NewRequest("GET", "/test", nil)
+				return &exchange.Exchange{
+					Request: &exchange.RequestContext{
+						Request: req,
+						Body:    []byte{},
+					},
+				}
+			},
+			validate: func(t *testing.T, rs *exchange.ResponseState) {
+				assert.Empty(t, rs.Headers)
+			},
+			reqMatcher: &config.RequestMatcher{
+				Path: "/test",
+			},
+		},
+		{
 			name: "response builder with failure - EmptyResponse",
 			step: config.Step{
 				Type: config.ScriptStepType,
