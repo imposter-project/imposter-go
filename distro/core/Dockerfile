@@ -15,6 +15,8 @@ RUN go build -tags lambda.norpc -ldflags "-s -w -X github.com/imposter-project/i
 RUN mkdir -p /tmp /opt/imposter/config /opt/imposter/plugins
 
 FROM scratch
+# Root CAs for outbound TLS, e.g. upstream passthrough, remote steps and remote spec loading
+COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=build /imposter-go /imposter-go
 COPY --from=build --chmod=0600 /tmp /tmp/
 COPY --from=build --chmod=0755 /opt/imposter/config /opt/imposter/config/
