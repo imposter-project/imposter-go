@@ -1,0 +1,43 @@
+# Demonstrates streaming HTTP responses with `stream: true`. Each block in
+# 'responses' is written and flushed to the client separately, paced by its
+# 'delay', so the client receives Server-Sent Events incrementally rather than
+# one buffered body. A 'schedule' on a streamed resource pushes further events
+# over the open connection until its limit is reached or the client disconnects.
+plugin: rest
+
+resources:
+  # An OpenAI-style chat completion stream: a fixed sequence of SSE chunks,
+  # ending with the conventional [DONE] sentinel.
+  - path: /v1/chat/completions
+    method: POST
+    stream: true
+    responses:
+      - content: "data: {\"choices\":[{\"delta\":{\"role\":\"assistant\"}}]}\n\n"
+        headers:
+          Content-Type: text/event-stream
+        delay: { exact: 50 }
+      - content: "data: {\"choices\":[{\"delta\":{\"content\":\"Hello\"}}]}\n\n"
+        delay: { exact: 50 }
+      - content: "data: {\"choices\":[{\"delta\":{\"content\":\" world\"}}]}\n\n"
+        delay: { exact: 50 }
+      - content: "data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}]}\n\n"
+        delay: { exact: 50 }
+      - content: "data: [DONE]\n\n"
+
+  # An open-ended event stream: an initial comment to open the stream, then a
+  # keepalive pushed every second by a request-scoped schedule. It stops after
+  # 10 ticks, or as soon as the client disconnects.
+  - path: /events
+    method: GET
+    stream: true
+    response:
+      content: ": stream open\n\n"
+      headers:
+        Content-Type: text/event-stream
+    schedule:
+      - name: keepalive
+        every: 1s
+        limit: 10
+        response:
+          template: true
+          content: "data: {\"type\":\"ping\",\"at\":\"${datetime.now.iso8601_datetime}\"}\n\n"

@@ -8,6 +8,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/imposter-project/imposter-go/internal/config"
+	"github.com/imposter-project/imposter-go/internal/emit"
 	"github.com/imposter-project/imposter-go/internal/exchange"
 	"github.com/imposter-project/imposter-go/internal/matcher"
 	"github.com/imposter-project/imposter-go/internal/pipeline"
@@ -197,23 +198,32 @@ func (c *wsConn) runEventPipeline(event string, body []byte) *exchange.ResponseS
 	return responseState
 }
 
+// frameSink emits processed response bodies as websocket text frames. It is
+// the websocket implementation of emit.Sink.
+type frameSink struct{ c *wsConn }
+
+// Emit enqueues the processed body as a text frame. It always reports true:
+// send() itself gives up if the connection has closed, and the read loop is
+// what actually tears the connection down.
+func (s frameSink) Emit(rs *exchange.ResponseState) bool {
+	s.c.send(rs.Body)
+	return true
+}
+
 // processAndSend runs standard response processing (delay, file/content
 // resolution, templating) and enqueues the result as a text frame, reporting
-// whether a frame was sent.
+// whether a frame was sent. Close events pass sendFrame=false, so the response
+// is processed (for its captures and steps) but discarded rather than sent.
 func (c *wsConn) processAndSend(exch *exchange.Exchange, reqMatcher *config.RequestMatcher,
 	resp *config.Response, sendFrame bool,
 ) bool {
 	c.handler.respProc(exch, reqMatcher, resp)
 
-	rs := exch.ResponseState
-	sent := false
-	if sendFrame && len(rs.Body) > 0 {
-		c.send(rs.Body)
-		sent = true
+	hadBody := len(exch.ResponseState.Body) > 0
+	var sink emit.Sink = frameSink{c}
+	if !sendFrame {
+		sink = emit.DiscardSink{}
 	}
-	// Reset per-response fields so subsequent responses in a 'responses'
-	// list start clean.
-	rs.Body = nil
-	rs.File = ""
-	return sent
+	emit.EmitOne(exch.ResponseState, sink)
+	return sendFrame && hadBody
 }

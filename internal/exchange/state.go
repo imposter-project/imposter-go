@@ -15,6 +15,7 @@ type ResponseState struct {
 	Stopped          bool                 // indicates if the response has been stopped (e.g., connection closed)
 	Handled          bool                 // indicates if a handler has handled the request
 	Hijacked         bool                 // indicates a plugin has taken over the underlying connection (e.g. websocket upgrade)
+	Streamed         bool                 // indicates the body was already written incrementally to the client (streaming); the buffered write is skipped
 	Resource         *config.BaseResource // the resource that handled the request
 	Delay            config.Delay         // delay configuration for the response
 	Fail             string               // failure type for the response
@@ -92,8 +93,9 @@ func (rs *ResponseState) ClearExplicitFlags() {
 
 // WriteToResponseWriter writes the final state to the http.ResponseWriter
 func (rs *ResponseState) WriteToResponseWriter(w http.ResponseWriter) {
-	if rs.Hijacked {
-		// The connection has been taken over (e.g. websocket upgrade); nothing
+	if rs.Hijacked || rs.Streamed {
+		// The connection has been taken over (e.g. websocket upgrade) or the
+		// body was already streamed to the client incrementally; nothing more
 		// may be written, but cleanup functions still run.
 		for _, cleanup := range rs.CleanupFunctions {
 			if cleanup != nil {
