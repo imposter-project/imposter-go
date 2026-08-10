@@ -71,7 +71,7 @@ jobs:
     # Pulls the entries for the version being released out of CHANGELOG.md, so
     # the release body matches the curated changelog rather than raw git log.
     - name: Extract changelog entries
-      uses: release-tools/since@v0.20.0
+      uses: release-tools/since@v0.21.0
       with:
         changelog-file: CHANGELOG.md
         output-file: .changelog-extract.md
