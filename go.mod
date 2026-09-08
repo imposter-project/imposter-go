@@ -1,6 +1,6 @@
 module github.com/imposter-project/imposter-go
 
-go 1.26
+go 1.26.0
 
 require gopkg.in/yaml.v3 v3.0.1
 
@@ -22,7 +22,7 @@ require (
 	github.com/testcontainers/testcontainers-go v0.44.0
 	github.com/testcontainers/testcontainers-go/modules/redis v0.44.0
 	go.yaml.in/yaml/v4 v4.0.0-rc.6
-	golang.org/x/crypto v0.55.0
+	golang.org/x/crypto v0.56.0
 	golang.org/x/exp v0.0.0-20250606033433-dcc06ee1d476
 	google.golang.org/protobuf v1.36.12
 )
