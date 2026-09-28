@@ -19,8 +19,8 @@ github.com/antchfx/xmlquery v1.5.1/go.mod h1:bVqnl7TaDXSReKINrhZz+2E/PbCu2tUahb+
 github.com/antchfx/xpath v1.3.6/go.mod h1:i54GszH55fYfBmoZXapTHN8T8tkcHfRgLyVwwqzXNcs=
 github.com/antchfx/xpath v1.3.8 h1:RQlkLaJDKk1Ew1H6CUPUTKM+IQxm+6HTyOgcrfqOU9c=
 github.com/antchfx/xpath v1.3.8/go.mod h1:i54GszH55fYfBmoZXapTHN8T8tkcHfRgLyVwwqzXNcs=
-github.com/aws/aws-lambda-go v1.55.0 h1:D+AUkk49hTldMnv+Ydt+/jdWVXWPsp8hlwY6Enob2FM=
-github.com/aws/aws-lambda-go v1.55.0/go.mod h1:V+NzkHNR6vBC8C1PDloqSLE+7jYWFiPvJJFiCiTm8nE=
+github.com/aws/aws-lambda-go v1.55.1 h1:We2cCp4BwqqH/JW+bEEo1FhgG71rslvjfi4y7KmlrR0=
+github.com/aws/aws-lambda-go v1.55.1/go.mod h1:V+NzkHNR6vBC8C1PDloqSLE+7jYWFiPvJJFiCiTm8nE=
 github.com/aws/aws-sdk-go v1.55.8 h1:JRmEUbU52aJQZ2AjX4q4Wu7t4uZjOu71uyNmaWlUkJQ=
 github.com/aws/aws-sdk-go v1.55.8/go.mod h1:ZkViS9AqA6otK+JBBNH2++sx1sgxrPKcSzPPvQkUtXk=
 github.com/bahlo/generic-list-go v0.2.0 h1:5sz/EEAK+ls5wF+NeqDpk5+iNdMDXrh3z3nPnH1Wvgk=
@@ -29,8 +29,8 @@ github.com/basgys/goxml2json v1.1.1-0.20231018121955-e66ee54ceaad h1:3swAvbzgfaI
 github.com/basgys/goxml2json v1.1.1-0.20231018121955-e66ee54ceaad/go.mod h1:9+nBLYNWkvPcq9ep0owWUsPTLgL9ZXTsZWcCSVGGLJ0=
 github.com/bitly/go-simplejson v0.5.1 h1:xgwPbetQScXt1gh9BmoJ6j9JMr3TElvuIyjR8pgdoow=
 github.com/bitly/go-simplejson v0.5.1/go.mod h1:YOPVLzCfwK14b4Sff3oP1AmGhI9T9Vsg84etUnlyp+Q=
-github.com/brianvoe/gofakeit/v7 v7.17.0 h1:usvHa73vmAjC1JmX4dpZAm1eQkR0riXaxvilScRTFb0=
-github.com/brianvoe/gofakeit/v7 v7.17.0/go.mod h1:QXuPeBw164PJCzCUZVmgpgHJ3Llj49jSLVkKPMtxtxA=
+github.com/brianvoe/gofakeit/v7 v7.17.1 h1:50FLBhTGVJQaj6ysRUu0it8wCdYO2uGM9VfuxI+csEc=
+github.com/brianvoe/gofakeit/v7 v7.17.1/go.mod h1:QXuPeBw164PJCzCUZVmgpgHJ3Llj49jSLVkKPMtxtxA=
 github.com/bufbuild/protocompile v0.14.1 h1:iA73zAf/fyljNjQKwYzUHD6AD4R8KMasmwa/FBatYVw=
 github.com/bufbuild/protocompile v0.14.1/go.mod h1:ppVdAIhbr2H8asPk6k4pY7t9zB1OU5DoEw9xY/FUi1c=
 github.com/buger/jsonparser v1.1.2 h1:frqHqw7otoVbk5M8LlE/L7HTnIq2v9RX6EJ48i9AxJk=
@@ -175,10 +175,10 @@ github.com/outofcoffee/go-xml-example-generator v0.4.2 h1:8KijZHX+16JCj1SHgy9WvB
 github.com/outofcoffee/go-xml-example-generator v0.4.2/go.mod h1:MR+cROV+8WgfOGVjEVD07su6Xoawl/VWEnlAt3JFD9k=
 github.com/outofcoffee/xgen v0.1.2 h1:n5GQ8P0hiTrYS+TEr+JoUMl2vcL4ogq5GtSimQLZ9NE=
 github.com/outofcoffee/xgen v0.1.2/go.mod h1:UPnCM9RP7mrOP+uAZWQ1XhQUHc+ORhMXfkMcZ6AAJCY=
-github.com/pb33f/jsonpath v0.8.2 h1:Ou4C7zjYClBm97dfZjDCjdZGusJoynv/vrtiEKNfj2Y=
-github.com/pb33f/jsonpath v0.8.2/go.mod h1:zBV5LJW4OQOPatmQE2QdKpGQJvhDTlE5IEj6ASaRNTo=
-github.com/pb33f/libopenapi v0.38.7 h1:Q2jfgRPdnU38WW8wQvrX2HEPGiqsxj01PX1BHmAEihc=
-github.com/pb33f/libopenapi v0.38.7/go.mod h1:naZ03Auhn7i+RJtMv8ck8l7Ag8E2/x2w66j9vsDFL38=
+github.com/pb33f/jsonpath v0.8.3 h1:gdOUYn31vic8iRSSR4I2SEv7UQf2WxLeDcUnDPpGZNE=
+github.com/pb33f/jsonpath v0.8.3/go.mod h1:zBV5LJW4OQOPatmQE2QdKpGQJvhDTlE5IEj6ASaRNTo=
+github.com/pb33f/libopenapi v0.40.0 h1:Hnzok6iUwo6PddYLc4YviTyBt0Q61TGeQf80KhiPdgg=
+github.com/pb33f/libopenapi v0.40.0/go.mod h1:nISN8KLZBliHRwZY0V53JZJtuzI8P52WGfJ6J56z9Tg=
 github.com/pb33f/libopenapi-validator v0.14.0 h1:K9cdv1kL6cZdQmSbzitkVcWCJKyRmmSZryZqgUqIv+Y=
 github.com/pb33f/libopenapi-validator v0.14.0/go.mod h1:EU6yVajX6rWwUAC4OWfsVPPwAZ7k29fruoZnMnzdKjI=
 github.com/pb33f/ordered-map/v2 v2.3.1 h1:5319HDO0aw4DA4gzi+zv4FXU9UlSs3xGZ40wcP1nBjY=
