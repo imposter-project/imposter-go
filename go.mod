@@ -6,7 +6,7 @@ require gopkg.in/yaml.v3 v3.0.1
 
 require (
 	github.com/antchfx/xmlquery v1.5.2
-	github.com/brianvoe/gofakeit/v7 v7.17.1
+	github.com/brianvoe/gofakeit/v7 v7.18.0
 	github.com/bufbuild/protocompile v0.14.1
 	github.com/dlclark/regexp2 v1.12.0
 	github.com/dop251/goja v0.0.0-20250531102226-cb187b08699c
@@ -15,13 +15,13 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-plugin v1.8.0
-	github.com/pb33f/libopenapi v0.41.5
-	github.com/pb33f/libopenapi-validator v0.16.0
+	github.com/pb33f/go-yaml v0.1.1
+	github.com/pb33f/libopenapi v0.41.6
+	github.com/pb33f/libopenapi-validator v0.16.1
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/stretchr/testify v1.12.1
 	github.com/testcontainers/testcontainers-go v0.44.0
 	github.com/testcontainers/testcontainers-go/modules/redis v0.44.0
-	go.yaml.in/yaml/v4 v4.0.0-rc.6
 	golang.org/x/crypto v0.58.0
 	golang.org/x/exp v0.0.0-20250606033433-dcc06ee1d476
 	google.golang.org/protobuf v1.36.12
@@ -78,7 +78,6 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect
 	github.com/outofcoffee/xgen v0.1.2 // indirect
-	github.com/pb33f/go-yaml v0.1.1 // indirect
 	github.com/pb33f/jsonpath v0.8.4 // indirect
 	github.com/pb33f/jsonschema/v6 v6.0.3 // indirect
 	github.com/pb33f/ordered-map/v2 v2.3.2 // indirect
@@ -112,6 +111,6 @@ require (
 	github.com/outofcoffee/go-wsdl-parser v0.2.0
 	github.com/outofcoffee/go-xml-example-generator v0.4.2
 	github.com/satori/go.uuid v1.2.0
-	golang.org/x/net v0.60.0
+	golang.org/x/net v0.61.0
 	golang.org/x/text v0.43.0 // indirect
 )
